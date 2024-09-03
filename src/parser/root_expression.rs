@@ -4,7 +4,7 @@ use super::{
 };
 
 pub struct RootExpression {
-    children: Vec<Box<EntireExpression>>,
+    pub children: Vec<Box<EntireExpression>>,
 }
 
 impl Parse for RootExpression {

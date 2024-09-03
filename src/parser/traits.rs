@@ -1,4 +1,4 @@
-use super::error::FhirpathError;
+use crate::error::FhirpathError;
 
 pub trait Matches {
     fn matches(input: &String) -> bool;

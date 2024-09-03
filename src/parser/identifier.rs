@@ -1,18 +1,49 @@
+use super::traits::{Matches, Parse, ParseResult};
+use crate::error::FhirpathError;
 use regex::Regex;
 
-use super::traits::Matches;
-
-enum Identifier {
-    LiteralIdentifier(LiteralIdentifier),
+pub enum Identifier {
+    LiteralIdentifier(Box<LiteralIdentifier>),
 }
 
-pub struct LiteralIdentifier {}
+impl Matches for Identifier {
+    fn matches(input: &String) -> bool {
+        return LiteralIdentifier::matches(input);
+    }
+}
 
-static IDENTIFIER_REGEX: &str = "([A-Za-z] | '_')([A-Za-z0-9] | '_')*";
+impl Parse for Identifier {
+    fn parse(input: &String) -> ParseResult<Box<Self>> {
+        if LiteralIdentifier::matches(input) {
+            return Ok(Box::new(Identifier::LiteralIdentifier(
+                LiteralIdentifier::parse(input)?,
+            )));
+        }
+
+        Err(FhirpathError::ParserError {
+            msg: "Failed to match Identifier".to_string(),
+        })
+    }
+}
+
+pub struct LiteralIdentifier {
+    pub text: String,
+}
+
+static IDENTIFIER_REGEX: &str = "([A-Za-z]|'_')([A-Za-z0-9]|'_')*";
 
 impl Matches for LiteralIdentifier {
     fn matches(input: &String) -> bool {
         Regex::is_match(&Regex::new(IDENTIFIER_REGEX).unwrap(), input)
+    }
+}
+
+impl Parse for LiteralIdentifier {
+    fn parse(input: &String) -> ParseResult<Box<Self>> {
+        let capture_text =
+            Regex::captures(&Regex::new(IDENTIFIER_REGEX).unwrap(), input).unwrap()[0].to_string();
+
+        Ok(Box::new(Self { text: capture_text }))
     }
 }
 

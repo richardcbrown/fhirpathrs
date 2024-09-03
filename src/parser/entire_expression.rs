@@ -4,7 +4,7 @@ use super::{
 };
 
 pub struct EntireExpression {
-    children: Vec<Box<Expression>>,
+    pub children: Vec<Box<Expression>>,
 }
 
 impl Parse for EntireExpression {
@@ -16,5 +16,17 @@ impl Parse for EntireExpression {
         children.push(expression);
 
         Ok(Box::new(Self { children }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_basic_path() {
+        let result = EntireExpression::parse(&"Patient".to_string()).unwrap();
+
+        assert_eq!(result.children.len(), 1);
     }
 }
