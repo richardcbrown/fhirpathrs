@@ -2,7 +2,7 @@ use serde_json::Value;
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
-use crate::parser::expression::{Expression, Term, TermExpression};
+use crate::parser::expression::{Expression, InvocationExpression, Term, TermExpression};
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{Invocation, InvocationTerm, MemberInvocation};
 use crate::parser::traits::Parse;
@@ -97,12 +97,11 @@ impl Evaluate for Identifier {
 
 impl Evaluate for InvocationTerm {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        self.children
-            .first()
-            .and_then(|x| x.evaluate(input))
-            .ok_or(FhirpathError::CompileError {
-                msg: "Missing InvocationTerm child element".to_string(),
-            })
+        let child = self.children.first().ok_or(FhirpathError::CompileError {
+            msg: "Missing InvocationTerm child element".to_string(),
+        })?;
+
+        child.evaluate(input)
     }
 }
 
@@ -116,12 +115,17 @@ impl Evaluate for Term {
 
 impl Evaluate for TermExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        self.children
-            .first()
-            .and_then(|x| x.evaluate(input))
-            .ok_or(FhirpathError::CompileError {
-                msg: "Missing TermExpression child element".to_string(),
-            })
+        let child = self.children.first().ok_or(FhirpathError::CompileError {
+            msg: "Missing TermExpression child element".to_string(),
+        })?;
+
+        child.evaluate(input)
+    }
+}
+
+impl Evaluate for InvocationExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        todo!()
     }
 }
 
@@ -136,26 +140,55 @@ impl Evaluate for Expression {
 
 impl Evaluate for EntireExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        self.children.first().and_then(|x| x.evaluate(input))
+        let child = self.children.first().ok_or(FhirpathError::CompileError {
+            msg: "Missing EntireExpression child element".to_string(),
+        })?;
+
+        child.evaluate(input)
     }
 }
 
-pub struct EvaluateEntireExpression {}
-
-impl EvaluateEntireExpression {
-    fn evaluate(resource: Value) -> Value {}
-}
-
-pub enum Engine {
-    EntireExpression(EvaluateEntireExpression),
-}
-
 impl CompiledPath {
-    fn evaluate(resource: Value) -> Value {}
+    fn evaluate(&self, resource: Value) -> CompileResult<Option<Value>> {
+        let node = ResourceNode {
+            data: Some(resource),
+            parent_node: None,
+        };
+
+        let evaluate_result = self.expression.evaluate(&node)?;
+
+        Ok(evaluate_result.data)
+    }
 }
 
 pub fn compile(path: &String) -> CompileResult<CompiledPath> {
     Ok(CompiledPath {
         expression: EntireExpression::parse(path)?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use assert_json_diff::assert_json_eq;
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn evaluates_basic_path() {
+        let compiled = compile(&"Patient".to_string()).unwrap();
+
+        let patient = json!({
+            "resourceType": "Patient"
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap().unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!({
+                "resourceType": "Patient"
+            })
+        );
+    }
 }
