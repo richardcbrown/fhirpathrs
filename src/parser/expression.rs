@@ -1,3 +1,9 @@
+// todo - split_at - panics
+
+use std::ops::Index;
+
+use regex::Match;
+
 use super::{
     invocation::{Invocation, InvocationTerm},
     traits::{Matches, Parse},
@@ -98,23 +104,132 @@ impl Parse for TermExpression {
     }
 }
 
-pub struct InvocationExpression {}
+pub enum ExpressionAndInvocation {
+    Expression(Expression),
+    Invocation(Invocation),
+}
+
+pub struct InvocationExpression {
+    pub children: Vec<Box<ExpressionAndInvocation>>,
+}
 
 impl Matches for InvocationExpression {
     fn matches(input: &String) -> bool {
-        let components: Vec<&str> = input.split('.').collect();
+        let last_index_of_invocation = input.rfind('.');
 
-        if components.len() != 2 {
-            return false;
+        match last_index_of_invocation {
+            Some(index) => {
+                let components = input.split_at(index);
+
+                Expression::matches(&components.0.to_string())
+                    && Invocation::matches(&components.1.to_string())
+            }
+            None => false,
         }
-
-        Expression::matches(&components[0].to_string())
-            && Invocation::matches(&components[1].to_string())
     }
 }
 
 impl Parse for InvocationExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        todo!()
+        let last_index_of_invocation = input.rfind('.');
+
+        match last_index_of_invocation {
+            Some(index) => {
+                let components = input.split_at(index);
+
+                let mut children = Vec::<Box<ExpressionAndInvocation>>::new();
+
+                let expression = Expression::parse(&components.0.to_string())?;
+                let invocation = Invocation::parse(&components.1.to_string())?;
+
+                children.push(Box::new(ExpressionAndInvocation::Expression(*expression)));
+                children.push(Box::new(ExpressionAndInvocation::Invocation(*invocation)));
+
+                Ok(Box::new(Self { children }))
+            }
+            None => Err(FhirpathError::ParserError {
+                msg: "Invalid InvocationExpression".to_string(),
+            }),
+        }
+    }
+}
+
+pub struct IndexerExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for IndexerExpression {
+    fn matches(input: &String) -> bool {
+        let closing_brace_index = input.rfind(']');
+        let opening_brace_index = input.rfind('[');
+
+        match (opening_brace_index, closing_brace_index) {
+            (Some(opening_brace), Some(_closing_brace)) => {
+                // @todo check closing brace is last element
+                let (first_expression, second_expression) = input.split_at(opening_brace);
+
+                let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+
+                return Expression::matches(&first_expression.to_string())
+                    && Expression::matches(&parsed_second_expression);
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Parse for IndexerExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let closing_brace_index = input.rfind(']');
+        let opening_brace_index = input.rfind('[');
+
+        match (opening_brace_index, closing_brace_index) {
+            (Some(opening_brace), Some(_closing_brace)) => {
+                // @todo check closing brace is last element
+                let (first_expression, second_expression) = input.split_at(opening_brace);
+
+                let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+
+                let mut children = Vec::<Box<Expression>>::new();
+
+                children.push(Box::new(*Expression::parse(&first_expression.to_string())?));
+                children.push(Box::new(*Expression::parse(&parsed_second_expression)?));
+
+                Ok(Box::new(Self { children }))
+            }
+            _ => Err(FhirpathError::ParserError {
+                msg: "Failed to parse IndexerExpression".to_string(),
+            }),
+        }
+    }
+}
+
+pub struct PolarityExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for PolarityExpression {
+    fn matches(input: &String) -> bool {
+        let mut chars = input.chars();
+
+        let first_char = chars.next();
+
+        match first_char {
+            Some('+') => return Expression::matches(&chars.as_str().to_string()),
+            Some('-') => return Expression::matches(&chars.as_str().to_string()),
+            _ => false,
+        }
+    }
+}
+
+impl Parse for PolarityExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let expression: String = input.chars().skip(1).collect();
+
+        let mut children = Vec::<Box<Expression>>::new();
+
+        children.push(Box::new(*Expression::parse(&expression)?));
+
+        Ok(Box::new(Self { children }))
     }
 }
