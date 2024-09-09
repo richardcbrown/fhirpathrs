@@ -25,6 +25,7 @@ dependencies = [
 name = "fhirpath"
 version = "0.1.0"
 dependencies = [
+ "aho-corasick",
  "assert-json-diff",
  "regex",
  "serde_json",

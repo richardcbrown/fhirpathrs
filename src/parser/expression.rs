@@ -1,8 +1,6 @@
 // todo - split_at - panics
 
-use std::ops::Index;
-
-use regex::Match;
+use aho_corasick::{AhoCorasick, MatchKind};
 
 use super::{
     invocation::{Invocation, InvocationTerm},
@@ -231,5 +229,58 @@ impl Parse for PolarityExpression {
         children.push(Box::new(*Expression::parse(&expression)?));
 
         Ok(Box::new(Self { children }))
+    }
+}
+
+pub struct SplitResult {
+    match_string: String,
+    first_segment: String,
+    second_segment: String,
+}
+
+fn split_at_string(input: &String, match_strings: &[&str]) -> Option<SplitResult> {
+    let ac = AhoCorasick::builder()
+        .match_kind(MatchKind::Standard)
+        .build(match_strings)
+        .unwrap();
+
+    let mut matches = vec![];
+
+    for mat in ac.find_iter(input) {
+        matches.push((mat.pattern(), mat.start(), mat.end()));
+    }
+
+    let last_match = matches.last();
+
+    match last_match {
+        Some((pattern, start, end)) => {
+            let first_segment = &input[..*start];
+            let second_segment = &input[*end..];
+
+            return Some(SplitResult {
+                first_segment: first_segment.to_string(),
+                second_segment: second_segment.to_string(),
+                match_string: match_strings[pattern.as_usize()].to_string(),
+            });
+        }
+        None => None,
+    }
+}
+
+static MULTIPLICATIVE_TERMS: [&str; 4] = ["*", "/", "div", "mod"];
+
+pub struct MultiplicativeExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for MultiplicativeExpression {
+    fn matches(input: &String) -> bool {
+        match split_at_string(input, &MULTIPLICATIVE_TERMS) {
+            Some(split_result) => {
+                Expression::matches(&split_result.first_segment)
+                    && Expression::matches(&split_result.second_segment)
+            }
+            None => false,
+        }
     }
 }
