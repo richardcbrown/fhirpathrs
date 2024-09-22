@@ -31,7 +31,7 @@ pub struct LiteralIdentifier {
     pub text: String,
 }
 
-static IDENTIFIER_REGEX: &str = "([A-Za-z]|'_')([A-Za-z0-9]|'_')*";
+static IDENTIFIER_REGEX: &str = "([A-Za-z]|_)([A-Za-z0-9]|_)*";
 
 impl Matches for LiteralIdentifier {
     fn matches(input: &String) -> bool {
@@ -61,18 +61,28 @@ pub struct LiteralContains {}
 pub struct LiteralIn {}
 
 pub enum TypeSpecifier {
-    QualifiedIdentifier(QualifiedIdentifier),
+    QualifiedIdentifier(Box<QualifiedIdentifier>),
 }
 
-pub enum QualifiedIdentifier {
-    LiteralQualifiedIdentifier(LiteralQualifiedIdentifier),
+impl Matches for TypeSpecifier {
+    fn matches(input: &String) -> bool {
+        QualifiedIdentifier::matches(input)
+    }
 }
 
-pub struct LiteralQualifiedIdentifier {
-    pub text: String,
+impl Parse for TypeSpecifier {
+    fn parse(input: &String) -> ParseResult<Box<Self>> {
+        Ok(Box::new(TypeSpecifier::QualifiedIdentifier(
+            QualifiedIdentifier::parse(input)?,
+        )))
+    }
 }
 
-impl Matches for LiteralQualifiedIdentifier {
+pub struct QualifiedIdentifier {
+    pub children: Vec<Box<Identifier>>,
+}
+
+impl Matches for QualifiedIdentifier {
     fn matches(input: &String) -> bool {
         let identifiers: Vec<&str> = input.split('.').collect();
 
@@ -82,10 +92,16 @@ impl Matches for LiteralQualifiedIdentifier {
     }
 }
 
-impl Parse for LiteralQualifiedIdentifier {
+impl Parse for QualifiedIdentifier {
     fn parse(input: &String) -> ParseResult<Box<Self>> {
-        Ok(Box::new(Self {
-            text: input.to_owned(),
-        }))
+        let mut children = Vec::<Box<Identifier>>::new();
+
+        let identifiers: Vec<&str> = input.split('.').collect();
+
+        for identifier in identifiers.iter() {
+            children.push(Identifier::parse(&identifier.to_string())?);
+        }
+
+        Ok(Box::new(Self { children }))
     }
 }

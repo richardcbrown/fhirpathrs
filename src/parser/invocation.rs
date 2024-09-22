@@ -1,6 +1,9 @@
+use regex::Regex;
+
 use crate::error::FhirpathError;
 
 use super::{
+    expression::Expression,
     identifier::Identifier,
     traits::{Matches, Parse},
 };
@@ -29,11 +32,19 @@ impl Parse for InvocationTerm {
 
 pub enum Invocation {
     MemberInvocation(Box<MemberInvocation>),
+    FunctionInvocation(Box<FunctionInvocation>),
+    ThisInvocation(Box<ThisInvocation>),
+    IndexInvocation(Box<IndexInvocation>),
+    TotalInvocation(Box<TotalInvocation>),
 }
 
 impl Matches for Invocation {
     fn matches(input: &String) -> bool {
-        return MemberInvocation::matches(input);
+        MemberInvocation::matches(input)
+            || FunctionInvocation::matches(input)
+            || ThisInvocation::matches(input)
+            || IndexInvocation::matches(input)
+            || TotalInvocation::matches(input)
     }
 }
 
@@ -42,6 +53,22 @@ impl Parse for Invocation {
         if MemberInvocation::matches(input) {
             return Ok(Box::new(Invocation::MemberInvocation(
                 MemberInvocation::parse(input)?,
+            )));
+        } else if FunctionInvocation::matches(input) {
+            return Ok(Box::new(Invocation::FunctionInvocation(
+                FunctionInvocation::parse(input)?,
+            )));
+        } else if ThisInvocation::matches(input) {
+            return Ok(Box::new(Invocation::ThisInvocation(ThisInvocation::parse(
+                input,
+            )?)));
+        } else if IndexInvocation::matches(input) {
+            return Ok(Box::new(Invocation::ThisInvocation(ThisInvocation::parse(
+                input,
+            )?)));
+        } else if TotalInvocation::matches(input) {
+            return Ok(Box::new(Invocation::TotalInvocation(
+                TotalInvocation::parse(input)?,
             )));
         }
 
@@ -70,5 +97,127 @@ impl Parse for MemberInvocation {
         children.push(identifier);
 
         Ok(Box::new(Self { children }))
+    }
+}
+
+pub struct ParamList {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for ParamList {
+    fn matches(input: &String) -> bool {
+        let expressions: Vec<&str> = input.split(',').collect();
+
+        expressions
+            .iter()
+            .all(|exp| Expression::matches(&exp.to_string()))
+    }
+}
+
+impl Parse for ParamList {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let expressions: Vec<&str> = input.split(',').collect();
+
+        let mut children = Vec::<Box<Expression>>::new();
+
+        for exp in expressions.iter() {
+            children.push(Expression::parse(&exp.to_string())?)
+        }
+
+        Ok(Box::new(Self { children }))
+    }
+}
+
+pub enum IdentifierAndParamList {
+    Identifier(Box<Identifier>),
+    ParamList(Box<ParamList>),
+}
+
+static FUNCTION_INVOCATION_REGEX: &str = r"([^()]*)\(([^()]*)\)";
+
+pub struct FunctionInvocation {
+    pub children: Vec<Box<IdentifierAndParamList>>,
+}
+
+impl Matches for FunctionInvocation {
+    fn matches(input: &String) -> bool {
+        let captures =
+            Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
+
+        Identifier::matches(&captures[0].to_string())
+            && ParamList::matches(&captures[1].to_string())
+    }
+}
+
+impl Parse for FunctionInvocation {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let mut children = Vec::<Box<IdentifierAndParamList>>::new();
+
+        let captures =
+            Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
+
+        children.push(Box::new(IdentifierAndParamList::Identifier(
+            Identifier::parse(&captures[0].to_string())?,
+        )));
+
+        children.push(Box::new(IdentifierAndParamList::ParamList(
+            ParamList::parse(&captures[1].to_string())?,
+        )));
+
+        Ok(Box::new(Self { children }))
+    }
+}
+
+pub struct ThisInvocation {
+    pub text: String,
+}
+
+impl Matches for ThisInvocation {
+    fn matches(input: &String) -> bool {
+        input.eq("$this")
+    }
+}
+
+impl Parse for ThisInvocation {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        Ok(Box::new(Self {
+            text: input.to_owned(),
+        }))
+    }
+}
+
+pub struct IndexInvocation {
+    pub text: String,
+}
+
+impl Matches for IndexInvocation {
+    fn matches(input: &String) -> bool {
+        input.eq("$index")
+    }
+}
+
+impl Parse for IndexInvocation {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        Ok(Box::new(Self {
+            text: input.to_owned(),
+        }))
+    }
+}
+
+pub struct TotalInvocation {
+    pub text: String,
+}
+
+impl Matches for TotalInvocation {
+    fn matches(input: &String) -> bool {
+        input.eq("$total")
+    }
+}
+
+impl Parse for TotalInvocation {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        Ok(Box::new(Self {
+            text: input.to_owned(),
+        }))
     }
 }

@@ -1,11 +1,12 @@
 // todo - split_at - panics
 
 use aho_corasick::{AhoCorasick, MatchKind};
+use regex::Regex;
 
 use super::{
-    identifier::TypeSpecifier,
+    identifier::{Identifier, TypeSpecifier},
     invocation::{Invocation, InvocationTerm},
-    literal::LiteralTerm,
+    literal::{LiteralTerm, StringLiteral},
     traits::{Matches, Parse},
 };
 use crate::error::FhirpathError;
@@ -48,7 +49,20 @@ pub enum Expression {
 
 impl Matches for Expression {
     fn matches(input: &String) -> bool {
-        TermExpression::matches(input) || InvocationExpression::matches(input)
+        TermExpression::matches(input)
+            || InvocationExpression::matches(input)
+            || IndexerExpression::matches(input)
+            || PolarityExpression::matches(input)
+            || MultiplicativeExpression::matches(input)
+            || AdditiveExpression::matches(input)
+            || UnionExpression::matches(input)
+            || InequalityExpression::matches(input)
+            || TypeExpression::matches(input)
+            || EqualityExpression::matches(input)
+            || MembershipExpression::matches(input)
+            || AndExpression::matches(input)
+            || OrExpression::matches(input)
+            || ImpliesExpression::matches(input)
     }
 }
 
@@ -70,6 +84,36 @@ impl Parse for Expression {
     }
 }
 
+pub struct ParenthesizedTerm {
+    pub children: Vec<Box<Expression>>,
+}
+
+static PARENTHESIZED_TERM_REGEX: &str = r"\((.*)\)";
+
+impl Matches for ParenthesizedTerm {
+    fn matches(input: &String) -> bool {
+        let capture_text = Regex::captures(&Regex::new(PARENTHESIZED_TERM_REGEX).unwrap(), input)
+            .unwrap()[0]
+            .to_string();
+
+        Expression::matches(&capture_text)
+    }
+}
+
+impl Parse for ParenthesizedTerm {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let capture_text = Regex::captures(&Regex::new(PARENTHESIZED_TERM_REGEX).unwrap(), input)
+            .unwrap()[0]
+            .to_string();
+
+        let mut children = Vec::<Box<Expression>>::new();
+
+        children.push(Expression::parse(&capture_text)?);
+
+        Ok(Box::new(Self { children }))
+    }
+}
+
 pub enum Term {
     InvocationTerm(Box<InvocationTerm>),
     LiteralTerm(Box<LiteralTerm>),
@@ -79,7 +123,7 @@ pub enum Term {
 
 impl Matches for Term {
     fn matches(input: &String) -> bool {
-        return InvocationTerm::matches(input);
+        return InvocationTerm::matches(input) || LiteralTerm::matches(input);
     }
 }
 
@@ -530,8 +574,8 @@ impl Parse for ImpliesExpression {
 }
 
 pub enum ExpressionAndTypeSpecifier {
-    Expression(Expression),
-    TypeSpecifier(TypeSpecifier),
+    Expression(Box<Expression>),
+    TypeSpecifier(Box<TypeSpecifier>),
 }
 
 static TYPE_TERMS: [&str; 2] = ["is", "as"];
@@ -546,10 +590,15 @@ fn parse_type_expression(
 ) -> super::traits::ParseResult<Vec<Box<ExpressionAndTypeSpecifier>>> {
     match split_at_string(input, &match_strings) {
         Some(split_result) => {
-            let mut children: Vec<Box<Expression>> = Vec::<Box<ExpressionAndTypeSpecifier>>::new();
+            let mut children: Vec<Box<ExpressionAndTypeSpecifier>> =
+                Vec::<Box<ExpressionAndTypeSpecifier>>::new();
 
-            children.push(Expression::parse(&split_result.first_segment)?);
-            children.push(TypeSpecifier::parse(&split_result.second_segment)?);
+            children.push(Box::new(ExpressionAndTypeSpecifier::Expression(
+                Expression::parse(&split_result.first_segment)?,
+            )));
+            children.push(Box::new(ExpressionAndTypeSpecifier::TypeSpecifier(
+                TypeSpecifier::parse(&split_result.second_segment)?,
+            )));
 
             Ok(children)
         }
@@ -560,5 +609,74 @@ fn parse_type_expression(
 }
 
 impl Matches for TypeExpression {
-    fn matches(input: &String) -> bool {}
+    fn matches(input: &String) -> bool {
+        match split_at_string(input, &TYPE_TERMS) {
+            Some(split_result) => {
+                Expression::matches(&split_result.first_segment)
+                    && TypeSpecifier::matches(&split_result.second_segment)
+            }
+            None => false,
+        }
+    }
+}
+
+impl Parse for TypeExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_type_expression(input, &TYPE_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match TypeExpression".to_string(),
+                })
+            })
+    }
+}
+
+pub enum IdentifierOrStringLiteral {
+    Identifier(Box<Identifier>),
+    StringLiteral(Box<StringLiteral>),
+}
+
+pub struct ExternalConstantTerm {
+    pub children: Vec<Box<IdentifierOrStringLiteral>>,
+}
+
+impl Matches for ExternalConstantTerm {
+    fn matches(input: &String) -> bool {
+        let mut chars = input.chars();
+
+        let first_char = chars.next();
+
+        match first_char {
+            Some('%') => {
+                return Identifier::matches(&chars.as_str().to_string())
+                    || StringLiteral::matches(&chars.as_str().to_string())
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Parse for ExternalConstantTerm {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let identifier_or_string: String = input.chars().skip(1).collect();
+
+        let mut children = Vec::<Box<IdentifierOrStringLiteral>>::new();
+
+        if Identifier::matches(&identifier_or_string) {
+            children.push(Box::new(IdentifierOrStringLiteral::Identifier(
+                Identifier::parse(&identifier_or_string)?,
+            )));
+        } else if StringLiteral::matches(&identifier_or_string) {
+            children.push(Box::new(IdentifierOrStringLiteral::StringLiteral(
+                StringLiteral::parse(&identifier_or_string)?,
+            )));
+        } else {
+            return Err(FhirpathError::ParserError {
+                msg: "Failed to parse ExternalConstantTerm".to_string(),
+            });
+        }
+
+        Ok(Box::new(Self { children }))
+    }
 }

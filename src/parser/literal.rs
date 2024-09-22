@@ -1,5 +1,7 @@
 use regex::Regex;
 
+use crate::error::FhirpathError;
+
 use super::traits::{Matches, Parse};
 
 static DATETIME_PRECISION_REGEX: &str = "year|month|week|day|hour|minute|second|millisecond";
@@ -10,6 +12,22 @@ pub struct LiteralTerm {
     pub children: Vec<Box<Literal>>,
 }
 
+impl Matches for LiteralTerm {
+    fn matches(input: &String) -> bool {
+        Literal::matches(input)
+    }
+}
+
+impl Parse for LiteralTerm {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        let mut children = Vec::<Box<Literal>>::new();
+
+        children.push(Literal::parse(input)?);
+
+        Ok(Box::new(Self { children }))
+    }
+}
+
 pub enum Literal {
     NullLiteral(Box<NullLiteral>),
     BooleanLiteral(Box<BooleanLiteral>),
@@ -18,6 +36,52 @@ pub enum Literal {
     DatetimeLiteral(Box<DatetimeLiteral>),
     TimeLiteral(Box<TimeLiteral>),
     QuantityLiteral(Box<QuantityLiteral>),
+}
+
+impl Matches for Literal {
+    fn matches(input: &String) -> bool {
+        NullLiteral::matches(input)
+            || BooleanLiteral::matches(input)
+            || StringLiteral::matches(input)
+            || NumberLiteral::matches(input)
+            || DatetimeLiteral::matches(input)
+            || TimeLiteral::matches(input)
+            || QuantityLiteral::matches(input)
+    }
+}
+
+impl Parse for Literal {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        if NullLiteral::matches(input) {
+            Ok(Box::new(Literal::NullLiteral(NullLiteral::parse(input)?)))
+        } else if BooleanLiteral::matches(input) {
+            Ok(Box::new(Literal::BooleanLiteral(BooleanLiteral::parse(
+                input,
+            )?)))
+        } else if StringLiteral::matches(input) {
+            Ok(Box::new(Literal::StringLiteral(StringLiteral::parse(
+                input,
+            )?)))
+        } else if NumberLiteral::matches(input) {
+            Ok(Box::new(Literal::NumberLiteral(NumberLiteral::parse(
+                input,
+            )?)))
+        } else if DatetimeLiteral::matches(input) {
+            Ok(Box::new(Literal::DatetimeLiteral(DatetimeLiteral::parse(
+                input,
+            )?)))
+        } else if TimeLiteral::matches(input) {
+            Ok(Box::new(Literal::TimeLiteral(TimeLiteral::parse(input)?)))
+        } else if QuantityLiteral::matches(input) {
+            Ok(Box::new(Literal::QuantityLiteral(QuantityLiteral::parse(
+                input,
+            )?)))
+        } else {
+            Err(FhirpathError::ParserError {
+                msg: "Failed to parse Literal".to_string(),
+            })
+        }
+    }
 }
 
 pub struct NullLiteral {
