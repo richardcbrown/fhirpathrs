@@ -4,6 +4,7 @@ use regex::Regex;
 
 pub enum Identifier {
     LiteralIdentifier(Box<LiteralIdentifier>),
+    LiteralDelimitedIdentifier(Box<LiteralDelimitedIdentifier>),
 }
 
 impl Matches for Identifier {
@@ -47,6 +48,8 @@ impl Parse for LiteralIdentifier {
     }
 }
 
+static DELIMITED_IDENTIFIER_REGEX: &str = "`(ESC | ~[\\`])*`";
+
 pub struct LiteralDelimitedIdentifier {}
 
 pub struct LiteralAs {}
@@ -56,3 +59,33 @@ pub struct LiteralIs {}
 pub struct LiteralContains {}
 
 pub struct LiteralIn {}
+
+pub enum TypeSpecifier {
+    QualifiedIdentifier(QualifiedIdentifier),
+}
+
+pub enum QualifiedIdentifier {
+    LiteralQualifiedIdentifier(LiteralQualifiedIdentifier),
+}
+
+pub struct LiteralQualifiedIdentifier {
+    pub text: String,
+}
+
+impl Matches for LiteralQualifiedIdentifier {
+    fn matches(input: &String) -> bool {
+        let identifiers: Vec<&str> = input.split('.').collect();
+
+        identifiers
+            .iter()
+            .all(|&identifier| Identifier::matches(&identifier.to_string()))
+    }
+}
+
+impl Parse for LiteralQualifiedIdentifier {
+    fn parse(input: &String) -> ParseResult<Box<Self>> {
+        Ok(Box::new(Self {
+            text: input.to_owned(),
+        }))
+    }
+}

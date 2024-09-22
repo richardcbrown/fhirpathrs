@@ -3,7 +3,9 @@
 use aho_corasick::{AhoCorasick, MatchKind};
 
 use super::{
+    identifier::TypeSpecifier,
     invocation::{Invocation, InvocationTerm},
+    literal::LiteralTerm,
     traits::{Matches, Parse},
 };
 use crate::error::FhirpathError;
@@ -30,6 +32,18 @@ use crate::error::FhirpathError;
 pub enum Expression {
     TermExpression(Box<TermExpression>),
     InvocationExpression(Box<InvocationExpression>),
+    IndexerExpression(Box<IndexerExpression>),
+    PolarityExpression(Box<PolarityExpression>),
+    MultiplicativeExpression(Box<MultiplicativeExpression>),
+    AdditiveExpression(Box<AdditiveExpression>),
+    UnionExpression(Box<UnionExpression>),
+    InequalityExpression(Box<InequalityExpression>),
+    TypeExpression(Box<TypeExpression>),
+    EqualityExpression(Box<EqualityExpression>),
+    MembershipExpression(Box<MembershipExpression>),
+    AndExpression(Box<AndExpression>),
+    OrExpression(Box<OrExpression>),
+    ImpliesExpression(Box<ImpliesExpression>),
 }
 
 impl Matches for Expression {
@@ -58,6 +72,9 @@ impl Parse for Expression {
 
 pub enum Term {
     InvocationTerm(Box<InvocationTerm>),
+    LiteralTerm(Box<LiteralTerm>),
+    ExternalConstantTerm(Box<ExternalConstantTerm>),
+    ParenthesizedTerm(Box<ParenthesizedTerm>),
 }
 
 impl Matches for Term {
@@ -269,18 +286,279 @@ fn split_at_string(input: &String, match_strings: &[&str]) -> Option<SplitResult
 
 static MULTIPLICATIVE_TERMS: [&str; 4] = ["*", "/", "div", "mod"];
 
+fn match_terms(input: &String, match_strings: &[&str]) -> bool {
+    match split_at_string(input, &match_strings) {
+        Some(split_result) => {
+            Expression::matches(&split_result.first_segment)
+                && Expression::matches(&split_result.second_segment)
+        }
+        None => false,
+    }
+}
+
+fn parse_terms(
+    input: &String,
+    match_strings: &[&str],
+) -> super::traits::ParseResult<Vec<Box<Expression>>> {
+    match split_at_string(input, &match_strings) {
+        Some(split_result) => {
+            let mut children: Vec<Box<Expression>> = Vec::<Box<Expression>>::new();
+
+            children.push(Expression::parse(&split_result.first_segment)?);
+            children.push(Expression::parse(&split_result.second_segment)?);
+
+            Ok(children)
+        }
+        None => Err(FhirpathError::ParserError {
+            msg: "Failed to parse terms".to_string(),
+        }),
+    }
+}
+
 pub struct MultiplicativeExpression {
     pub children: Vec<Box<Expression>>,
 }
 
 impl Matches for MultiplicativeExpression {
     fn matches(input: &String) -> bool {
-        match split_at_string(input, &MULTIPLICATIVE_TERMS) {
-            Some(split_result) => {
-                Expression::matches(&split_result.first_segment)
-                    && Expression::matches(&split_result.second_segment)
-            }
-            None => false,
-        }
+        match_terms(input, &MULTIPLICATIVE_TERMS)
     }
+}
+
+impl Parse for MultiplicativeExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &MULTIPLICATIVE_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match MultiplicativeExpression".to_string(),
+                })
+            })
+    }
+}
+
+static ADDITIVE_TERMS: [&str; 3] = ["+", "-", "&"];
+
+pub struct AdditiveExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for AdditiveExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &ADDITIVE_TERMS)
+    }
+}
+
+impl Parse for AdditiveExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &MULTIPLICATIVE_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match AdditiveExpression".to_string(),
+                })
+            })
+    }
+}
+
+static UNION_TERMS: [&str; 1] = ["|"];
+
+pub struct UnionExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for UnionExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &UNION_TERMS)
+    }
+}
+
+impl Parse for UnionExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &UNION_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match UnionExpression".to_string(),
+                })
+            })
+    }
+}
+
+static INEQUALITY_TERMS: [&str; 4] = ["<=", "<", ">", ">="];
+
+pub struct InequalityExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for InequalityExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &INEQUALITY_TERMS)
+    }
+}
+
+impl Parse for InequalityExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &INEQUALITY_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match InequalityExpression".to_string(),
+                })
+            })
+    }
+}
+
+static EQUALITY_TERMS: [&str; 4] = ["=", "~", "!=", "!~"];
+
+pub struct EqualityExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for EqualityExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &EQUALITY_TERMS)
+    }
+}
+
+impl Parse for EqualityExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &EQUALITY_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match EqualityExpression".to_string(),
+                })
+            })
+    }
+}
+
+static MEMBERSHIP_TERMS: [&str; 2] = ["in", "contains"];
+
+pub struct MembershipExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for MembershipExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &MEMBERSHIP_TERMS)
+    }
+}
+
+impl Parse for MembershipExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &MEMBERSHIP_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match MembershipExpression".to_string(),
+                })
+            })
+    }
+}
+
+static AND_TERMS: [&str; 1] = ["and"];
+
+pub struct AndExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for AndExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &AND_TERMS)
+    }
+}
+
+impl Parse for AndExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &AND_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match AndExpression".to_string(),
+                })
+            })
+    }
+}
+
+static OR_TERMS: [&str; 2] = ["or", "xor"];
+
+pub struct OrExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for OrExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &OR_TERMS)
+    }
+}
+
+impl Parse for OrExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &OR_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match OrExpression".to_string(),
+                })
+            })
+    }
+}
+
+static IMPLIES_TERMS: [&str; 1] = ["implies"];
+
+pub struct ImpliesExpression {
+    pub children: Vec<Box<Expression>>,
+}
+
+impl Matches for ImpliesExpression {
+    fn matches(input: &String) -> bool {
+        match_terms(input, &IMPLIES_TERMS)
+    }
+}
+
+impl Parse for ImpliesExpression {
+    fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        parse_terms(input, &IMPLIES_TERMS)
+            .and_then(|children| Ok(Box::new(Self { children })))
+            .or_else(|_e| {
+                Err(FhirpathError::ParserError {
+                    msg: "Failed to match ImpliesExpression".to_string(),
+                })
+            })
+    }
+}
+
+pub enum ExpressionAndTypeSpecifier {
+    Expression(Expression),
+    TypeSpecifier(TypeSpecifier),
+}
+
+static TYPE_TERMS: [&str; 2] = ["is", "as"];
+
+pub struct TypeExpression {
+    pub children: Vec<Box<ExpressionAndTypeSpecifier>>,
+}
+
+fn parse_type_expression(
+    input: &String,
+    match_strings: &[&str],
+) -> super::traits::ParseResult<Vec<Box<ExpressionAndTypeSpecifier>>> {
+    match split_at_string(input, &match_strings) {
+        Some(split_result) => {
+            let mut children: Vec<Box<Expression>> = Vec::<Box<ExpressionAndTypeSpecifier>>::new();
+
+            children.push(Expression::parse(&split_result.first_segment)?);
+            children.push(TypeSpecifier::parse(&split_result.second_segment)?);
+
+            Ok(children)
+        }
+        None => Err(FhirpathError::ParserError {
+            msg: "Failed to parse terms".to_string(),
+        }),
+    }
+}
+
+impl Matches for TypeExpression {
+    fn matches(input: &String) -> bool {}
 }
