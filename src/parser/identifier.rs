@@ -5,6 +5,10 @@ use regex::Regex;
 pub enum Identifier {
     LiteralIdentifier(Box<LiteralIdentifier>),
     LiteralDelimitedIdentifier(Box<LiteralDelimitedIdentifier>),
+    LiteralAs(Box<LiteralAs>),
+    LiteralIs(Box<LiteralIs>),
+    LiteralContains(Box<LiteralContains>),
+    LiteralIn(Box<LiteralIn>),
 }
 
 impl Matches for Identifier {
@@ -48,7 +52,19 @@ impl Parse for LiteralIdentifier {
     }
 }
 
-static DELIMITED_IDENTIFIER_REGEX: &str = "`(ESC | ~[\\`])*`";
+static UNICODE_REGEX: &str = "u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]";
+
+static ESC_REGEX: &str = "\\\\([`'\\/fnrt]|UNICODE)";
+
+static DELIMITED_IDENTIFIER_REGEX: &str = "`(ESC|^[\\`])*`";
+
+fn esc_regex() -> String {
+    ESC_REGEX.replace("UNICODE", UNICODE_REGEX)
+}
+
+fn delimited_identifier_regex() -> String {
+    DELIMITED_IDENTIFIER_REGEX.replace("ESC", esc_regex().as_str())
+}
 
 pub struct LiteralDelimitedIdentifier {}
 

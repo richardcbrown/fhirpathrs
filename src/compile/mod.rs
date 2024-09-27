@@ -1,10 +1,12 @@
+pub mod invocation_table;
+
 use serde_json::Value;
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{Expression, InvocationExpression, Term, TermExpression};
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
-use crate::parser::invocation::{Invocation, InvocationTerm, MemberInvocation};
+use crate::parser::invocation::{FunctionInvocation, Invocation, InvocationTerm, MemberInvocation, ParamList};
 use crate::parser::traits::Parse;
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
@@ -70,10 +72,31 @@ impl Evaluate for MemberInvocation {
     }
 }
 
+impl Evaluate for ParamList {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        
+    }
+}
+
+impl Evaluate for FunctionInvocation {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        // @TODO - Child of FunctionInvocation should be "Functn" in js fhirpath
+        if self.children.len() != 2 {
+            Err(FhirpathError::CompileError { msg: "FunctionInvocation should have 2 child elements".to_string() })
+        }
+
+        let function_name = self.children[0];
+        let param_list = self.children[1];
+
+             
+    }
+}
+
 impl Evaluate for Invocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
+            Invocation::FunctionInvocation(exp) => exp.evaluate(input),
         }
     }
 }
