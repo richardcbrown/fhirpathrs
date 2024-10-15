@@ -7,10 +7,12 @@ use serde_json::Value;
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
-use crate::parser::expression::{Expression, InvocationExpression, Term, TermExpression};
+use crate::parser::expression::{
+    EqualityExpression, Expression, InvocationExpression, Term, TermExpression,
+};
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
-    self, FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
+    FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
 use crate::parser::traits::Parse;
@@ -188,12 +190,40 @@ impl Evaluate for InvocationExpression {
     }
 }
 
+impl Evaluate for EqualityExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "EqualityExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invocation_table()
+            .get(&self.op)
+            .ok_or(FhirpathError::CompileError {
+                msg: format!("No such operator {}", self.op),
+            })
+            .and_then(|function| function(input, &self.children))
+    }
+}
+
 impl Evaluate for Expression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Expression::TermExpression(exp) => exp.evaluate(input),
             Expression::InvocationExpression(exp) => exp.evaluate(input),
-            _ => todo!(),
+            Expression::IndexerExpression(exp) => todo!(),
+            Expression::PolarityExpression(exp) => todo!(),
+            Expression::MultiplicativeExpression(exp) => todo!(),
+            Expression::AdditiveExpression(exp) => todo!(),
+            Expression::UnionExpression(exp) => todo!(),
+            Expression::InequalityExpression(exp) => todo!(),
+            Expression::TypeExpression(exp) => todo!(),
+            Expression::EqualityExpression(exp) => exp.evaluate(input),
+            Expression::MembershipExpression(exp) => todo!(),
+            Expression::AndExpression(exp) => todo!(),
+            Expression::OrExpression(exp) => todo!(),
+            Expression::ImpliesExpression(exp) => todo!(),
         }
     }
 }

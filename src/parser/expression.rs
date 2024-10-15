@@ -340,10 +340,15 @@ fn match_terms(input: &String, match_strings: &[&str]) -> bool {
     }
 }
 
+struct OpParsedTerms {
+    children: Vec<Box<Expression>>,
+    op: String,
+}
+
 fn parse_terms(
     input: &String,
     match_strings: &[&str],
-) -> super::traits::ParseResult<Vec<Box<Expression>>> {
+) -> super::traits::ParseResult<OpParsedTerms> {
     match split_at_string(input, &match_strings) {
         Some(split_result) => {
             let mut children: Vec<Box<Expression>> = Vec::<Box<Expression>>::new();
@@ -351,7 +356,10 @@ fn parse_terms(
             children.push(Expression::parse(&split_result.first_segment)?);
             children.push(Expression::parse(&split_result.second_segment)?);
 
-            Ok(children)
+            Ok(OpParsedTerms {
+                children,
+                op: split_result.match_string,
+            })
         }
         None => Err(FhirpathError::ParserError {
             msg: "Failed to parse terms".to_string(),
@@ -361,6 +369,7 @@ fn parse_terms(
 
 pub struct MultiplicativeExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for MultiplicativeExpression {
@@ -372,7 +381,12 @@ impl Matches for MultiplicativeExpression {
 impl Parse for MultiplicativeExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &MULTIPLICATIVE_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match MultiplicativeExpression".to_string(),
@@ -385,6 +399,7 @@ static ADDITIVE_TERMS: [&str; 3] = ["+", "-", "&"];
 
 pub struct AdditiveExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for AdditiveExpression {
@@ -396,7 +411,12 @@ impl Matches for AdditiveExpression {
 impl Parse for AdditiveExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &MULTIPLICATIVE_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match AdditiveExpression".to_string(),
@@ -409,6 +429,7 @@ static UNION_TERMS: [&str; 1] = ["|"];
 
 pub struct UnionExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for UnionExpression {
@@ -420,7 +441,12 @@ impl Matches for UnionExpression {
 impl Parse for UnionExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &UNION_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match UnionExpression".to_string(),
@@ -433,6 +459,7 @@ static INEQUALITY_TERMS: [&str; 4] = ["<=", "<", ">", ">="];
 
 pub struct InequalityExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for InequalityExpression {
@@ -444,7 +471,12 @@ impl Matches for InequalityExpression {
 impl Parse for InequalityExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &INEQUALITY_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match InequalityExpression".to_string(),
@@ -457,6 +489,7 @@ static EQUALITY_TERMS: [&str; 4] = ["=", "~", "!=", "!~"];
 
 pub struct EqualityExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for EqualityExpression {
@@ -468,7 +501,12 @@ impl Matches for EqualityExpression {
 impl Parse for EqualityExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &EQUALITY_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match EqualityExpression".to_string(),
@@ -481,6 +519,7 @@ static MEMBERSHIP_TERMS: [&str; 2] = ["in", "contains"];
 
 pub struct MembershipExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for MembershipExpression {
@@ -492,7 +531,12 @@ impl Matches for MembershipExpression {
 impl Parse for MembershipExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &MEMBERSHIP_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match MembershipExpression".to_string(),
@@ -505,6 +549,7 @@ static AND_TERMS: [&str; 1] = ["and"];
 
 pub struct AndExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for AndExpression {
@@ -516,7 +561,12 @@ impl Matches for AndExpression {
 impl Parse for AndExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &AND_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match AndExpression".to_string(),
@@ -529,6 +579,7 @@ static OR_TERMS: [&str; 2] = ["or", "xor"];
 
 pub struct OrExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for OrExpression {
@@ -540,7 +591,12 @@ impl Matches for OrExpression {
 impl Parse for OrExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &OR_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match OrExpression".to_string(),
@@ -553,6 +609,7 @@ static IMPLIES_TERMS: [&str; 1] = ["implies"];
 
 pub struct ImpliesExpression {
     pub children: Vec<Box<Expression>>,
+    pub op: String,
 }
 
 impl Matches for ImpliesExpression {
@@ -564,7 +621,12 @@ impl Matches for ImpliesExpression {
 impl Parse for ImpliesExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         parse_terms(input, &IMPLIES_TERMS)
-            .and_then(|children| Ok(Box::new(Self { children })))
+            .and_then(|opt| {
+                Ok(Box::new(Self {
+                    children: opt.children,
+                    op: opt.op,
+                }))
+            })
             .or_else(|_e| {
                 Err(FhirpathError::ParserError {
                     msg: "Failed to match ImpliesExpression".to_string(),
