@@ -1,12 +1,18 @@
 pub mod invocation_table;
 
+use std::ops::Deref;
+
+use invocation_table::invocation_table;
 use serde_json::Value;
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{Expression, InvocationExpression, Term, TermExpression};
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
-use crate::parser::invocation::{FunctionInvocation, Invocation, InvocationTerm, MemberInvocation, ParamList};
+use crate::parser::invocation::{
+    self, FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
+    ParamList,
+};
 use crate::parser::traits::Parse;
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
@@ -74,7 +80,7 @@ impl Evaluate for MemberInvocation {
 
 impl Evaluate for ParamList {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        
+        todo!()
     }
 }
 
@@ -82,13 +88,40 @@ impl Evaluate for FunctionInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         // @TODO - Child of FunctionInvocation should be "Functn" in js fhirpath
         if self.children.len() != 2 {
-            Err(FhirpathError::CompileError { msg: "FunctionInvocation should have 2 child elements".to_string() })
+            return Err(FhirpathError::CompileError {
+                msg: "FunctionInvocation should have 2 child elements".to_string(),
+            });
         }
 
-        let function_name = self.children[0];
-        let param_list = self.children[1];
+        let function_name_child = self.children[0].deref();
+        let param_list_child = self.children[1].deref();
 
-             
+        if let IdentifierAndParamList::ParamList(param_list) = param_list_child {
+            if let IdentifierAndParamList::Identifier(identifier) = function_name_child {
+                let function_name = identifier.evaluate(input)?.data.and_then(|val| match val {
+                    Value::String(string) => Some(string),
+                    _ => None,
+                });
+
+                Ok(function_name
+                    .and_then(|fnc| {
+                        let str_fnc = fnc.clone();
+                        Some(invocation_table().get(&str_fnc).unwrap().clone())
+                    })
+                    .ok_or(FhirpathError::CompileError {
+                        msg: "No method in invocation table".to_string(),
+                    })
+                    .and_then(|invocation| invocation(input, &param_list.children))?)
+            } else {
+                return Err(FhirpathError::CompileError {
+                    msg: "Second child of FunctionInvocation should be function params".to_string(),
+                });
+            }
+        } else {
+            return Err(FhirpathError::CompileError {
+                msg: "First child of FunctionInvocation should be function name".to_string(),
+            });
+        }
     }
 }
 
@@ -97,6 +130,7 @@ impl Evaluate for Invocation {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
+            _ => todo!(),
         }
     }
 }
@@ -114,6 +148,7 @@ impl Evaluate for Identifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
+            _ => todo!(),
         }
     }
 }
@@ -132,6 +167,7 @@ impl Evaluate for Term {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Term::InvocationTerm(exp) => exp.evaluate(input),
+            _ => todo!(),
         }
     }
 }
@@ -157,6 +193,7 @@ impl Evaluate for Expression {
         match self {
             Expression::TermExpression(exp) => exp.evaluate(input),
             Expression::InvocationExpression(exp) => exp.evaluate(input),
+            _ => todo!(),
         }
     }
 }
