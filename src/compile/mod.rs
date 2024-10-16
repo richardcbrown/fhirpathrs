@@ -1,9 +1,11 @@
+pub mod equal;
 pub mod invocation_table;
+pub mod where_check;
 
 use std::ops::Deref;
 
 use invocation_table::invocation_table;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
@@ -15,6 +17,7 @@ use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
+use crate::parser::literal::{Literal, LiteralTerm, StringLiteral};
 use crate::parser::traits::Parse;
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
@@ -30,6 +33,29 @@ pub struct CompiledPath {
 
 pub trait Evaluate {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>>;
+}
+
+impl Evaluate for StringLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        Ok(ResourceNode {
+            parent_node: Some(Box::new(input)),
+            data: Some(json!(self.text)),
+        })
+    }
+}
+
+impl Evaluate for Literal {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        match self {
+            Literal::BooleanLiteral(exp) => todo!(),
+            Literal::DatetimeLiteral(exp) => todo!(),
+            Literal::NullLiteral(exp) => todo!(),
+            Literal::NumberLiteral(exp) => todo!(),
+            Literal::QuantityLiteral(exp) => todo!(),
+            Literal::StringLiteral(exp) => exp.evaluate(input),
+            Literal::TimeLiteral(exp) => todo!(),
+        }
+    }
 }
 
 impl Evaluate for MemberInvocation {
@@ -57,7 +83,11 @@ impl Evaluate for MemberInvocation {
             });
         }
 
-        let key_value = key.unwrap();
+        let key_value = match key.unwrap() {
+            Value::String(str) => str,
+            _ => "".to_string(),
+        };
+
         let input_data = input.data.as_ref().unwrap();
 
         let node_resource_type = input_data.get("resourceType");
@@ -70,12 +100,30 @@ impl Evaluate for MemberInvocation {
             });
         }
 
+        print!("data");
+        println!("{}", input_data);
+        println!("{:?}", &key_value.to_string());
+
         // Else look for a child property of the resource that matches the key
-        let child_data = input_data.get(key_value.to_string());
+        let child_data = match input_data {
+            Value::Object(obj) => obj.get(&key_value.to_string()).cloned(),
+            Value::Array(array) => {
+                let values = array
+                    .to_owned()
+                    .into_iter()
+                    .filter_map(|item| item.get(&key_value.to_string()).cloned())
+                    .collect();
+
+                Some(Value::Array(values))
+            }
+            _ => None,
+        };
+
+        println!("{:?}", child_data);
 
         Ok(ResourceNode {
             parent_node: Some(Box::new(input)),
-            data: child_data.cloned(),
+            data: child_data,
         })
     }
 }
@@ -165,11 +213,30 @@ impl Evaluate for InvocationTerm {
     }
 }
 
+impl Evaluate for LiteralTerm {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 1 {
+            return Err(FhirpathError::CompileError {
+                msg: "LiteralTerm should have exactly one child".to_string(),
+            });
+        }
+
+        let first = &self.children[0];
+
+        Ok(ResourceNode {
+            parent_node: Some(Box::new(input)),
+            data: first.evaluate(input)?.data,
+        })
+    }
+}
+
 impl Evaluate for Term {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Term::InvocationTerm(exp) => exp.evaluate(input),
-            _ => todo!(),
+            Term::LiteralTerm(exp) => exp.evaluate(input),
+            Term::ExternalConstantTerm(exp) => todo!(),
+            Term::ParenthesizedTerm(exp) => todo!(),
         }
     }
 }
@@ -280,5 +347,45 @@ mod tests {
                 "resourceType": "Patient"
             })
         );
+    }
+
+    #[test]
+    fn evaluate_name_path() {
+        let compiled = compile(&"Patient.name".to_string()).unwrap();
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": "test"
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": "test"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_where_path() {
+        let compiled = compile(&"Patient.name.where(use = 'usual').given".to_string()).unwrap();
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": "test"
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!("test"));
     }
 }
