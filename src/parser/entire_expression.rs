@@ -3,6 +3,7 @@ use super::{
     traits::{Parse, ParseResult},
 };
 
+#[derive(Debug)]
 pub struct EntireExpression {
     pub children: Vec<Box<Expression>>,
 }

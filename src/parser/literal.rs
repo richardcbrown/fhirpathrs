@@ -8,6 +8,7 @@ static DATETIME_PRECISION_REGEX: &str = "year|month|week|day|hour|minute|second|
 static PLURAL_DATETIME_PRECISION_REGEX: &str =
     "years|months|weeks|days|hours|minutes|seconds|milliseconds";
 
+#[derive(Debug)]
 pub struct LiteralTerm {
     pub children: Vec<Box<Literal>>,
 }
@@ -28,6 +29,7 @@ impl Parse for LiteralTerm {
     }
 }
 
+#[derive(Debug)]
 pub enum Literal {
     NullLiteral(Box<NullLiteral>),
     BooleanLiteral(Box<BooleanLiteral>),
@@ -84,6 +86,7 @@ impl Parse for Literal {
     }
 }
 
+#[derive(Debug)]
 pub struct NullLiteral {
     pub text: String,
 }
@@ -102,6 +105,7 @@ impl Parse for NullLiteral {
     }
 }
 
+#[derive(Debug)]
 pub struct BooleanLiteral {
     pub text: String,
 }
@@ -122,6 +126,7 @@ impl Parse for BooleanLiteral {
 
 static STRING_REGEX: &str = "\'([^']*)\'";
 
+#[derive(Debug)]
 pub struct StringLiteral {
     pub text: String,
 }
@@ -143,6 +148,7 @@ impl Parse for StringLiteral {
 
 static NUMBER_REGEX: &str = "[0-9]+(\\.[0-9]+)?";
 
+#[derive(Debug)]
 pub struct NumberLiteral {
     pub text: String,
 }
@@ -165,6 +171,7 @@ impl Parse for NumberLiteral {
 static TIME_FORMAT: &str =
     "[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?";
 
+#[derive(Debug)]
 pub struct DatetimeLiteral {
     pub text: String,
 }
@@ -205,6 +212,7 @@ impl Parse for DatetimeLiteral {
     }
 }
 
+#[derive(Debug)]
 pub struct TimeLiteral {
     pub text: String,
 }
@@ -231,6 +239,7 @@ impl Parse for TimeLiteral {
     }
 }
 
+#[derive(Debug)]
 pub struct QuantityLiteral {
     pub text: String,
     pub unit: Option<String>,

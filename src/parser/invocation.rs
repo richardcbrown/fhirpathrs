@@ -8,6 +8,7 @@ use super::{
     traits::{Matches, Parse},
 };
 
+#[derive(Debug)]
 pub struct InvocationTerm {
     pub children: Vec<Box<Invocation>>,
 }
@@ -30,6 +31,7 @@ impl Parse for InvocationTerm {
     }
 }
 
+#[derive(Debug)]
 pub enum Invocation {
     MemberInvocation(Box<MemberInvocation>),
     FunctionInvocation(Box<FunctionInvocation>),
@@ -78,6 +80,7 @@ impl Parse for Invocation {
     }
 }
 
+#[derive(Debug)]
 pub struct MemberInvocation {
     pub children: Vec<Box<Identifier>>,
 }
@@ -100,17 +103,24 @@ impl Parse for MemberInvocation {
     }
 }
 
+fn filter_ignored_data(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+#[derive(Debug)]
 pub struct ParamList {
     pub children: Vec<Box<Expression>>,
 }
 
 impl Matches for ParamList {
     fn matches(input: &String) -> bool {
-        let expressions: Vec<&str> = input.split(',').collect();
+        let expressions: Vec<String> = input.split(',').map(|s| filter_ignored_data(s)).collect();
 
-        expressions
-            .iter()
-            .all(|exp| Expression::matches(&exp.to_string()))
+        expressions.iter().all(|exp| {
+            dbg!(exp);
+
+            Expression::matches(&exp.to_string())
+        })
     }
 }
 
@@ -128,6 +138,7 @@ impl Parse for ParamList {
     }
 }
 
+#[derive(Debug)]
 pub enum IdentifierAndParamList {
     Identifier(Box<Identifier>),
     ParamList(Box<ParamList>),
@@ -135,17 +146,22 @@ pub enum IdentifierAndParamList {
 
 static FUNCTION_INVOCATION_REGEX: &str = r"([^()]*)\(([^()]*)\)";
 
+#[derive(Debug)]
 pub struct FunctionInvocation {
     pub children: Vec<Box<IdentifierAndParamList>>,
 }
 
 impl Matches for FunctionInvocation {
     fn matches(input: &String) -> bool {
-        let captures =
-            Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
+        let captures = Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input);
 
-        Identifier::matches(&captures[0].to_string())
-            && ParamList::matches(&captures[1].to_string())
+        match captures {
+            Some(capture) => {
+                return Identifier::matches(&capture[1].to_string())
+                    && ParamList::matches(&capture[2].to_string());
+            }
+            None => false,
+        }
     }
 }
 
@@ -168,6 +184,7 @@ impl Parse for FunctionInvocation {
     }
 }
 
+#[derive(Debug)]
 pub struct ThisInvocation {
     pub text: String,
 }
@@ -186,6 +203,7 @@ impl Parse for ThisInvocation {
     }
 }
 
+#[derive(Debug)]
 pub struct IndexInvocation {
     pub text: String,
 }
@@ -204,6 +222,7 @@ impl Parse for IndexInvocation {
     }
 }
 
+#[derive(Debug)]
 pub struct TotalInvocation {
     pub text: String,
 }

@@ -2,6 +2,7 @@ use super::traits::{Matches, Parse, ParseResult};
 use crate::error::FhirpathError;
 use regex::Regex;
 
+#[derive(Debug)]
 pub enum Identifier {
     LiteralIdentifier(Box<LiteralIdentifier>),
     LiteralDelimitedIdentifier(Box<LiteralDelimitedIdentifier>),
@@ -31,11 +32,12 @@ impl Parse for Identifier {
     }
 }
 
+#[derive(Debug)]
 pub struct LiteralIdentifier {
     pub text: String,
 }
 
-static IDENTIFIER_REGEX: &str = "([A-Za-z]|_)([A-Za-z0-9]|_)*";
+static IDENTIFIER_REGEX: &str = "^([A-Za-z]|_)([A-Za-z0-9]|_)*$";
 
 impl Matches for LiteralIdentifier {
     fn matches(input: &String) -> bool {
@@ -66,16 +68,22 @@ fn delimited_identifier_regex() -> String {
     DELIMITED_IDENTIFIER_REGEX.replace("ESC", esc_regex().as_str())
 }
 
+#[derive(Debug)]
 pub struct LiteralDelimitedIdentifier {}
 
+#[derive(Debug)]
 pub struct LiteralAs {}
 
+#[derive(Debug)]
 pub struct LiteralIs {}
 
+#[derive(Debug)]
 pub struct LiteralContains {}
 
+#[derive(Debug)]
 pub struct LiteralIn {}
 
+#[derive(Debug)]
 pub enum TypeSpecifier {
     QualifiedIdentifier(Box<QualifiedIdentifier>),
 }
@@ -94,6 +102,7 @@ impl Parse for TypeSpecifier {
     }
 }
 
+#[derive(Debug)]
 pub struct QualifiedIdentifier {
     pub children: Vec<Box<Identifier>>,
 }

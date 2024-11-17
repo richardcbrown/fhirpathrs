@@ -30,6 +30,7 @@ use crate::error::FhirpathError;
  *   //| (IDENTIFIER)? '=>' expression                    #lambdaExpression
  *   ;
  */
+#[derive(Debug)]
 pub enum Expression {
     TermExpression(Box<TermExpression>),
     InvocationExpression(Box<InvocationExpression>),
@@ -84,6 +85,7 @@ impl Parse for Expression {
     }
 }
 
+#[derive(Debug)]
 pub struct ParenthesizedTerm {
     pub children: Vec<Box<Expression>>,
 }
@@ -114,6 +116,7 @@ impl Parse for ParenthesizedTerm {
     }
 }
 
+#[derive(Debug)]
 pub enum Term {
     InvocationTerm(Box<InvocationTerm>),
     LiteralTerm(Box<LiteralTerm>),
@@ -123,7 +126,10 @@ pub enum Term {
 
 impl Matches for Term {
     fn matches(input: &String) -> bool {
-        return InvocationTerm::matches(input) || LiteralTerm::matches(input);
+        return InvocationTerm::matches(input)
+            || LiteralTerm::matches(input)
+            || ExternalConstantTerm::matches(input)
+            || ParenthesizedTerm::matches(input);
     }
 }
 
@@ -131,6 +137,16 @@ impl Parse for Term {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         if InvocationTerm::matches(input) {
             return Ok(Box::new(Term::InvocationTerm(InvocationTerm::parse(
+                input,
+            )?)));
+        } else if LiteralTerm::matches(input) {
+            return Ok(Box::new(Term::LiteralTerm(LiteralTerm::parse(input)?)));
+        } else if ExternalConstantTerm::matches(input) {
+            return Ok(Box::new(Term::ExternalConstantTerm(
+                ExternalConstantTerm::parse(input)?,
+            )));
+        } else if ParenthesizedTerm::matches(input) {
+            return Ok(Box::new(Term::ParenthesizedTerm(ParenthesizedTerm::parse(
                 input,
             )?)));
         }
@@ -141,13 +157,14 @@ impl Parse for Term {
     }
 }
 
+#[derive(Debug)]
 pub struct TermExpression {
     pub children: Vec<Box<Term>>,
 }
 
 impl Matches for TermExpression {
     fn matches(input: &String) -> bool {
-        return InvocationTerm::matches(input);
+        Term::matches(input)
     }
 }
 
@@ -163,11 +180,13 @@ impl Parse for TermExpression {
     }
 }
 
+#[derive(Debug)]
 pub enum ExpressionAndInvocation {
     Expression(Expression),
     Invocation(Invocation),
 }
 
+#[derive(Debug)]
 pub struct InvocationExpression {
     pub children: Vec<Box<ExpressionAndInvocation>>,
 }
@@ -181,7 +200,7 @@ impl Matches for InvocationExpression {
                 let components = input.split_at(index);
 
                 Expression::matches(&components.0.to_string())
-                    && Invocation::matches(&components.1.to_string())
+                    && Invocation::matches(&components.1.to_string().replacen(".", "", 1))
             }
             None => false,
         }
@@ -199,7 +218,7 @@ impl Parse for InvocationExpression {
                 let mut children = Vec::<Box<ExpressionAndInvocation>>::new();
 
                 let expression = Expression::parse(&components.0.to_string())?;
-                let invocation = Invocation::parse(&components.1.to_string())?;
+                let invocation = Invocation::parse(&components.1.to_string().replacen(".", "", 1))?;
 
                 children.push(Box::new(ExpressionAndInvocation::Expression(*expression)));
                 children.push(Box::new(ExpressionAndInvocation::Invocation(*invocation)));
@@ -213,6 +232,7 @@ impl Parse for InvocationExpression {
     }
 }
 
+#[derive(Debug)]
 pub struct IndexerExpression {
     pub children: Vec<Box<Expression>>,
 }
@@ -263,6 +283,7 @@ impl Parse for IndexerExpression {
     }
 }
 
+#[derive(Debug)]
 pub struct PolarityExpression {
     pub children: Vec<Box<Expression>>,
 }
@@ -293,6 +314,7 @@ impl Parse for PolarityExpression {
     }
 }
 
+#[derive(Debug)]
 pub struct SplitResult {
     match_string: String,
     first_segment: String,
@@ -340,6 +362,7 @@ fn match_terms(input: &String, match_strings: &[&str]) -> bool {
     }
 }
 
+#[derive(Debug)]
 struct OpParsedTerms {
     children: Vec<Box<Expression>>,
     op: String,
@@ -367,6 +390,7 @@ fn parse_terms(
     }
 }
 
+#[derive(Debug)]
 pub struct MultiplicativeExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -397,6 +421,7 @@ impl Parse for MultiplicativeExpression {
 
 static ADDITIVE_TERMS: [&str; 3] = ["+", "-", "&"];
 
+#[derive(Debug)]
 pub struct AdditiveExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -427,6 +452,7 @@ impl Parse for AdditiveExpression {
 
 static UNION_TERMS: [&str; 1] = ["|"];
 
+#[derive(Debug)]
 pub struct UnionExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -457,6 +483,7 @@ impl Parse for UnionExpression {
 
 static INEQUALITY_TERMS: [&str; 4] = ["<=", "<", ">", ">="];
 
+#[derive(Debug)]
 pub struct InequalityExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -487,6 +514,7 @@ impl Parse for InequalityExpression {
 
 static EQUALITY_TERMS: [&str; 4] = ["=", "~", "!=", "!~"];
 
+#[derive(Debug)]
 pub struct EqualityExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -517,6 +545,7 @@ impl Parse for EqualityExpression {
 
 static MEMBERSHIP_TERMS: [&str; 2] = ["in", "contains"];
 
+#[derive(Debug)]
 pub struct MembershipExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -547,6 +576,7 @@ impl Parse for MembershipExpression {
 
 static AND_TERMS: [&str; 1] = ["and"];
 
+#[derive(Debug)]
 pub struct AndExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -577,6 +607,7 @@ impl Parse for AndExpression {
 
 static OR_TERMS: [&str; 2] = ["or", "xor"];
 
+#[derive(Debug)]
 pub struct OrExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -607,6 +638,7 @@ impl Parse for OrExpression {
 
 static IMPLIES_TERMS: [&str; 1] = ["implies"];
 
+#[derive(Debug)]
 pub struct ImpliesExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
@@ -635,6 +667,7 @@ impl Parse for ImpliesExpression {
     }
 }
 
+#[derive(Debug)]
 pub enum ExpressionAndTypeSpecifier {
     Expression(Box<Expression>),
     TypeSpecifier(Box<TypeSpecifier>),
@@ -642,6 +675,7 @@ pub enum ExpressionAndTypeSpecifier {
 
 static TYPE_TERMS: [&str; 2] = ["is", "as"];
 
+#[derive(Debug)]
 pub struct TypeExpression {
     pub children: Vec<Box<ExpressionAndTypeSpecifier>>,
 }
@@ -694,11 +728,13 @@ impl Parse for TypeExpression {
     }
 }
 
+#[derive(Debug)]
 pub enum IdentifierOrStringLiteral {
     Identifier(Box<Identifier>),
     StringLiteral(Box<StringLiteral>),
 }
 
+#[derive(Debug)]
 pub struct ExternalConstantTerm {
     pub children: Vec<Box<IdentifierOrStringLiteral>>,
 }

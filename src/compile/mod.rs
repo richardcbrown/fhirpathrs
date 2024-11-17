@@ -10,7 +10,8 @@ use serde_json::{json, Value};
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
-    EqualityExpression, Expression, InvocationExpression, Term, TermExpression,
+    EqualityExpression, Expression, ExpressionAndInvocation, InvocationExpression, Term,
+    TermExpression,
 };
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
@@ -22,6 +23,7 @@ use crate::parser::traits::Parse;
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
 
+#[derive(Clone)]
 pub struct ResourceNode<'a> {
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
     pub data: Option<Value>,
@@ -108,13 +110,22 @@ impl Evaluate for MemberInvocation {
         let child_data = match input_data {
             Value::Object(obj) => obj.get(&key_value.to_string()).cloned(),
             Value::Array(array) => {
-                let values = array
+                let values: Vec<Value> = array
                     .to_owned()
                     .into_iter()
                     .filter_map(|item| item.get(&key_value.to_string()).cloned())
                     .collect();
 
-                Some(Value::Array(values))
+                dbg!(&values);
+
+                let mut flattened_values: Vec<Value> = vec![];
+
+                values.iter().for_each(|val| match val {
+                    Value::Array(array_val) => flattened_values.append(&mut array_val.clone()),
+                    val => flattened_values.push(val.clone()),
+                });
+
+                Some(Value::Array(flattened_values))
             }
             _ => None,
         };
@@ -251,9 +262,30 @@ impl Evaluate for TermExpression {
     }
 }
 
+impl Evaluate for ExpressionAndInvocation {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        match self {
+            ExpressionAndInvocation::Expression(expr) => expr.evaluate(input),
+            ExpressionAndInvocation::Invocation(invocation) => invocation.evaluate(input),
+        }
+    }
+}
+
 impl Evaluate for InvocationExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        todo!()
+        self.children.iter().fold(Ok(input.clone()), |acc, child| {
+            acc.and_then(|val| {
+                let result = child.evaluate(&val);
+
+                match result {
+                    Ok(res) => Ok(ResourceNode {
+                        parent_node: Some(Box::new(input)),
+                        data: res.data,
+                    }),
+                    Err(err) => Err(err),
+                }
+            })
+        })
     }
 }
 
@@ -353,11 +385,13 @@ mod tests {
     fn evaluate_name_path() {
         let compiled = compile(&"Patient.name".to_string()).unwrap();
 
+        print!("{:?}", compiled.expression);
+
         let patient = json!({
             "resourceType": "Patient",
             "name": [{
                 "use": "usual",
-                "given": "test"
+                "given": ["test"]
             }]
         });
 
@@ -367,9 +401,30 @@ mod tests {
             evaluate_result,
             json!([{
                 "use": "usual",
-                "given": "test"
+                "given": ["test"]
             }])
         );
+    }
+
+    #[test]
+    fn evaluate_name_given_path() {
+        let compiled = compile(&"Patient.name.given".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test", "test2"]
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        println!("{:?}", evaluate_result);
+
+        assert_json_eq!(evaluate_result, json!(["test", "test2"]));
     }
 
     #[test]
@@ -380,12 +435,12 @@ mod tests {
             "resourceType": "Patient",
             "name": [{
                 "use": "usual",
-                "given": "test"
+                "given": ["test"]
             }]
         });
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!("test"));
+        assert_json_eq!(evaluate_result, json!(["test"]));
     }
 }
