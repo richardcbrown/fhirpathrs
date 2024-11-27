@@ -1,4 +1,6 @@
-use super::{equal::equal, where_check::where_function, CompileResult, ResourceNode};
+use super::{
+    equal::equal, strings::index_of, where_check::where_function, CompileResult, ResourceNode,
+};
 use crate::parser::expression::Expression;
 use std::collections::HashMap;
 
@@ -16,6 +18,8 @@ pub fn invocation_table<'a>() -> HashMap<
             expressions: &Vec<Box<Expression>>,
         ) -> CompileResult<ResourceNode<'a>>,
     >::new();
+
+    map.insert("indexOf".to_string(), index_of);
 
     map.insert("=".to_string(), equal);
 

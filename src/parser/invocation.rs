@@ -126,7 +126,7 @@ impl Matches for ParamList {
 
 impl Parse for ParamList {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        let expressions: Vec<&str> = input.split(',').collect();
+        let expressions: Vec<String> = input.split(',').map(|s| filter_ignored_data(s)).collect();
 
         let mut children = Vec::<Box<Expression>>::new();
 
@@ -144,7 +144,7 @@ pub enum IdentifierAndParamList {
     ParamList(Box<ParamList>),
 }
 
-static FUNCTION_INVOCATION_REGEX: &str = r"([^()]*)\(([^()]*)\)";
+static FUNCTION_INVOCATION_REGEX: &str = r"^([^()]*)\((.*)\)$";
 
 #[derive(Debug)]
 pub struct FunctionInvocation {
@@ -173,11 +173,11 @@ impl Parse for FunctionInvocation {
             Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
 
         children.push(Box::new(IdentifierAndParamList::Identifier(
-            Identifier::parse(&captures[0].to_string())?,
+            Identifier::parse(&captures[1].to_string())?,
         )));
 
         children.push(Box::new(IdentifierAndParamList::ParamList(
-            ParamList::parse(&captures[1].to_string())?,
+            ParamList::parse(&captures[2].to_string())?,
         )));
 
         Ok(Box::new(Self { children }))

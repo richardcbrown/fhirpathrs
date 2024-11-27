@@ -124,7 +124,7 @@ impl Parse for BooleanLiteral {
     }
 }
 
-static STRING_REGEX: &str = "\'([^']*)\'";
+static STRING_REGEX: &str = "^\'([^']*)\'$";
 
 #[derive(Debug)]
 pub struct StringLiteral {
@@ -140,13 +140,13 @@ impl Matches for StringLiteral {
 impl Parse for StringLiteral {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         let capture_text =
-            Regex::captures(&Regex::new(STRING_REGEX).unwrap(), input).unwrap()[0].to_string();
+            Regex::captures(&Regex::new(STRING_REGEX).unwrap(), input).unwrap()[1].to_string();
 
         Ok(Box::new(Self { text: capture_text }))
     }
 }
 
-static NUMBER_REGEX: &str = "[0-9]+(\\.[0-9]+)?";
+static NUMBER_REGEX: &str = "^[0-9]+(\\.[0-9]+)?$";
 
 #[derive(Debug)]
 pub struct NumberLiteral {

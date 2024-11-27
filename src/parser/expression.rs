@@ -69,6 +69,8 @@ impl Matches for Expression {
 
 impl Parse for Expression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
+        dbg!(input);
+
         if TermExpression::matches(input) {
             return Ok(Box::new(Expression::TermExpression(TermExpression::parse(
                 input,
@@ -76,6 +78,54 @@ impl Parse for Expression {
         } else if InvocationExpression::matches(input) {
             return Ok(Box::new(Expression::InvocationExpression(
                 InvocationExpression::parse(input)?,
+            )));
+        } else if IndexerExpression::matches(input) {
+            return Ok(Box::new(Expression::IndexerExpression(
+                IndexerExpression::parse(input)?,
+            )));
+        } else if PolarityExpression::matches(input) {
+            return Ok(Box::new(Expression::PolarityExpression(
+                PolarityExpression::parse(input)?,
+            )));
+        } else if MultiplicativeExpression::matches(input) {
+            return Ok(Box::new(Expression::MultiplicativeExpression(
+                MultiplicativeExpression::parse(input)?,
+            )));
+        } else if AdditiveExpression::matches(input) {
+            return Ok(Box::new(Expression::AdditiveExpression(
+                AdditiveExpression::parse(input)?,
+            )));
+        } else if UnionExpression::matches(input) {
+            return Ok(Box::new(Expression::UnionExpression(
+                UnionExpression::parse(input)?,
+            )));
+        } else if InequalityExpression::matches(input) {
+            return Ok(Box::new(Expression::InequalityExpression(
+                InequalityExpression::parse(input)?,
+            )));
+        } else if TypeExpression::matches(input) {
+            return Ok(Box::new(Expression::TypeExpression(TypeExpression::parse(
+                input,
+            )?)));
+        } else if EqualityExpression::matches(input) {
+            return Ok(Box::new(Expression::EqualityExpression(
+                EqualityExpression::parse(input)?,
+            )));
+        } else if MembershipExpression::matches(input) {
+            return Ok(Box::new(Expression::MembershipExpression(
+                MembershipExpression::parse(input)?,
+            )));
+        } else if AndExpression::matches(input) {
+            return Ok(Box::new(Expression::AndExpression(AndExpression::parse(
+                input,
+            )?)));
+        } else if OrExpression::matches(input) {
+            return Ok(Box::new(Expression::OrExpression(OrExpression::parse(
+                input,
+            )?)));
+        } else if ImpliesExpression::matches(input) {
+            return Ok(Box::new(Expression::ImpliesExpression(
+                ImpliesExpression::parse(input)?,
             )));
         }
 
@@ -90,15 +140,17 @@ pub struct ParenthesizedTerm {
     pub children: Vec<Box<Expression>>,
 }
 
-static PARENTHESIZED_TERM_REGEX: &str = r"\((.*)\)";
+static PARENTHESIZED_TERM_REGEX: &str = r"^\((.*)\)$";
 
 impl Matches for ParenthesizedTerm {
     fn matches(input: &String) -> bool {
-        let capture_text = Regex::captures(&Regex::new(PARENTHESIZED_TERM_REGEX).unwrap(), input)
-            .unwrap()[0]
-            .to_string();
+        let captures = Regex::captures(&Regex::new(PARENTHESIZED_TERM_REGEX).unwrap(), input);
 
-        Expression::matches(&capture_text)
+        captures
+            .and_then(|capture| {
+                return Some(Expression::matches(&capture[1].to_string()));
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -191,16 +243,58 @@ pub struct InvocationExpression {
     pub children: Vec<Box<ExpressionAndInvocation>>,
 }
 
+fn backtrace_find_dot(input: &String) -> Option<SplitResult> {
+    let mut lparam_count = 0;
+    let mut rparam_count = 0;
+
+    let mut lchars: Vec<char> = vec![];
+    let mut rchars: Vec<char> = vec![];
+
+    let mut found_dot: bool = false;
+
+    let reversed_chars = input.chars().rev();
+
+    for current_char in reversed_chars {
+        if found_dot {
+            lchars.push(current_char);
+            continue;
+        }
+
+        if current_char.eq(&')') {
+            rparam_count += 1;
+        }
+
+        if current_char.eq(&'(') {
+            lparam_count += 1;
+        }
+
+        if current_char.eq(&'.') && lparam_count.eq(&rparam_count) {
+            found_dot = true;
+            continue;
+        }
+
+        rchars.push(current_char);
+    }
+
+    if !found_dot {
+        return None;
+    }
+
+    return Some(SplitResult {
+        match_string: ".".to_string(),
+        first_segment: lchars.into_iter().rev().collect(),
+        second_segment: rchars.into_iter().rev().collect(),
+    });
+}
+
 impl Matches for InvocationExpression {
     fn matches(input: &String) -> bool {
-        let last_index_of_invocation = input.rfind('.');
+        let split_result = backtrace_find_dot(input);
 
-        match last_index_of_invocation {
-            Some(index) => {
-                let components = input.split_at(index);
-
-                Expression::matches(&components.0.to_string())
-                    && Invocation::matches(&components.1.to_string().replacen(".", "", 1))
+        match split_result {
+            Some(result) => {
+                Expression::matches(&result.first_segment)
+                    && Invocation::matches(&result.second_segment)
             }
             None => false,
         }
@@ -209,16 +303,14 @@ impl Matches for InvocationExpression {
 
 impl Parse for InvocationExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        let last_index_of_invocation = input.rfind('.');
+        let split_result = backtrace_find_dot(input);
 
-        match last_index_of_invocation {
-            Some(index) => {
-                let components = input.split_at(index);
-
+        match split_result {
+            Some(result) => {
                 let mut children = Vec::<Box<ExpressionAndInvocation>>::new();
 
-                let expression = Expression::parse(&components.0.to_string())?;
-                let invocation = Invocation::parse(&components.1.to_string().replacen(".", "", 1))?;
+                let expression = Expression::parse(&result.first_segment.to_string())?;
+                let invocation = Invocation::parse(&result.second_segment.to_string())?;
 
                 children.push(Box::new(ExpressionAndInvocation::Expression(*expression)));
                 children.push(Box::new(ExpressionAndInvocation::Invocation(*invocation)));
@@ -285,6 +377,7 @@ impl Parse for IndexerExpression {
 
 #[derive(Debug)]
 pub struct PolarityExpression {
+    pub text: String,
     pub children: Vec<Box<Expression>>,
 }
 
@@ -304,13 +397,25 @@ impl Matches for PolarityExpression {
 
 impl Parse for PolarityExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        let expression: String = input.chars().skip(1).collect();
+        let mut chars = input.chars();
+
+        let operator = chars
+            .next()
+            .clone()
+            .and_then(|c| Some(c.to_string()))
+            .ok_or(FhirpathError::ParserError {
+                msg: "PolarityExpression contained no first character".to_string(),
+            })?;
+        let expression: String = chars.collect();
 
         let mut children = Vec::<Box<Expression>>::new();
 
         children.push(Box::new(*Expression::parse(&expression)?));
 
-        Ok(Box::new(Self { children }))
+        Ok(Box::new(Self {
+            children,
+            text: operator,
+        }))
     }
 }
 

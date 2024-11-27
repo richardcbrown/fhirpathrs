@@ -1,24 +1,25 @@
 pub mod equal;
 pub mod invocation_table;
+pub mod strings;
 pub mod where_check;
 
 use std::ops::Deref;
 
 use invocation_table::invocation_table;
-use serde_json::{json, Value};
+use serde_json::{json, Number, Value};
 
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
-    EqualityExpression, Expression, ExpressionAndInvocation, InvocationExpression, Term,
-    TermExpression,
+    EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
+    InvocationExpression, PolarityExpression, Term, TermExpression,
 };
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
-use crate::parser::literal::{Literal, LiteralTerm, StringLiteral};
+use crate::parser::literal::{Literal, LiteralTerm, NumberLiteral, StringLiteral};
 use crate::parser::traits::Parse;
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
@@ -46,13 +47,29 @@ impl Evaluate for StringLiteral {
     }
 }
 
+impl Evaluate for NumberLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        let value = self
+            .text
+            .parse::<i64>()
+            .map_err(|_| FhirpathError::ParserError {
+                msg: "NumberLiteral is not a Number".to_string(),
+            })?;
+
+        Ok(ResourceNode {
+            parent_node: Some(Box::new(input)),
+            data: Some(json!(value)),
+        })
+    }
+}
+
 impl Evaluate for Literal {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Literal::BooleanLiteral(exp) => todo!(),
             Literal::DatetimeLiteral(exp) => todo!(),
             Literal::NullLiteral(exp) => todo!(),
-            Literal::NumberLiteral(exp) => todo!(),
+            Literal::NumberLiteral(exp) => exp.evaluate(input),
             Literal::QuantityLiteral(exp) => todo!(),
             Literal::StringLiteral(exp) => exp.evaluate(input),
             Literal::TimeLiteral(exp) => todo!(),
@@ -306,13 +323,97 @@ impl Evaluate for EqualityExpression {
     }
 }
 
+impl Evaluate for IndexerExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "IndexerExpression must have exactly two children".to_string(),
+            });
+        }
+
+        let array_node = self.children[0].evaluate(input)?;
+        let index_node = self.children[1].evaluate(input)?;
+
+        let index_value = index_node.data.ok_or(FhirpathError::ParserError {
+            msg: "IndexerExpression index has no value".to_string(),
+        })?;
+
+        let index: i64 = match index_value {
+            Value::Number(num) => num.as_i64().ok_or(FhirpathError::ParserError {
+                msg: "IndexerExpression index is not a Number".to_string(),
+            }),
+            Value::String(num_string) => {
+                num_string.parse().map_err(|_| FhirpathError::ParserError {
+                    msg: "IndexerExpression index is not a Number".to_string(),
+                })
+            }
+            _ => Err(FhirpathError::ParserError {
+                msg: "IndexerExpression index is not a Number".to_string(),
+            }),
+        }?;
+
+        let array_data = array_node.data.ok_or(FhirpathError::ParserError {
+            msg: "IndexerExpression did not contain a Value".to_string(),
+        })?;
+
+        match array_data {
+            Value::Array(array) => Ok(ResourceNode {
+                parent_node: Some(Box::new(input)),
+                data: Some(array[index as usize].clone()),
+            }),
+            _ => Err(FhirpathError::ParserError {
+                msg: "Element is not an array".to_string(),
+            }),
+        }
+    }
+}
+
+impl Evaluate for PolarityExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        let child = self.children.first();
+
+        child
+            .ok_or(FhirpathError::CompileError {
+                msg: "PolarityExpression must have a single child expression".to_string(),
+            })
+            .and_then(|child_expr| child_expr.evaluate(input))
+            .and_then(|result| {
+                result.data.ok_or(FhirpathError::CompileError {
+                    msg: "PolarityExpression had no result".to_string(),
+                })
+            })
+            .and_then(|expr_result| match expr_result {
+                Value::Number(json_num) => {
+                    let mut num: i64 = json_num.as_i64().ok_or(FhirpathError::CompileError {
+                        msg: "PolarityExpression result was not a number".to_string(),
+                    })?;
+
+                    if self.text == "-" {
+                        num = -num;
+                    }
+
+                    Ok(Value::Number(Number::from(num)))
+                }
+                _ => Err(FhirpathError::CompileError {
+                    msg: "PolarityExpression result was not a number".to_string(),
+                }),
+            })
+            .and_then(|result| {
+                Ok(ResourceNode {
+                    parent_node: Some(Box::new(input)),
+                    data: Some(result),
+                })
+            })
+    }
+}
+
 impl Evaluate for Expression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Expression::TermExpression(exp) => exp.evaluate(input),
             Expression::InvocationExpression(exp) => exp.evaluate(input),
-            Expression::IndexerExpression(exp) => todo!(),
-            Expression::PolarityExpression(exp) => todo!(),
+            Expression::IndexerExpression(exp) => exp.evaluate(input),
+            Expression::PolarityExpression(exp) => exp.evaluate(input),
             Expression::MultiplicativeExpression(exp) => todo!(),
             Expression::AdditiveExpression(exp) => todo!(),
             Expression::UnionExpression(exp) => todo!(),
@@ -431,6 +532,8 @@ mod tests {
     fn evaluate_where_path() {
         let compiled = compile(&"Patient.name.where(use = 'usual').given".to_string()).unwrap();
 
+        print!("{:?}", compiled.expression);
+
         let patient = json!({
             "resourceType": "Patient",
             "name": [{
@@ -442,5 +545,109 @@ mod tests {
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
+    }
+
+    #[test]
+    fn evaluate_index_path() {
+        let compiled = compile(&"Patient.name[0]".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test"]
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!({
+                "use": "usual",
+                "given": ["test"]
+            })
+        );
+    }
+
+    #[test]
+    fn evaluate_complex_index_path() {
+        let compiled = compile(&"Patient.name.where(use = 'usual').given[1]".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test", "test1"]
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!("test1"));
+    }
+
+    #[test]
+    fn evaluate_inequality_path() {
+        let compiled = compile(&"Patient.name.where(use != 'usual').given".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"]
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"]
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(["test1"]));
+    }
+
+    #[test]
+    fn evaluate_indexof_path() {
+        let compiled =
+            compile(&"Patient.name.where(family.indexOf('test') = -1)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            }])
+        );
     }
 }
