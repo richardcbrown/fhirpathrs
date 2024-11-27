@@ -1,6 +1,6 @@
 use super::{
     equality::{equal, not_equal},
-    strings::index_of,
+    strings::{index_of, substring},
     where_check::where_function,
     CompileResult, ResourceNode,
 };
@@ -21,6 +21,8 @@ pub fn invocation_table<'a>() -> HashMap<
             expressions: &Vec<Box<Expression>>,
         ) -> CompileResult<ResourceNode<'a>>,
     >::new();
+
+    map.insert("substring".to_string(), substring);
 
     map.insert("indexOf".to_string(), index_of);
 

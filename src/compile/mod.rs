@@ -650,4 +650,39 @@ mod tests {
             }])
         );
     }
+
+    #[test]
+    fn evaluate_substring_path() {
+        let compiled =
+            compile(&"Patient.name.where(family.substring(1) = 'est')".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            }])
+        );
+    }
 }
