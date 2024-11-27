@@ -1,5 +1,8 @@
 use super::{
-    equal::equal, strings::index_of, where_check::where_function, CompileResult, ResourceNode,
+    equality::{equal, not_equal},
+    strings::index_of,
+    where_check::where_function,
+    CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
 use std::collections::HashMap;
@@ -20,6 +23,8 @@ pub fn invocation_table<'a>() -> HashMap<
     >::new();
 
     map.insert("indexOf".to_string(), index_of);
+
+    map.insert("!=".to_string(), not_equal);
 
     map.insert("=".to_string(), equal);
 

@@ -1,4 +1,4 @@
-pub mod equal;
+pub mod equality;
 pub mod invocation_table;
 pub mod strings;
 pub mod where_check;
