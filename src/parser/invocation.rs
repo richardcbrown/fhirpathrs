@@ -157,8 +157,11 @@ impl Matches for FunctionInvocation {
 
         match captures {
             Some(capture) => {
-                return Identifier::matches(&capture[1].to_string())
-                    && ParamList::matches(&capture[2].to_string());
+                let identifier_match = Identifier::matches(&capture[1].to_string());
+                let param_list_match_or_empty =
+                    capture[2].is_empty() || ParamList::matches(&capture[2].to_string());
+
+                return identifier_match && param_list_match_or_empty;
             }
             None => false,
         }
@@ -176,9 +179,11 @@ impl Parse for FunctionInvocation {
             Identifier::parse(&captures[1].to_string())?,
         )));
 
-        children.push(Box::new(IdentifierAndParamList::ParamList(
-            ParamList::parse(&captures[2].to_string())?,
-        )));
+        if !captures[2].is_empty() {
+            children.push(Box::new(IdentifierAndParamList::ParamList(
+                ParamList::parse(&captures[2].to_string())?,
+            )));
+        }
 
         Ok(Box::new(Self { children }))
     }

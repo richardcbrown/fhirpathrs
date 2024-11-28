@@ -1,3 +1,5 @@
+// http://hl7.org/fhirpath/N1/#string-manipulation
+
 use std::fmt::format;
 
 use serde_json::{json, Number, Value};
@@ -24,6 +26,17 @@ fn get_option_string(value: &Option<Value>) -> CompileResult<String> {
     })?;
 
     get_string(&string_val)
+}
+
+fn get_value_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<Value> {
+    expression.evaluate(input).and_then(|res| {
+        res.data.ok_or(FhirpathError::CompileError {
+            msg: "Expression evaluation contained no result".to_string(),
+        })
+    })
 }
 
 fn get_number_from_expression(
@@ -60,6 +73,20 @@ fn get_usize_from_expression(
                 msg: "Could not convert number to u64".to_string(),
             })
         })
+}
+
+fn get_string_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<String> {
+    let value = get_value_from_expression(input, expression)?;
+
+    match value {
+        Value::String(str_result) => Ok(str_result),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Value was not a String".to_string(),
+        }),
+    }
 }
 
 pub fn index_of<'a>(
@@ -116,5 +143,86 @@ pub fn substring<'a>(
     Ok(ResourceNode {
         parent_node: Some(Box::new(input)),
         data: Some(Value::String(sub_string.to_string())),
+    })
+}
+
+pub fn starts_with<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+        msg: "StartsWith expects one expression".to_string(),
+    })?;
+
+    let string_value = get_option_string(&input.data)?;
+    let match_string = get_string_from_expression(input, first_expr)?;
+
+    let starts_with = string_value.starts_with(&match_string);
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Bool(starts_with)),
+    })
+}
+
+pub fn ends_with<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+        msg: "StartsWith expects one expression".to_string(),
+    })?;
+
+    let string_value = get_option_string(&input.data)?;
+    let match_string = get_string_from_expression(input, first_expr)?;
+
+    let ends_with = string_value.ends_with(&match_string);
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Bool(ends_with)),
+    })
+}
+
+pub fn contains<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+        msg: "StartsWith expects one expression".to_string(),
+    })?;
+
+    let string_value = get_option_string(&input.data)?;
+    let match_string = get_string_from_expression(input, first_expr)?;
+
+    let contains = string_value.contains(&match_string);
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Bool(contains)),
+    })
+}
+
+pub fn upper<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_value = get_option_string(&input.data)?;
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::String(string_value.to_uppercase())),
+    })
+}
+
+pub fn lower<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_value = get_option_string(&input.data)?;
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::String(string_value.to_lowercase())),
     })
 }

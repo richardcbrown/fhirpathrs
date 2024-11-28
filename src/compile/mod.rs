@@ -14,7 +14,7 @@ use crate::parser::expression::{
     EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
     InvocationExpression, PolarityExpression, Term, TermExpression,
 };
-use crate::parser::identifier::{Identifier, LiteralIdentifier};
+use crate::parser::identifier::{self, Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
@@ -165,41 +165,78 @@ impl Evaluate for ParamList {
 impl Evaluate for FunctionInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         // @TODO - Child of FunctionInvocation should be "Functn" in js fhirpath
-        if self.children.len() != 2 {
-            return Err(FhirpathError::CompileError {
-                msg: "FunctionInvocation should have 2 child elements".to_string(),
-            });
-        }
-
         let function_name_child = self.children[0].deref();
-        let param_list_child = self.children[1].deref();
-
-        if let IdentifierAndParamList::ParamList(param_list) = param_list_child {
-            if let IdentifierAndParamList::Identifier(identifier) = function_name_child {
-                let function_name = identifier.evaluate(input)?.data.and_then(|val| match val {
-                    Value::String(string) => Some(string),
-                    _ => None,
-                });
-
-                Ok(function_name
-                    .and_then(|fnc| {
-                        let str_fnc = fnc.clone();
-                        Some(invocation_table().get(&str_fnc).unwrap().clone())
-                    })
-                    .ok_or(FhirpathError::CompileError {
-                        msg: "No method in invocation table".to_string(),
-                    })
-                    .and_then(|invocation| invocation(input, &param_list.children))?)
-            } else {
-                return Err(FhirpathError::CompileError {
-                    msg: "Second child of FunctionInvocation should be function params".to_string(),
-                });
-            }
+        let param_list_child = if self.children.len() == 2 {
+            Some(self.children[1].deref())
         } else {
-            return Err(FhirpathError::CompileError {
+            None
+        };
+
+        let identifier = match function_name_child {
+            IdentifierAndParamList::Identifier(identifier) => Ok(identifier),
+            _ => Err(FhirpathError::CompileError {
                 msg: "First child of FunctionInvocation should be function name".to_string(),
-            });
-        }
+            }),
+        }?;
+
+        let default_params =
+            IdentifierAndParamList::ParamList(Box::new(ParamList { children: vec![] }));
+
+        let param_list = param_list_child.unwrap_or(&default_params);
+
+        let parameters = match param_list {
+            IdentifierAndParamList::ParamList(param_list) => Ok(&param_list.children),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Second child of FunctionInvocation should be function params".to_string(),
+            }),
+        }?;
+
+        let function_name = identifier
+            .evaluate(input)?
+            .data
+            .and_then(|val| match val {
+                Value::String(string) => Some(string),
+                _ => None,
+            })
+            .ok_or(FhirpathError::CompileError {
+                msg: "First child of FunctionInvocation should be function name".to_string(),
+            })?;
+
+        let invocation = invocation_table()
+            .get(&function_name)
+            .ok_or(FhirpathError::CompileError {
+                msg: "No method in invocation table".to_string(),
+            })?
+            .clone();
+
+        Ok(invocation(input, &parameters)?)
+
+        // if let IdentifierAndParamList::ParamList(param_list) = param_list_child {
+        //     if let IdentifierAndParamList::Identifier(identifier) = function_name_child {
+        //         let function_name = identifier.evaluate(input)?.data.and_then(|val| match val {
+        //             Value::String(string) => Some(string),
+        //             _ => None,
+        //         });
+
+        //         Ok(function_name
+        //             .and_then(|fnc| {
+        //                 let str_fnc = fnc.clone();
+        //                 Some(invocation_table().get(&str_fnc).unwrap().clone())
+        //             })
+        //             .ok_or(FhirpathError::CompileError {
+        //                 msg: "No method in invocation table".to_string(),
+        //             })
+        //             .and_then(|invocation| invocation(input, &param_list.children))?)
+        //     } else {
+        //         return Err(FhirpathError::CompileError {
+        //             msg: "Second child of FunctionInvocation should be function params".to_string(),
+        //         });
+        //     }
+        // } else {
+        //     return Err(FhirpathError::CompileError {
+        //         msg: "First child of FunctionInvocation should be function name".to_string(),
+        //     });
+        // }
     }
 }
 
@@ -573,6 +610,26 @@ mod tests {
     }
 
     #[test]
+    fn evaluate_index_invocation_path() {
+        let compiled = compile(&"Patient.name[0].family".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!("test"));
+    }
+
+    #[test]
     fn evaluate_complex_index_path() {
         let compiled = compile(&"Patient.name.where(use = 'usual').given[1]".to_string()).unwrap();
 
@@ -684,5 +741,162 @@ mod tests {
                 "family": "test"
             }])
         );
+    }
+
+    #[test]
+    fn evaluate_startswith_path() {
+        let compiled =
+            compile(&"Patient.name.where(family.startsWith('tes'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_endswith_path() {
+        let compiled = compile(&"Patient.name.where(family.endsWith('bc'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_contains_path() {
+        let compiled = compile(&"Patient.name.where(family.contains('b'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_upper_path() {
+        let compiled = compile(&"Patient.name[0].family.upper()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!("TEST"));
+    }
+
+    #[test]
+    fn evaluate_lower_path() {
+        let compiled = compile(&"Patient.name[0].family.lower()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "TEST"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!("test"));
     }
 }

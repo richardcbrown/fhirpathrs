@@ -1,6 +1,6 @@
 use super::{
     equality::{equal, not_equal},
-    strings::{index_of, substring},
+    strings::{contains, ends_with, index_of, lower, starts_with, substring, upper},
     where_check::where_function,
     CompileResult, ResourceNode,
 };
@@ -25,6 +25,16 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("substring".to_string(), substring);
 
     map.insert("indexOf".to_string(), index_of);
+
+    map.insert("startsWith".to_string(), starts_with);
+
+    map.insert("endsWith".to_string(), ends_with);
+
+    map.insert("contains".to_string(), contains);
+
+    map.insert("upper".to_string(), upper);
+
+    map.insert("lower".to_string(), lower);
 
     map.insert("!=".to_string(), not_equal);
 
