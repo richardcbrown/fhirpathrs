@@ -2,6 +2,7 @@
 
 use std::fmt::format;
 
+use regex::Regex;
 use serde_json::{json, Number, Value};
 
 use crate::{
@@ -22,10 +23,29 @@ fn get_string(value: &Value) -> CompileResult<String> {
 
 fn get_option_string(value: &Option<Value>) -> CompileResult<String> {
     let string_val = value.clone().ok_or(FhirpathError::CompileError {
-        msg: "Expexted String but got None".to_string(),
+        msg: "Expected String but got None".to_string(),
     })?;
 
     get_string(&string_val)
+}
+
+fn get_option_string_vec(value: &Option<Value>) -> CompileResult<Vec<String>> {
+    let val = value.clone().ok_or(FhirpathError::CompileError {
+        msg: "Expected String or Vec<String> but got None".to_string(),
+    })?;
+
+    match val {
+        Value::Array(array) => {
+            let string_vec: CompileResult<Vec<String>> =
+                array.iter().map(|item| get_string(item)).collect();
+
+            Ok(string_vec?)
+        }
+        Value::String(string_item) => Ok(vec![string_item]),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Expected String or Vec<String>".to_string(),
+        }),
+    }
 }
 
 fn get_value_from_expression(
@@ -207,11 +227,17 @@ pub fn upper<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_value = get_option_string(&input.data)?;
+    let string_values = get_option_string_vec(&input.data)?;
+
+    let replaced: Vec<Value> = string_values
+        .iter()
+        .map(|val| val.to_uppercase())
+        .map(|item| Value::String(item))
+        .collect();
 
     Ok(ResourceNode {
         parent_node: Some(Box::new(input)),
-        data: Some(Value::String(string_value.to_uppercase())),
+        data: Some(Value::Array(replaced)),
     })
 }
 
@@ -219,10 +245,123 @@ pub fn lower<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_value = get_option_string(&input.data)?;
+    let string_values = get_option_string_vec(&input.data)?;
+
+    let replaced: Vec<Value> = string_values
+        .iter()
+        .map(|val| val.to_lowercase())
+        .map(|item| Value::String(item))
+        .collect();
 
     Ok(ResourceNode {
         parent_node: Some(Box::new(input)),
-        data: Some(Value::String(string_value.to_lowercase())),
+        data: Some(Value::Array(replaced)),
+    })
+}
+
+pub fn replace<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_values = get_option_string_vec(&input.data)?;
+    let pattern = get_string_from_expression(input, &expressions[0])?;
+    let replacement = get_string_from_expression(input, &expressions[1])?;
+
+    let replaced: Vec<Value> = string_values
+        .iter()
+        .map(|val| val.replace(&pattern, &replacement))
+        .map(|item| Value::String(item))
+        .collect();
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(replaced)),
+    })
+}
+
+pub fn matches<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_value = get_option_string(&input.data)?;
+    let pattern = get_string_from_expression(input, &expressions[0])?;
+    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
+        msg: "Failed to parse Regex".to_string(),
+    })?;
+
+    let matches = Regex::is_match(&regex, &string_value);
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Bool(matches)),
+    })
+}
+
+pub fn replace_matches<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_values = get_option_string_vec(&input.data)?;
+    let pattern = get_string_from_expression(input, &expressions[0])?;
+    let replacement = get_string_from_expression(input, &expressions[1])?;
+    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
+        msg: "Failed to parse Regex".to_string(),
+    })?;
+
+    let replace_result: Vec<Value> = string_values
+        .iter()
+        .map(|string_value| {
+            Value::String(regex.replace_all(&string_value, &replacement).to_string())
+        })
+        .collect();
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(replace_result)),
+    })
+}
+
+pub fn length<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_values = get_option_string_vec(&input.data)?;
+
+    let lengths = string_values
+        .iter()
+        .map(|string_value| {
+            let num = Number::from(string_value.len());
+
+            Value::Number(num)
+        })
+        .collect();
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(lengths)),
+    })
+}
+
+pub fn to_chars<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let string_values = get_option_string_vec(&input.data)?;
+
+    let char_sets = string_values
+        .iter()
+        .map(|string_value| {
+            let string_chars: Vec<Value> = string_value
+                .chars()
+                .map(|c| Value::String(c.to_string()))
+                .collect();
+
+            Value::Array(string_chars)
+        })
+        .collect();
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(char_sets)),
     })
 }

@@ -1,6 +1,9 @@
 use super::{
     equality::{equal, not_equal},
-    strings::{contains, ends_with, index_of, lower, starts_with, substring, upper},
+    strings::{
+        contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
+        starts_with, substring, to_chars, upper,
+    },
     where_check::where_function,
     CompileResult, ResourceNode,
 };
@@ -35,6 +38,16 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("upper".to_string(), upper);
 
     map.insert("lower".to_string(), lower);
+
+    map.insert("replace".to_string(), replace);
+
+    map.insert("matches".to_string(), matches);
+
+    map.insert("replaceMatches".to_string(), replace_matches);
+
+    map.insert("length".to_string(), length);
+
+    map.insert("toChars".to_string(), to_chars);
 
     map.insert("!=".to_string(), not_equal);
 

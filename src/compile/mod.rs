@@ -870,7 +870,7 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!("TEST"));
+        assert_json_eq!(evaluate_result, json!(["TEST"]));
     }
 
     #[test]
@@ -897,6 +897,145 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!("test"));
+        assert_json_eq!(evaluate_result, json!(["test"]));
+    }
+
+    #[test]
+    fn evaluate_replace_path() {
+        let compiled = compile(&"Patient.name.family.replace('es', '')".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
+    }
+
+    #[test]
+    fn evaluate_matches_path() {
+        let compiled = compile(&"Patient.name[0].family.matches('tes')".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(true));
+    }
+
+    #[test]
+    fn evaluate_replace_matches_path() {
+        let compiled =
+            compile(&"Patient.name.family.replaceMatches('es', '')".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
+    }
+
+    #[test]
+    fn evaluate_length_path() {
+        let compiled = compile(&"Patient.name.family.length()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([4, 3]));
+    }
+
+    #[test]
+    fn evaluate_to_chars_path() {
+        let compiled = compile(&"Patient.name.family.toChars()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([['t', 'e', 's', 't'], ['a', 'b', 'c']])
+        );
     }
 }
