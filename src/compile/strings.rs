@@ -5,109 +5,15 @@ use std::fmt::format;
 use regex::Regex;
 use serde_json::{json, Number, Value};
 
-use crate::{
-    error::FhirpathError,
-    parser::expression::{self, Expression},
+use crate::{error::FhirpathError, parser::expression::Expression};
+
+use super::{
+    utils::{
+        get_option_string, get_option_string_vec, get_string, get_string_from_expression,
+        get_usize_from_expression,
+    },
+    CompileResult, Evaluate, ResourceNode,
 };
-
-use super::{CompileResult, Evaluate, ResourceNode};
-
-fn get_string(value: &Value) -> CompileResult<String> {
-    match value {
-        Value::String(string) => Ok(string.clone()),
-        _ => Err(FhirpathError::CompileError {
-            msg: format!("Value {} is not a string", value),
-        }),
-    }
-}
-
-fn get_option_string(value: &Option<Value>) -> CompileResult<String> {
-    let string_val = value.clone().ok_or(FhirpathError::CompileError {
-        msg: "Expected String but got None".to_string(),
-    })?;
-
-    get_string(&string_val)
-}
-
-fn get_option_string_vec(value: &Option<Value>) -> CompileResult<Vec<String>> {
-    let val = value.clone().ok_or(FhirpathError::CompileError {
-        msg: "Expected String or Vec<String> but got None".to_string(),
-    })?;
-
-    match val {
-        Value::Array(array) => {
-            let string_vec: CompileResult<Vec<String>> =
-                array.iter().map(|item| get_string(item)).collect();
-
-            Ok(string_vec?)
-        }
-        Value::String(string_item) => Ok(vec![string_item]),
-        _ => Err(FhirpathError::CompileError {
-            msg: "Expected String or Vec<String>".to_string(),
-        }),
-    }
-}
-
-fn get_value_from_expression(
-    input: &ResourceNode,
-    expression: &Expression,
-) -> CompileResult<Value> {
-    expression.evaluate(input).and_then(|res| {
-        res.data.ok_or(FhirpathError::CompileError {
-            msg: "Expression evaluation contained no result".to_string(),
-        })
-    })
-}
-
-fn get_number_from_expression(
-    input: &ResourceNode,
-    expression: &Expression,
-) -> CompileResult<Number> {
-    let expr_result = expression.evaluate(input).and_then(|res| {
-        res.data.ok_or(FhirpathError::CompileError {
-            msg: "Expression evaluation contained no result".to_string(),
-        })
-    })?;
-
-    match expr_result {
-        Value::Number(num) => Ok(num),
-        _ => Err(FhirpathError::CompileError {
-            msg: "Value was not a Number".to_string(),
-        }),
-    }
-}
-
-fn get_usize_from_expression(
-    input: &ResourceNode,
-    expression: &Expression,
-) -> CompileResult<usize> {
-    let json_num = get_number_from_expression(input, expression)?;
-
-    json_num
-        .as_u64()
-        .ok_or(FhirpathError::CompileError {
-            msg: "Could not convert number to u64".to_string(),
-        })
-        .and_then(|num| {
-            usize::try_from(num).map_err(|_| FhirpathError::CompileError {
-                msg: "Could not convert number to u64".to_string(),
-            })
-        })
-}
-
-fn get_string_from_expression(
-    input: &ResourceNode,
-    expression: &Expression,
-) -> CompileResult<String> {
-    let value = get_value_from_expression(input, expression)?;
-
-    match value {
-        Value::String(str_result) => Ok(str_result),
-        _ => Err(FhirpathError::CompileError {
-            msg: "Value was not a String".to_string(),
-        }),
-    }
-}
 
 pub fn index_of<'a>(
     input: &'a ResourceNode<'a>,

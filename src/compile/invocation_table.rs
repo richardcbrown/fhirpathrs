@@ -1,10 +1,11 @@
 use super::{
     equality::{equal, not_equal},
+    filtering::{select, where_function},
+    math::add,
     strings::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
     },
-    where_check::where_function,
     CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
@@ -53,7 +54,11 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("=".to_string(), equal);
 
+    map.insert("+".to_string(), add);
+
     map.insert("where".to_string(), where_function);
+
+    map.insert("select".to_string(), select);
 
     map
 }

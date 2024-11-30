@@ -329,6 +329,8 @@ pub struct IndexerExpression {
     pub children: Vec<Box<Expression>>,
 }
 
+static INDEX_EXPRESSION_REGEX = r"([^\[\]])";
+
 impl Matches for IndexerExpression {
     fn matches(input: &String) -> bool {
         let closing_brace_index = input.rfind(']');
@@ -540,7 +542,7 @@ impl Matches for AdditiveExpression {
 
 impl Parse for AdditiveExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        parse_terms(input, &MULTIPLICATIVE_TERMS)
+        parse_terms(input, &ADDITIVE_TERMS)
             .and_then(|opt| {
                 Ok(Box::new(Self {
                     children: opt.children,

@@ -1,7 +1,9 @@
-pub mod equality;
-pub mod invocation_table;
-pub mod strings;
-pub mod where_check;
+mod equality;
+mod filtering;
+mod invocation_table;
+mod math;
+mod strings;
+mod utils;
 
 use std::ops::Deref;
 
@@ -11,10 +13,10 @@ use serde_json::{json, Number, Value};
 use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
-    EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
+    AdditiveExpression, EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
     InvocationExpression, PolarityExpression, Term, TermExpression,
 };
-use crate::parser::identifier::{self, Identifier, LiteralIdentifier};
+use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
@@ -343,6 +345,19 @@ impl Evaluate for InvocationExpression {
     }
 }
 
+fn invoke_operation<'a>(
+    op: &String,
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    invocation_table()
+        .get(op)
+        .ok_or(FhirpathError::CompileError {
+            msg: format!("No such operator {}", op),
+        })
+        .and_then(|function| function(input, expressions))
+}
+
 impl Evaluate for EqualityExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -351,12 +366,19 @@ impl Evaluate for EqualityExpression {
             });
         }
 
-        invocation_table()
-            .get(&self.op)
-            .ok_or(FhirpathError::CompileError {
-                msg: format!("No such operator {}", self.op),
-            })
-            .and_then(|function| function(input, &self.children))
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
+impl Evaluate for AdditiveExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "AdditiveExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
     }
 }
 
@@ -452,7 +474,7 @@ impl Evaluate for Expression {
             Expression::IndexerExpression(exp) => exp.evaluate(input),
             Expression::PolarityExpression(exp) => exp.evaluate(input),
             Expression::MultiplicativeExpression(exp) => todo!(),
-            Expression::AdditiveExpression(exp) => todo!(),
+            Expression::AdditiveExpression(exp) => exp.evaluate(input),
             Expression::UnionExpression(exp) => todo!(),
             Expression::InequalityExpression(exp) => todo!(),
             Expression::TypeExpression(exp) => todo!(),
@@ -1012,6 +1034,37 @@ mod tests {
     #[test]
     fn evaluate_to_chars_path() {
         let compiled = compile(&"Patient.name.family.toChars()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([['t', 'e', 's', 't'], ['a', 'b', 'c']])
+        );
+    }
+
+    #[test]
+    fn evaluate_select_path() {
+        let compiled =
+            compile(&"Patient.name.select(given[0] + ' ' + family)".to_string()).unwrap();
 
         print!("{:?}", compiled.expression);
 

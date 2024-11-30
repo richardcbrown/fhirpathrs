@@ -56,3 +56,45 @@ pub fn where_function<'a>(
             msg: "where_function requires single expression argument".to_string(),
         })
 }
+
+pub fn select<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let expression = expressions.first().ok_or(FhirpathError::CompileError {
+        msg: "select function requires single expression argument".to_string(),
+    })?;
+
+    let value = input
+        .data
+        .as_ref()
+        .and_then(|data| match data {
+            Value::Array(array) => Some(array),
+            _ => None,
+        })
+        .ok_or(FhirpathError::CompileError {
+            msg: "expect input data to be an Array".to_string(),
+        })?;
+
+    let result: CompileResult<Vec<Value>> = value
+        .iter()
+        .map(|val| {
+            let node = ResourceNode {
+                parent_node: None,
+                data: Some(val.clone()),
+            };
+
+            expression
+                .evaluate(&node)?
+                .data
+                .ok_or(FhirpathError::CompileError {
+                    msg: "expected evaluation to return a value but recieved None".to_string(),
+                })
+        })
+        .collect();
+
+    Ok(ResourceNode {
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(result?)),
+    })
+}
