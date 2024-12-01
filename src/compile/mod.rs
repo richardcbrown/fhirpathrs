@@ -1086,9 +1086,6 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(
-            evaluate_result,
-            json!([['t', 'e', 's', 't'], ['a', 'b', 'c']])
-        );
+        assert_json_eq!(evaluate_result, json!(["test test", "test1 abc"]));
     }
 }

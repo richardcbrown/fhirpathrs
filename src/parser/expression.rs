@@ -329,51 +329,75 @@ pub struct IndexerExpression {
     pub children: Vec<Box<Expression>>,
 }
 
-static INDEX_EXPRESSION_REGEX = r"([^\[\]])";
+static INDEX_EXPRESSION_REGEX: &str = r"^([^\[\]]*)\[(\d+)\]$";
 
 impl Matches for IndexerExpression {
     fn matches(input: &String) -> bool {
-        let closing_brace_index = input.rfind(']');
-        let opening_brace_index = input.rfind('[');
+        let captures = Regex::captures(&Regex::new(INDEX_EXPRESSION_REGEX).unwrap(), input);
 
-        match (opening_brace_index, closing_brace_index) {
-            (Some(opening_brace), Some(_closing_brace)) => {
-                // @todo check closing brace is last element
-                let (first_expression, second_expression) = input.split_at(opening_brace);
+        captures
+            .and_then(|capture| {
+                return Some(
+                    Expression::matches(&capture[1].to_string())
+                        && Expression::matches(&capture[2].to_string()),
+                );
+            })
+            .unwrap_or(false)
 
-                let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+        // let closing_brace_index = input.rfind(']');
+        // let opening_brace_index = input.rfind('[');
 
-                return Expression::matches(&first_expression.to_string())
-                    && Expression::matches(&parsed_second_expression);
-            }
-            _ => false,
-        }
+        // match (opening_brace_index, closing_brace_index) {
+        //     (Some(opening_brace), Some(_closing_brace)) => {
+        //         // @todo check closing brace is last element
+        //         let (first_expression, second_expression) = input.split_at(opening_brace);
+
+        //         let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+
+        //         return Expression::matches(&first_expression.to_string())
+        //             && Expression::matches(&parsed_second_expression);
+        //     }
+        //     _ => false,
+        // }
     }
 }
 
 impl Parse for IndexerExpression {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        let closing_brace_index = input.rfind(']');
-        let opening_brace_index = input.rfind('[');
+        let captures = Regex::captures(&Regex::new(INDEX_EXPRESSION_REGEX).unwrap(), input);
 
-        match (opening_brace_index, closing_brace_index) {
-            (Some(opening_brace), Some(_closing_brace)) => {
-                // @todo check closing brace is last element
-                let (first_expression, second_expression) = input.split_at(opening_brace);
+        let capture = captures.ok_or(FhirpathError::ParserError {
+            msg: "Failed to parse IndexerExpression".to_string(),
+        })?;
 
-                let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+        let mut children = Vec::<Box<Expression>>::new();
 
-                let mut children = Vec::<Box<Expression>>::new();
+        children.push(Expression::parse(&capture[1].to_string())?);
+        children.push(Expression::parse(&capture[2].to_string())?);
 
-                children.push(Box::new(*Expression::parse(&first_expression.to_string())?));
-                children.push(Box::new(*Expression::parse(&parsed_second_expression)?));
+        Ok(Box::new(Self { children }))
 
-                Ok(Box::new(Self { children }))
-            }
-            _ => Err(FhirpathError::ParserError {
-                msg: "Failed to parse IndexerExpression".to_string(),
-            }),
-        }
+        // let closing_brace_index = input.rfind(']');
+        // let opening_brace_index = input.rfind('[');
+
+        // match (opening_brace_index, closing_brace_index) {
+        //     (Some(opening_brace), Some(_closing_brace)) => {
+        //         // @todo check closing brace is last element
+        //         let (first_expression, second_expression) = input.split_at(opening_brace);
+
+        //         let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
+
+        //         let mut children = Vec::<Box<Expression>>::new();
+
+        //         children.push(Box::new(*Expression::parse(&first_expression.to_string())?));
+        //         children.push(Box::new(*Expression::parse(&parsed_second_expression)?));
+
+        //         Ok(Box::new(Self { children }))
+        //     }
+        //     _ => Err(FhirpathError::ParserError {
+        //         msg: "Failed to parse IndexerExpression".to_string(),
+        //     }),
+        // }
     }
 }
 

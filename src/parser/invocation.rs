@@ -1,11 +1,11 @@
-use regex::Regex;
+use fancy_regex::Regex;
 
 use crate::error::FhirpathError;
 
 use super::{
     expression::Expression,
     identifier::Identifier,
-    traits::{Matches, Parse},
+    traits::{Matches, Parse, ParseResult},
 };
 
 #[derive(Debug)]
@@ -103,8 +103,19 @@ impl Parse for MemberInvocation {
     }
 }
 
-fn filter_ignored_data(s: &str) -> String {
-    s.chars().filter(|c| !c.is_whitespace()).collect()
+static WHITESPACE_REGEX: &str = r"\s+(?=((\\[\\']|[^\\'])*'(\\[\\']|[^\\'])*')*(\\[\\']|[^\\'])*$)";
+
+fn filter_ignored_data(s: &str) -> ParseResult<String> {
+    // s.chars().filter(|c| !c.is_whitespace()).collect()
+    let regex = Regex::new(WHITESPACE_REGEX).map_err(|e| {
+        dbg!(e);
+
+        FhirpathError::ParserError {
+            msg: "Failed to create whitespace regex".to_string(),
+        }
+    })?;
+
+    Ok(regex.replace_all(s, "").to_string())
 }
 
 #[derive(Debug)]
@@ -114,19 +125,26 @@ pub struct ParamList {
 
 impl Matches for ParamList {
     fn matches(input: &String) -> bool {
-        let expressions: Vec<String> = input.split(',').map(|s| filter_ignored_data(s)).collect();
+        let expr: ParseResult<Vec<String>> =
+            input.split(',').map(|s| filter_ignored_data(s)).collect();
 
-        expressions.iter().all(|exp| {
-            dbg!(exp);
+        expr.and_then(|expressions| {
+            Ok(expressions.iter().all(|exp| {
+                dbg!(exp);
 
-            Expression::matches(&exp.to_string())
+                Expression::matches(&exp.to_string())
+            }))
         })
+        .unwrap_or(false)
     }
 }
 
 impl Parse for ParamList {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
-        let expressions: Vec<String> = input.split(',').map(|s| filter_ignored_data(s)).collect();
+        let expressions: Vec<String> = input
+            .split(',')
+            .map(|s| filter_ignored_data(s))
+            .collect::<ParseResult<Vec<String>>>()?;
 
         let mut children = Vec::<Box<Expression>>::new();
 
@@ -153,7 +171,8 @@ pub struct FunctionInvocation {
 
 impl Matches for FunctionInvocation {
     fn matches(input: &String) -> bool {
-        let captures = Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input);
+        let captures =
+            Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
 
         match captures {
             Some(capture) => {
@@ -172,8 +191,9 @@ impl Parse for FunctionInvocation {
     fn parse(input: &String) -> super::traits::ParseResult<Box<Self>> {
         let mut children = Vec::<Box<IdentifierAndParamList>>::new();
 
-        let captures =
-            Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
+        let captures = Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input)
+            .unwrap()
+            .unwrap();
 
         children.push(Box::new(IdentifierAndParamList::Identifier(
             Identifier::parse(&captures[1].to_string())?,
