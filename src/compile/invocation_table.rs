@@ -6,6 +6,7 @@ use super::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
     },
+    subsetting::{first, intersect, last, single, skip, tail, take},
     CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
@@ -59,6 +60,20 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("where".to_string(), where_function);
 
     map.insert("select".to_string(), select);
+
+    map.insert("single".to_string(), single);
+
+    map.insert("first".to_string(), first);
+
+    map.insert("last".to_string(), last);
+
+    map.insert("tail".to_string(), tail);
+
+    map.insert("skip".to_string(), skip);
+
+    map.insert("take".to_string(), take);
+
+    map.insert("intersect".to_string(), intersect);
 
     map
 }

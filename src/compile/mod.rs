@@ -3,6 +3,7 @@ mod filtering;
 mod invocation_table;
 mod math;
 mod strings;
+mod subsetting;
 mod utils;
 
 use std::ops::Deref;
@@ -212,33 +213,6 @@ impl Evaluate for FunctionInvocation {
             .clone();
 
         Ok(invocation(input, &parameters)?)
-
-        // if let IdentifierAndParamList::ParamList(param_list) = param_list_child {
-        //     if let IdentifierAndParamList::Identifier(identifier) = function_name_child {
-        //         let function_name = identifier.evaluate(input)?.data.and_then(|val| match val {
-        //             Value::String(string) => Some(string),
-        //             _ => None,
-        //         });
-
-        //         Ok(function_name
-        //             .and_then(|fnc| {
-        //                 let str_fnc = fnc.clone();
-        //                 Some(invocation_table().get(&str_fnc).unwrap().clone())
-        //             })
-        //             .ok_or(FhirpathError::CompileError {
-        //                 msg: "No method in invocation table".to_string(),
-        //             })
-        //             .and_then(|invocation| invocation(input, &param_list.children))?)
-        //     } else {
-        //         return Err(FhirpathError::CompileError {
-        //             msg: "Second child of FunctionInvocation should be function params".to_string(),
-        //         });
-        //     }
-        // } else {
-        //     return Err(FhirpathError::CompileError {
-        //         msg: "First child of FunctionInvocation should be function name".to_string(),
-        //     });
-        // }
     }
 }
 
@@ -1087,5 +1061,384 @@ mod tests {
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test test", "test1 abc"]));
+    }
+
+    #[test]
+    fn evaluate_single_path() {
+        let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_single_path_no_values() {
+        let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient);
+
+        assert_eq!(
+            evaluate_result,
+            Err(FhirpathError::CompileError {
+                msg: "Expected array with single element but had 0".to_string()
+            })
+        )
+    }
+
+    #[test]
+    fn evaluate_single_path_multiple_values() {
+        let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient);
+
+        assert_eq!(
+            evaluate_result,
+            Err(FhirpathError::CompileError {
+                msg: "Expected array with single element but had 2".to_string()
+            })
+        )
+    }
+
+    #[test]
+    fn evaluate_first_path() {
+        let compiled = compile(&"Patient.name.first()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_first_empty_path() {
+        let compiled = compile(&"Patient.name.first()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_last_path() {
+        let compiled = compile(&"Patient.name.last()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_last_empty_path() {
+        let compiled = compile(&"Patient.name.last()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_tail_path() {
+        let compiled = compile(&"Patient.name.tail()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                },
+                {
+                    "use": "official",
+                    "given": ["test2"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            },
+            {
+                "use": "official",
+                "given": ["test2"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_tail_empty_path() {
+        let compiled = compile(&"Patient.name.last()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_skip_path() {
+        let compiled = compile(&"Patient.name.skip(1)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                },
+                {
+                    "use": "official",
+                    "given": ["test2"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            },
+            {
+                "use": "official",
+                "given": ["test2"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_skip_empty_path() {
+        let compiled = compile(&"Patient.name.skip(1)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_take_path() {
+        let compiled = compile(&"Patient.name.take(2)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                },
+                {
+                    "use": "official",
+                    "given": ["test2"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"],
+                "family": "test"
+            },
+            {
+                "use": "official",
+                "given": ["test1"],
+                "family": "abc"
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_take_empty_path() {
+        let compiled = compile(&"Patient.name.take(1)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_intersect_path() {
+        let compiled = compile(&"Patient.a.intersect(Patient.b)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3],
+            "b": [1,2]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([1, 2]));
     }
 }

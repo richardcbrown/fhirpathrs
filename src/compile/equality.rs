@@ -1,8 +1,13 @@
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{CompileResult, Evaluate, ResourceNode};
+
+// todo - pad out
+pub fn values_are_equal(first: &Value, second: &Value) -> bool {
+    first == second
+}
 
 fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> CompileResult<bool> {
     if expressions.len() != 2 {
@@ -17,9 +22,7 @@ fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> Compil
     let first_val = first.evaluate(input)?.data.unwrap_or(json!(false));
     let second_val = second.evaluate(input)?.data.unwrap_or(json!(false));
 
-    let equal_vals = first_val == second_val;
-
-    Ok(equal_vals)
+    Ok(values_are_equal(&first_val, &second_val))
 }
 
 pub fn equal<'a>(

@@ -1,4 +1,4 @@
-use serde_json::{Number, Value};
+use serde_json::{value, Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
@@ -118,5 +118,32 @@ pub fn get_single_value(value: Value) -> CompileResult<Value> {
                 .clone())
         }
         _ => Ok(value),
+    }
+}
+
+pub fn get_option_array(value: &Option<Value>) -> CompileResult<Vec<Value>> {
+    let unpacked_value = value.clone().ok_or_else(|| FhirpathError::CompileError {
+        msg: "Expected array but got None".to_string(),
+    })?;
+
+    match unpacked_value {
+        Value::Array(array) => Ok(array),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Expected array".to_string(),
+        }),
+    }
+}
+
+pub fn get_array_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<Vec<Value>> {
+    let value = get_value_from_expression(input, expression)?;
+
+    match value {
+        Value::Array(array) => Ok(array),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Value was not an Array".to_string(),
+        }),
     }
 }
