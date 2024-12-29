@@ -45,6 +45,7 @@ pub fn add<'a>(
     };
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(result),
     })

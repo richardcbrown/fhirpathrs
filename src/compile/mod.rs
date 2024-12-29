@@ -1,3 +1,4 @@
+mod arity;
 mod equality;
 mod filtering;
 mod invocation_table;
@@ -29,6 +30,7 @@ pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
 
 #[derive(Clone)]
 pub struct ResourceNode<'a> {
+    pub data_root: Value,
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
     pub data: Option<Value>,
 }
@@ -44,6 +46,7 @@ pub trait Evaluate {
 impl Evaluate for StringLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode {
+            data_root: input.data_root.clone(),
             parent_node: Some(Box::new(input)),
             data: Some(json!(self.text)),
         })
@@ -60,6 +63,7 @@ impl Evaluate for NumberLiteral {
             })?;
 
         Ok(ResourceNode {
+            data_root: input.data_root.clone(),
             parent_node: Some(Box::new(input)),
             data: Some(json!(value)),
         })
@@ -84,6 +88,7 @@ impl Evaluate for MemberInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if input.data.is_none() {
             return Ok(ResourceNode {
+                data_root: input.data_root.clone(),
                 parent_node: Some(Box::new(input)),
                 data: None,
             });
@@ -117,6 +122,7 @@ impl Evaluate for MemberInvocation {
         // MemberInvocation is resourceType, so return whole resource
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
             return Ok(ResourceNode {
+                data_root: input.data_root.clone(),
                 parent_node: Some(Box::new(input)),
                 data: Some(input_data.to_owned()),
             });
@@ -153,6 +159,7 @@ impl Evaluate for MemberInvocation {
         println!("{:?}", child_data);
 
         Ok(ResourceNode {
+            data_root: input.data_root.clone(),
             parent_node: Some(Box::new(input)),
             data: child_data,
         })
@@ -229,6 +236,7 @@ impl Evaluate for Invocation {
 impl Evaluate for LiteralIdentifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode {
+            data_root: input.data_root.clone(),
             data: Some(Value::String(self.text.clone())),
             parent_node: Some(Box::new(input)),
         })
@@ -265,6 +273,7 @@ impl Evaluate for LiteralTerm {
         let first = &self.children[0];
 
         Ok(ResourceNode {
+            data_root: input.data_root.clone(),
             parent_node: Some(Box::new(input)),
             data: first.evaluate(input)?.data,
         })
@@ -309,6 +318,7 @@ impl Evaluate for InvocationExpression {
 
                 match result {
                     Ok(res) => Ok(ResourceNode {
+                        data_root: input.data_root.clone(),
                         parent_node: Some(Box::new(input)),
                         data: res.data,
                     }),
@@ -391,6 +401,7 @@ impl Evaluate for IndexerExpression {
 
         match array_data {
             Value::Array(array) => Ok(ResourceNode {
+                data_root: input.data_root.clone(),
                 parent_node: Some(Box::new(input)),
                 data: Some(array[index as usize].clone()),
             }),
@@ -433,6 +444,7 @@ impl Evaluate for PolarityExpression {
             })
             .and_then(|result| {
                 Ok(ResourceNode {
+                    data_root: input.data_root.clone(),
                     parent_node: Some(Box::new(input)),
                     data: Some(result),
                 })
@@ -474,6 +486,7 @@ impl Evaluate for EntireExpression {
 impl CompiledPath {
     fn evaluate(&self, resource: Value) -> CompileResult<Option<Value>> {
         let node = ResourceNode {
+            data_root: resource.clone(),
             data: Some(resource),
             parent_node: None,
         };

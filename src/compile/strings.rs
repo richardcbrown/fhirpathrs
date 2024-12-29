@@ -1,7 +1,5 @@
 // http://hl7.org/fhirpath/N1/#string-manipulation
 
-use std::fmt::format;
-
 use regex::Regex;
 use serde_json::{json, Number, Value};
 
@@ -34,6 +32,7 @@ pub fn index_of<'a>(
         .unwrap_or(-1);
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(json!(index)),
     })
@@ -67,6 +66,7 @@ pub fn substring<'a>(
             })?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::String(sub_string.to_string())),
     })
@@ -86,6 +86,7 @@ pub fn starts_with<'a>(
     let starts_with = string_value.starts_with(&match_string);
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Bool(starts_with)),
     })
@@ -105,6 +106,7 @@ pub fn ends_with<'a>(
     let ends_with = string_value.ends_with(&match_string);
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Bool(ends_with)),
     })
@@ -124,6 +126,7 @@ pub fn contains<'a>(
     let contains = string_value.contains(&match_string);
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Bool(contains)),
     })
@@ -142,6 +145,7 @@ pub fn upper<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(replaced)),
     })
@@ -160,6 +164,7 @@ pub fn lower<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(replaced)),
     })
@@ -180,6 +185,7 @@ pub fn replace<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(replaced)),
     })
@@ -198,6 +204,7 @@ pub fn matches<'a>(
     let matches = Regex::is_match(&regex, &string_value);
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Bool(matches)),
     })
@@ -222,6 +229,7 @@ pub fn replace_matches<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(replace_result)),
     })
@@ -243,6 +251,7 @@ pub fn length<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(lengths)),
     })
@@ -267,6 +276,7 @@ pub fn to_chars<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(char_sets)),
     })

@@ -3,6 +3,7 @@ use serde_json::Value;
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
+    arity::{get_input_for_arity, Arity},
     equality::values_are_equal,
     utils::{get_array_from_expression, get_option_array, get_usize_from_expression},
     CompileResult, ResourceNode,
@@ -25,6 +26,7 @@ pub fn single<'a>(
     })?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(vec![single_value.clone()])),
     })
@@ -39,6 +41,7 @@ pub fn first<'a>(
     let first_value = array.first();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: match first_value {
             Some(first) => Some(Value::Array(vec![first.clone()])),
@@ -56,6 +59,7 @@ pub fn last<'a>(
     let last_value = array.last();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: match last_value {
             Some(first) => Some(Value::Array(vec![first.clone()])),
@@ -73,6 +77,7 @@ pub fn tail<'a>(
     let tail_values: Vec<Value> = array.into_iter().skip(1).collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(tail_values)),
     })
@@ -99,6 +104,7 @@ pub fn skip<'a>(
     let skip_num = get_usize_from_expression(input, expression)?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(array.into_iter().skip(skip_num).collect())),
     })
@@ -125,6 +131,7 @@ pub fn take<'a>(
     let take_num = get_usize_from_expression(input, expression)?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(array.into_iter().take(take_num).collect())),
     })
@@ -148,7 +155,9 @@ pub fn intersect<'a>(
             msg: "Skip expects exactly one expression".to_string(),
         })?;
 
-    let second_array = get_array_from_expression(input, &expression)?;
+    let second_input = get_input_for_arity(input, Arity::AnyAtRoot);
+
+    let second_array = get_array_from_expression(&second_input, &expression)?;
 
     let intersect: Vec<Value> = array
         .into_iter()
@@ -161,6 +170,7 @@ pub fn intersect<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(intersect)),
     })

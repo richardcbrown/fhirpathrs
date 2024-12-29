@@ -97,6 +97,11 @@ mod tests {
     #[test]
     fn test_where_function() {
         let node = ResourceNode {
+            data_root: json!([
+              { "use": "a" },
+              { "use": "b" },
+              { "use": "c" }
+            ]),
             data: Some(json!([
               { "use": "a" },
               { "use": "b" },

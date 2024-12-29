@@ -32,6 +32,7 @@ pub fn equal<'a>(
     let result = are_equal(input, expressions)?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(json!(result)),
     })
@@ -44,6 +45,7 @@ pub fn not_equal<'a>(
     let result = are_equal(input, expressions)?;
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(json!(!result)),
     })

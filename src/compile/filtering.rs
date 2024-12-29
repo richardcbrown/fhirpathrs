@@ -4,11 +4,16 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{CompileResult, Evaluate, ResourceNode};
 
-fn evaluate_array_expression(array: &Vec<Value>, expr: &Expression) -> Vec<Value> {
+fn evaluate_array_expression(
+    input: ResourceNode,
+    array: &Vec<Value>,
+    expr: &Expression,
+) -> Vec<Value> {
     let results: Vec<Value> = array
         .iter()
         .filter_map(|item| {
             let node = ResourceNode {
+                data_root: input.data_root.clone(),
                 data: Some(item.to_owned()),
                 parent_node: None,
             };
@@ -40,7 +45,7 @@ pub fn where_function<'a>(
         .and_then(|expr| {
             let data = input.data.as_ref().and_then(|val| match val {
                 Value::Array(array) => {
-                    let results: Vec<Value> = evaluate_array_expression(array, expr);
+                    let results: Vec<Value> = evaluate_array_expression(input.clone(), array, expr);
 
                     Some(Value::Array(results))
                 }
@@ -48,6 +53,7 @@ pub fn where_function<'a>(
             });
 
             Some(ResourceNode {
+                data_root: input.data_root.clone(),
                 parent_node: Some(Box::new(input)),
                 data,
             })
@@ -80,6 +86,7 @@ pub fn select<'a>(
         .iter()
         .map(|val| {
             let node = ResourceNode {
+                data_root: input.data_root.clone(),
                 parent_node: None,
                 data: Some(val.clone()),
             };
@@ -94,6 +101,7 @@ pub fn select<'a>(
         .collect();
 
     Ok(ResourceNode {
+        data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
         data: Some(Value::Array(result?)),
     })
