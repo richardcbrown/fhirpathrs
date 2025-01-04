@@ -229,7 +229,9 @@ impl Evaluate for Invocation {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
-            _ => todo!(),
+            Invocation::IndexInvocation(exp) => todo!(),
+            Invocation::ThisInvocation(exp) => todo!(),
+            Invocation::TotalInvocation(exp) => todo!(),
         }
     }
 }
@@ -248,7 +250,11 @@ impl Evaluate for Identifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
-            _ => todo!(),
+            Identifier::LiteralAs(exp) => todo!(),
+            Identifier::LiteralContains(exp) => todo!(),
+            Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
+            Identifier::LiteralIn(exp) => todo!(),
+            Identifier::LiteralIs(exp) => todo!(),
         }
     }
 }
@@ -512,7 +518,7 @@ impl CompiledPath {
 
 pub fn compile(path: &String) -> CompileResult<CompiledPath> {
     Ok(CompiledPath {
-        expression: EntireExpression::parse(path)?,
+        expression: EntireExpression::parse(path, 0)?,
     })
 }
 

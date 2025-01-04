@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use super::{
     entire_expression::EntireExpression,
     traits::{Parse, ParseResult},
@@ -8,10 +10,10 @@ pub struct RootExpression {
 }
 
 impl Parse for RootExpression {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
         let mut children = Vec::<Box<EntireExpression>>::new();
 
-        let entire_expression = EntireExpression::parse(input)?;
+        let entire_expression = EntireExpression::parse(input, cursor)?;
 
         children.push(entire_expression);
 

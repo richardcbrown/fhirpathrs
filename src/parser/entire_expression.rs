@@ -9,10 +9,10 @@ pub struct EntireExpression {
 }
 
 impl Parse for EntireExpression {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Expression>>::new();
 
-        let expression = Expression::parse(input)?;
+        let expression = Expression::parse(input, cursor)?;
 
         children.push(expression);
 
@@ -26,7 +26,7 @@ mod tests {
 
     #[test]
     fn parses_basic_path() {
-        let result = EntireExpression::parse(&"Patient".to_string()).unwrap();
+        let result = EntireExpression::parse(&"Patient".to_string(), 0).unwrap();
 
         assert_eq!(result.children.len(), 1);
     }

@@ -1,4 +1,4 @@
-use super::traits::{Matches, Parse, ParseResult};
+use super::traits::{Parse, ParseResult};
 use crate::error::FhirpathError;
 use regex::Regex;
 
@@ -12,18 +12,16 @@ pub enum Identifier {
     LiteralIn(Box<LiteralIn>),
 }
 
-impl Matches for Identifier {
-    fn matches(input: &String) -> bool {
-        return LiteralIdentifier::matches(input);
-    }
-}
+// impl Matches for Identifier {
+//     fn matches(input: &String, cursor: usize) -> bool {
+//         return LiteralIdentifier::matches(input, cursor);
+//     }
+// }
 
 impl Parse for Identifier {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
-        if LiteralIdentifier::matches(input) {
-            return Ok(Box::new(Identifier::LiteralIdentifier(
-                LiteralIdentifier::parse(input)?,
-            )));
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+        if let Ok(literal_identifier) = LiteralIdentifier::parse(input, cursor) {
+            return Ok(Box::new(Identifier::LiteralIdentifier(literal_identifier)));
         }
 
         Err(FhirpathError::ParserError {
@@ -39,16 +37,22 @@ pub struct LiteralIdentifier {
 
 static IDENTIFIER_REGEX: &str = "^([A-Za-z]|_)([A-Za-z0-9]|_)*$";
 
-impl Matches for LiteralIdentifier {
-    fn matches(input: &String) -> bool {
-        Regex::is_match(&Regex::new(IDENTIFIER_REGEX).unwrap(), input)
-    }
-}
+// impl Matches for LiteralIdentifier {
+//     fn matches(input: &String, cursor: usize) -> bool {
+//         Regex::is_match(&Regex::new(IDENTIFIER_REGEX).unwrap(), input)
+//     }
+// }
 
 impl Parse for LiteralIdentifier {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
-        let capture_text =
-            Regex::captures(&Regex::new(IDENTIFIER_REGEX).unwrap(), input).unwrap()[0].to_string();
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+        let captures =
+            Regex::captures(&Regex::new(IDENTIFIER_REGEX).unwrap(), input).ok_or_else(|| {
+                FhirpathError::ParserError {
+                    msg: "No match for LiteralIdentifier".to_string(),
+                }
+            })?;
+
+        let capture_text = captures[0].to_string();
 
         Ok(Box::new(Self { text: capture_text }))
     }
@@ -88,16 +92,16 @@ pub enum TypeSpecifier {
     QualifiedIdentifier(Box<QualifiedIdentifier>),
 }
 
-impl Matches for TypeSpecifier {
-    fn matches(input: &String) -> bool {
-        QualifiedIdentifier::matches(input)
-    }
-}
+// impl Matches for TypeSpecifier {
+//     fn matches(input: &String, cursor: usize) -> bool {
+//         QualifiedIdentifier::matches(input, cursor)
+//     }
+// }
 
 impl Parse for TypeSpecifier {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
         Ok(Box::new(TypeSpecifier::QualifiedIdentifier(
-            QualifiedIdentifier::parse(input)?,
+            QualifiedIdentifier::parse(input, cursor)?,
         )))
     }
 }
@@ -107,24 +111,24 @@ pub struct QualifiedIdentifier {
     pub children: Vec<Box<Identifier>>,
 }
 
-impl Matches for QualifiedIdentifier {
-    fn matches(input: &String) -> bool {
-        let identifiers: Vec<&str> = input.split('.').collect();
+// impl Matches for QualifiedIdentifier {
+//     fn matches(input: &String, cursor: usize) -> bool {
+//         let identifiers: Vec<&str> = input.split('.').collect();
 
-        identifiers
-            .iter()
-            .all(|&identifier| Identifier::matches(&identifier.to_string()))
-    }
-}
+//         identifiers
+//             .iter()
+//             .all(|&identifier| Identifier::matches(&identifier.to_string(), 0))
+//     }
+// }
 
 impl Parse for QualifiedIdentifier {
-    fn parse(input: &String) -> ParseResult<Box<Self>> {
+    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Identifier>>::new();
 
         let identifiers: Vec<&str> = input.split('.').collect();
 
         for identifier in identifiers.iter() {
-            children.push(Identifier::parse(&identifier.to_string())?);
+            children.push(Identifier::parse(&identifier.to_string(), 0)?);
         }
 
         Ok(Box::new(Self { children }))
