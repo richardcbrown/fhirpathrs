@@ -1,4 +1,6 @@
 use super::{
+    arity::Arity,
+    combining::union,
     equality::{equal, not_equal},
     filtering::{select, where_function},
     math::add,
@@ -6,7 +8,7 @@ use super::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
     },
-    subsetting::{first, intersect, last, single, skip, tail, take},
+    subsetting::{exclude, first, intersect, last, single, skip, tail, take},
     CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
@@ -74,6 +76,20 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("take".to_string(), take);
 
     map.insert("intersect".to_string(), intersect);
+
+    map.insert("exclude".to_string(), exclude);
+
+    let union_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+        union(input, expressions, Arity::AnyAtRoot)
+    };
+
+    map.insert("union".to_string(), union_root);
+
+    let union_expr = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+        union(input, expressions, Arity::Expr)
+    };
+
+    map.insert("|".to_string(), union_expr);
 
     map
 }

@@ -105,8 +105,7 @@ impl Parse for MemberInvocation {
 
 static WHITESPACE_REGEX: &str = r"\s+(?=((\\[\\']|[^\\'])*'(\\[\\']|[^\\'])*')*(\\[\\']|[^\\'])*$)";
 
-fn filter_ignored_data(s: &str) -> ParseResult<String> {
-    // s.chars().filter(|c| !c.is_whitespace()).collect()
+pub fn filter_ignored_data(s: &str) -> ParseResult<String> {
     let regex = Regex::new(WHITESPACE_REGEX).map_err(|e| {
         dbg!(e);
 

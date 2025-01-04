@@ -1,8 +1,14 @@
+use std::ops::Deref;
+
 use serde_json::{value, Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
-use super::{CompileResult, Evaluate, ResourceNode};
+use super::{
+    arity::{get_input_for_arity, Arity},
+    equality::{equal, values_are_equal},
+    CompileResult, Evaluate, ResourceNode,
+};
 
 pub fn get_string(value: &Value) -> CompileResult<String> {
     match value {
@@ -126,6 +132,8 @@ pub fn get_option_array(value: &Option<Value>) -> CompileResult<Vec<Value>> {
         msg: "Expected array but got None".to_string(),
     })?;
 
+    dbg!(unpacked_value.clone());
+
     match unpacked_value {
         Value::Array(array) => Ok(array),
         _ => Err(FhirpathError::CompileError {
@@ -140,10 +148,87 @@ pub fn get_array_from_expression(
 ) -> CompileResult<Vec<Value>> {
     let value = get_value_from_expression(input, expression)?;
 
+    dbg!(value.clone());
+
     match value {
         Value::Array(array) => Ok(array),
         _ => Err(FhirpathError::CompileError {
             msg: "Value was not an Array".to_string(),
         }),
     }
+}
+
+pub fn get_arrays<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+    arity: Arity,
+) -> CompileResult<(Vec<Value>, Vec<Value>)> {
+    match arity {
+        Arity::AnyAtRoot => {
+            let array = get_option_array(&input.data)?;
+
+            if expressions.len() > 1 {
+                return Err(FhirpathError::CompileError {
+                    msg: "Expected exactly one expression".to_string(),
+                });
+            }
+
+            let expression = expressions
+                .first()
+                .ok_or_else(|| FhirpathError::CompileError {
+                    msg: "Expected exactly one expression".to_string(),
+                })?;
+
+            let second_input = get_input_for_arity(input, arity);
+
+            let second_array = get_array_from_expression(&second_input, &expression)?;
+
+            Ok((array, second_array))
+        }
+        Arity::Expr => {
+            if expressions.len() != 2 {
+                return Err(FhirpathError::CompileError {
+                    msg: "Expected exactly two expressions".to_string(),
+                });
+            }
+
+            let first_expression =
+                expressions
+                    .first()
+                    .ok_or_else(|| FhirpathError::CompileError {
+                        msg: "Expected exactly two expressions".to_string(),
+                    })?;
+
+            let second_expression =
+                expressions
+                    .into_iter()
+                    .nth(1)
+                    .ok_or_else(|| FhirpathError::CompileError {
+                        msg: "Expected exactly two expressions".to_string(),
+                    })?;
+
+            let first_array = get_array_from_expression(input, first_expression)?;
+
+            let second_array = get_array_from_expression(input, second_expression)?;
+
+            Ok((first_array, second_array))
+        }
+    }
+}
+
+pub fn unique_array_elements(array: &Vec<Value>) -> Vec<Value> {
+    let mut unique: Vec<Value> = vec![];
+
+    array.into_iter().for_each(|item| {
+        let exists = unique
+            .iter()
+            .find(|unique_item| values_are_equal(unique_item, item))
+            .is_some();
+
+        if !exists {
+            unique.push(item.clone());
+        }
+    });
+
+    unique
 }

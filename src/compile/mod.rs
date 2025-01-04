@@ -1,4 +1,5 @@
 mod arity;
+mod combining;
 mod equality;
 mod filtering;
 mod invocation_table;
@@ -16,7 +17,7 @@ use crate::error::FhirpathError;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
     AdditiveExpression, EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
-    InvocationExpression, PolarityExpression, Term, TermExpression,
+    InvocationExpression, PolarityExpression, Term, TermExpression, UnionExpression,
 };
 use crate::parser::identifier::{Identifier, LiteralIdentifier};
 use crate::parser::invocation::{
@@ -366,6 +367,18 @@ impl Evaluate for AdditiveExpression {
     }
 }
 
+impl Evaluate for UnionExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "UnionExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
 impl Evaluate for IndexerExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -461,7 +474,7 @@ impl Evaluate for Expression {
             Expression::PolarityExpression(exp) => exp.evaluate(input),
             Expression::MultiplicativeExpression(exp) => todo!(),
             Expression::AdditiveExpression(exp) => exp.evaluate(input),
-            Expression::UnionExpression(exp) => todo!(),
+            Expression::UnionExpression(exp) => exp.evaluate(input),
             Expression::InequalityExpression(exp) => todo!(),
             Expression::TypeExpression(exp) => todo!(),
             Expression::EqualityExpression(exp) => exp.evaluate(input),
@@ -1453,5 +1466,56 @@ mod tests {
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2]));
+    }
+
+    #[test]
+    fn evaluate_exclude_path() {
+        let compiled = compile(&"Patient.a.exclude(Patient.b)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3],
+            "b": [1,2]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([3]));
+    }
+
+    #[test]
+    fn evaluate_union_path() {
+        let compiled = compile(&"Patient.a.union(Patient.b)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([1, 2, 3]));
+    }
+
+    #[test]
+    fn evaluate_union_symbol_path() {
+        let compiled = compile(&"Patient.a | Patient.b".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([1, 2, 3]));
     }
 }

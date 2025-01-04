@@ -5,9 +5,9 @@ use regex::Regex;
 
 use super::{
     identifier::{Identifier, TypeSpecifier},
-    invocation::{Invocation, InvocationTerm},
+    invocation::{filter_ignored_data, Invocation, InvocationTerm},
     literal::{LiteralTerm, StringLiteral},
-    traits::{Matches, Parse},
+    traits::{Matches, Parse, ParseResult},
 };
 use crate::error::FhirpathError;
 
@@ -343,22 +343,6 @@ impl Matches for IndexerExpression {
                 );
             })
             .unwrap_or(false)
-
-        // let closing_brace_index = input.rfind(']');
-        // let opening_brace_index = input.rfind('[');
-
-        // match (opening_brace_index, closing_brace_index) {
-        //     (Some(opening_brace), Some(_closing_brace)) => {
-        //         // @todo check closing brace is last element
-        //         let (first_expression, second_expression) = input.split_at(opening_brace);
-
-        //         let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
-
-        //         return Expression::matches(&first_expression.to_string())
-        //             && Expression::matches(&parsed_second_expression);
-        //     }
-        //     _ => false,
-        // }
     }
 }
 
@@ -376,28 +360,6 @@ impl Parse for IndexerExpression {
         children.push(Expression::parse(&capture[2].to_string())?);
 
         Ok(Box::new(Self { children }))
-
-        // let closing_brace_index = input.rfind(']');
-        // let opening_brace_index = input.rfind('[');
-
-        // match (opening_brace_index, closing_brace_index) {
-        //     (Some(opening_brace), Some(_closing_brace)) => {
-        //         // @todo check closing brace is last element
-        //         let (first_expression, second_expression) = input.split_at(opening_brace);
-
-        //         let parsed_second_expression = second_expression.replace(']', "").replace('[', "");
-
-        //         let mut children = Vec::<Box<Expression>>::new();
-
-        //         children.push(Box::new(*Expression::parse(&first_expression.to_string())?));
-        //         children.push(Box::new(*Expression::parse(&parsed_second_expression)?));
-
-        //         Ok(Box::new(Self { children }))
-        //     }
-        //     _ => Err(FhirpathError::ParserError {
-        //         msg: "Failed to parse IndexerExpression".to_string(),
-        //     }),
-        // }
     }
 }
 
@@ -486,8 +448,15 @@ static MULTIPLICATIVE_TERMS: [&str; 4] = ["*", "/", "div", "mod"];
 fn match_terms(input: &String, match_strings: &[&str]) -> bool {
     match split_at_string(input, &match_strings) {
         Some(split_result) => {
-            Expression::matches(&split_result.first_segment)
-                && Expression::matches(&split_result.second_segment)
+            let first = filter_ignored_data(&split_result.first_segment);
+            let second = filter_ignored_data(&split_result.second_segment);
+
+            match (first, second) {
+                (Ok(first_segment), Ok(second_segment)) => {
+                    Expression::matches(&first_segment) && Expression::matches(&second_segment)
+                }
+                _ => false,
+            }
         }
         None => false,
     }
@@ -507,7 +476,10 @@ fn parse_terms(
         Some(split_result) => {
             let mut children: Vec<Box<Expression>> = Vec::<Box<Expression>>::new();
 
-            children.push(Expression::parse(&split_result.first_segment)?);
+            let first = filter_ignored_data(&split_result.first_segment)?;
+            let second = filter_ignored_data(&split_result.second_segment)?;
+
+            children.push(Expression::parse(&first)?);
             children.push(Expression::parse(&split_result.second_segment)?);
 
             Ok(OpParsedTerms {

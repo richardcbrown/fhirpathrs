@@ -5,7 +5,10 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 use super::{
     arity::{get_input_for_arity, Arity},
     equality::values_are_equal,
-    utils::{get_array_from_expression, get_option_array, get_usize_from_expression},
+    utils::{
+        get_array_from_expression, get_arrays, get_option_array, get_usize_from_expression,
+        unique_array_elements,
+    },
     CompileResult, ResourceNode,
 };
 
@@ -141,25 +144,9 @@ pub fn intersect<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let array = get_option_array(&input.data)?;
+    let (array, second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
 
-    if expressions.len() > 1 {
-        return Err(FhirpathError::CompileError {
-            msg: "Skip expects exactly one expression".to_string(),
-        });
-    }
-
-    let expression = expressions
-        .first()
-        .ok_or_else(|| FhirpathError::CompileError {
-            msg: "Skip expects exactly one expression".to_string(),
-        })?;
-
-    let second_input = get_input_for_arity(input, Arity::AnyAtRoot);
-
-    let second_array = get_array_from_expression(&second_input, &expression)?;
-
-    let intersect: Vec<Value> = array
+    let intersect_array: Vec<Value> = array
         .into_iter()
         .filter(|item| {
             second_array
@@ -172,6 +159,29 @@ pub fn intersect<'a>(
     Ok(ResourceNode {
         data_root: input.data_root.clone(),
         parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(intersect)),
+        data: Some(Value::Array(unique_array_elements(&intersect_array))),
+    })
+}
+
+pub fn exclude<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let (array, second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
+
+    let exclude_array: Vec<Value> = array
+        .into_iter()
+        .filter(|item| {
+            second_array
+                .iter()
+                .find(|second_item| values_are_equal(item, *second_item))
+                .is_none()
+        })
+        .collect();
+
+    Ok(ResourceNode {
+        data_root: input.data_root.clone(),
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(exclude_array)),
     })
 }
