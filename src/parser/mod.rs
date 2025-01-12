@@ -1,12 +1,7 @@
-pub mod entire_expression;
 pub mod expression;
 pub mod identifier;
 pub mod invocation;
 pub mod literal;
-pub mod root_expression;
-pub mod traits;
-
-use root_expression::RootExpression;
 
 // pub enum MemberInvocationChild {
 //     MemberInvocation(MemberInvocationNode),

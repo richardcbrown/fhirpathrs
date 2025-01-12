@@ -1,0 +1,543 @@
+use regex::Regex;
+
+use crate::parser::expression::{
+    EntireExpression,
+    Expression,
+    TermExpression,
+    Term,
+    InvocationExpression,
+    ExpressionAndInvocation,
+    ParenthesizedTerm,
+    IdentifierOrStringLiteral,
+    ExternalConstantTerm,
+    ImpliesExpression,
+    OrExpression,
+    AndExpression,
+    MembershipExpression,
+    EqualityExpression,
+    IndexerExpression,
+    ExpressionAndTypeSpecifier,
+    TypeExpression,
+    InequalityExpression,
+    AdditiveExpression,
+    UnionExpression,
+    MultiplicativeExpression,
+    PolarityExpression
+};
+
+use crate::parser::literal::{
+    LiteralTerm,
+    StringLiteral,
+    Literal,
+    QuantityLiteral,
+    TimeLiteral,
+    DatetimeLiteral,
+    NumberLiteral,
+    BooleanLiteral,
+    NullLiteral
+};
+
+use crate::parser::identifier::{
+    LiteralIdentifier,
+    Identifier,
+    QualifiedIdentifier,
+    TypeSpecifier,
+    LiteralIn,
+    LiteralAs,
+    LiteralContains,
+    LiteralIs
+};
+
+use crate::parser::invocation::{
+    InvocationTerm,
+    MemberInvocation,
+    Invocation,
+    ParamList,
+    TotalInvocation,
+    ThisInvocation,
+    IndexInvocation,
+    IdentifierAndParamList,
+    FunctionInvocation
+};
+
+grammar;
+
+pub EntireExpression: EntireExpression = {
+    <e: Expression> => EntireExpression {
+        children: vec![Box::new(e)]
+    }
+}
+
+Expression: Expression = {
+    // TermExpression
+    #[precedence(level="0")]
+    <t: Term> => Expression::TermExpression(Box::new(TermExpression {
+        children: vec![Box::new(t)]
+    })),
+    
+    
+    // InvocationExpression
+    #[precedence(level="2")]
+    <e: Expression> "." <i: Invocation> => Expression::InvocationExpression(Box::new(InvocationExpression {
+        children: vec![
+            Box::new(ExpressionAndInvocation::Expression(e)), 
+            Box::new(ExpressionAndInvocation::Invocation(i))
+        ]
+    })),    
+    
+    // IndexerExpression
+    #[precedence(level="2")]
+    <e1: Expression> "[" <e2: Expression> "]" => Expression::IndexerExpression(Box::new(IndexerExpression {
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // PolarityExpression
+    #[precedence(level="4")] #[assoc(side="right")]
+    "+" <e: Expression> => Expression::PolarityExpression(Box::new(PolarityExpression {
+        op: "+".to_string(),
+        children: vec![
+            Box::new(e)
+        ]
+    })),
+    "-" <e: Expression> => Expression::PolarityExpression(Box::new(PolarityExpression {
+        op: "-".to_string(),
+        children: vec![
+            Box::new(e)
+        ]
+    })),
+    
+    
+    // MultiplicativeExpression
+    #[precedence(level="5")] #[assoc(side="left")]
+    <e1: Expression> "*" <e2: Expression> => Expression::MultiplicativeExpression(Box::new(MultiplicativeExpression {
+        op: "*".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "/" <e2: Expression> => Expression::MultiplicativeExpression(Box::new(MultiplicativeExpression {
+        op: "/".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "div" <e2: Expression> => Expression::MultiplicativeExpression(Box::new(MultiplicativeExpression {
+        op: "div".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "mod" <e2: Expression> => Expression::MultiplicativeExpression(Box::new(MultiplicativeExpression {
+        op: "mod".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // AdditiveExpression
+    #[precedence(level="6")] #[assoc(side="left")]
+    <e1: Expression> "+" <e2: Expression> => Expression::AdditiveExpression(Box::new(AdditiveExpression {
+        op: "+".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "-" <e2: Expression> => Expression::AdditiveExpression(Box::new(AdditiveExpression {
+        op: "-".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "&" <e2: Expression> => Expression::AdditiveExpression(Box::new(AdditiveExpression {
+        op: "&".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // UnionExpression
+    #[precedence(level="7")] #[assoc(side="left")]
+    <e1: Expression> "|" <e2: Expression> => Expression::UnionExpression(Box::new(UnionExpression {
+        op: "|".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // InequalityExpression
+    #[precedence(level="8")] #[assoc(side="left")]
+    <e1: Expression> "<=" <e2: Expression> => Expression::InequalityExpression(Box::new(InequalityExpression {
+        op: "<=".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "<" <e2: Expression> => Expression::InequalityExpression(Box::new(InequalityExpression {
+        op: "<".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> ">" <e2: Expression> => Expression::InequalityExpression(Box::new(InequalityExpression {
+        op: ">".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> ">=" <e2: Expression> => Expression::InequalityExpression(Box::new(InequalityExpression {
+        op: ">=".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // TypeExpression
+    #[precedence(level="9")] #[assoc(side="left")]
+    <e: Expression> "is" <t: TypeSpecifier> => Expression::TypeExpression(Box::new(TypeExpression {
+        children: vec![
+            Box::new(ExpressionAndTypeSpecifier::Expression(Box::new(e))),
+            Box::new(ExpressionAndTypeSpecifier::TypeSpecifier(Box::new(t)))
+        ]
+    })),
+
+    // EqualityExpression
+    #[precedence(level="10")] #[assoc(side="left")]
+    <e1: Expression> "=" <e2: Expression> => Expression::EqualityExpression(Box::new(EqualityExpression {
+        op: "=".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "~" <e2: Expression> => Expression::EqualityExpression(Box::new(EqualityExpression {
+        op: "~".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "!=" <e2: Expression> => Expression::EqualityExpression(Box::new(EqualityExpression {
+        op: "!=".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "!~" <e2: Expression> => Expression::EqualityExpression(Box::new(EqualityExpression {
+        op: "!~".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // MembershipExpression
+    #[precedence(level="1")] #[assoc(side="left")]
+    <e1: Expression> "in" <e2: Expression> => Expression::MembershipExpression(Box::new(MembershipExpression {
+        op: "in".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "contains" <e2: Expression> => Expression::MembershipExpression(Box::new(MembershipExpression {
+        op: "contains".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // AndExpression
+    #[precedence(level="1")] #[assoc(side="left")]
+    <e1: Expression> "and" <e2: Expression> => Expression::AndExpression(Box::new(AndExpression {
+        op: "and".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // OrExpression
+    #[precedence(level="1")] #[assoc(side="left")]
+    <e1: Expression> "or" <e2: Expression> => Expression::OrExpression(Box::new(OrExpression {
+        op: "or".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+    <e1: Expression> "xor" <e2: Expression> => Expression::OrExpression(Box::new(OrExpression {
+        op: "xor".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    })),
+
+    // ImpliesExpression
+    #[precedence(level="1")] #[assoc(side="left")]
+    <e1: Expression> "implies" <e2: Expression> => Expression::ImpliesExpression(Box::new(ImpliesExpression {
+        op: "implies".to_string(),
+        children: vec![
+            Box::new(e1),
+            Box::new(e2)
+        ]
+    }))
+}
+
+Term: Term = {
+    #[precedence(level="0")]
+    <i: InvocationTerm> => Term::InvocationTerm(Box::new(i)),
+    #[precedence(level="1")]
+    #[assoc(side="left")]
+    <l: LiteralTerm> => Term::LiteralTerm(Box::new(l)),
+    #[precedence(level="2")]
+    #[assoc(side="left")]
+    <e: ExternalConstantTerm> => Term::ExternalConstantTerm(Box::new(e)),
+    #[precedence(level="3")]
+    #[assoc(side="left")]
+    <p: ParenthesizedTerm> => Term::ParenthesizedTerm(Box::new(p))
+}
+
+InvocationTerm: InvocationTerm = {
+    <i: Invocation> => InvocationTerm {
+        children: vec![Box::new(i)]
+    }
+}
+
+ExternalConstantTerm: ExternalConstantTerm = {
+    "%" <i: Identifier> => ExternalConstantTerm {
+        children: vec![
+            Box::new(
+                IdentifierOrStringLiteral::Identifier(Box::new(i))
+            )
+        ]
+    },
+    "%" <sl: StringLiteral> => ExternalConstantTerm {
+        children: vec![
+            Box::new(
+                IdentifierOrStringLiteral::StringLiteral(Box::new(sl))
+            )
+        ]
+    }
+}
+
+ParenthesizedTerm: ParenthesizedTerm = {
+    "(" <e: Expression> ")" => ParenthesizedTerm {
+        children: vec![
+            Box::new(e)
+        ]
+    }
+}
+
+Invocation: Invocation = {
+    <m: MemberInvocation> => Invocation::MemberInvocation(Box::new(m)),
+    <f: FunctionInvocation> => Invocation::FunctionInvocation(Box::new(f)),    
+    <t: ThisInvocation> => Invocation::ThisInvocation(Box::new(t)), 
+    <i: IndexInvocation> => Invocation::IndexInvocation(Box::new(i)), 
+    <tot: TotalInvocation> => Invocation::TotalInvocation(Box::new(tot))
+}
+
+FunctionInvocation: FunctionInvocation = {
+    <i: Identifier> "(" <pl: ParamList> ")" => FunctionInvocation {
+        children: vec![
+            Box::new(
+                IdentifierAndParamList::Identifier(Box::new(i))
+            ),
+            Box::new(
+                IdentifierAndParamList::ParamList(Box::new(pl))
+            )
+        ]
+    }
+}
+
+ThisInvocation: ThisInvocation = {
+    "$this" => ThisInvocation {
+        text: "$this".to_string()
+    }
+}
+
+IndexInvocation: IndexInvocation = {
+    "$index" => IndexInvocation {
+        text: "$index".to_string()
+    }
+}
+
+TotalInvocation: TotalInvocation = {
+    "$total" => TotalInvocation {
+        text: "$total".to_string()
+    }
+}
+
+MemberInvocation: MemberInvocation = {
+    <i: Identifier> => MemberInvocation {
+        children: vec![Box::new(i)]
+    }
+}
+
+Identifier: Identifier = {
+    <li: LiteralIdentifier> => Identifier::LiteralIdentifier(Box::new(li)),
+    //<ldi: LiteralDelimitedIdentifier> => Identifier::LiteralDelimitedIdentifier(Box::new(ldi)),
+    <las: LiteralAs> => Identifier::LiteralAs(Box::new(las)),
+    <lis: LiteralIs> => Identifier::LiteralIs(Box::new(lis)),
+    <lc: LiteralContains> => Identifier::LiteralContains(Box::new(lc)),
+    <lin: LiteralIn> => Identifier::LiteralIn(Box::new(lin))
+}
+
+LiteralIdentifier: LiteralIdentifier = {
+    <li: r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> => LiteralIdentifier {
+        text: li.to_string()
+    }
+}
+
+LiteralAs: LiteralAs = {
+    <las: "as"> => LiteralAs {
+        text: "as".to_string()
+    }
+}
+
+LiteralIs: LiteralIs = {
+    <lis: "is"> => LiteralIs {
+        text: "is".to_string()
+    }
+}
+
+LiteralContains: LiteralContains = {
+    <lc: "contains"> => LiteralContains {
+        text: "contains".to_string()
+    }
+}
+
+LiteralIn: LiteralIn = {
+    <li: "in"> => LiteralIn {
+        text: "in".to_string()
+    }
+}
+
+LiteralTerm: LiteralTerm = {
+   <l: Literal> => LiteralTerm {
+        children: vec![Box::new(l)]
+   }
+}
+
+Literal: Literal = {
+    <nl: NullLiteral> => Literal::NullLiteral(Box::new(nl)),
+    <bl: BooleanLiteral> => Literal::BooleanLiteral(Box::new(bl)),
+    <sl: StringLiteral> => Literal::StringLiteral(Box::new(sl)),
+    <numl: NumberLiteral> => Literal::NumberLiteral(Box::new(numl)),
+    <dl: DatetimeLiteral> => Literal::DatetimeLiteral(Box::new(dl)),
+    <tl: TimeLiteral> => Literal::TimeLiteral(Box::new(tl)),
+    <ql: QuantityLiteral> => Literal::QuantityLiteral(Box::new(ql))
+}
+
+NullLiteral: NullLiteral = {
+    <n: r"\{\s*\}"> => NullLiteral {
+        text: "{}".to_string()
+    }
+}
+
+BooleanLiteral: BooleanLiteral = {
+    <b: "(true|false)"> => BooleanLiteral {
+        text: b.to_string()
+    }
+}
+
+StringLiteral: StringLiteral = {
+    <s: r"'([^']*)'"> => {
+        let capture_regex = r"'([^']*)'";
+
+        let captures = Regex::captures(&Regex::new(capture_regex).unwrap(), s).unwrap();
+
+        let capture_text = captures[1].to_string();
+
+        StringLiteral {
+            text: capture_text.to_string()
+        }
+    }
+}
+
+pub NumberLiteral: NumberLiteral = {
+    <n: r"[0-9]+(\.[0-9]+)?"> => NumberLiteral {
+        text: n.to_string()
+    }
+}
+
+pub DatetimeLiteral: DatetimeLiteral = {
+    <dt: r"@[0-9][0-9][0-9][0-9](\\-[0-9][0-9](\\-[0-9][0-9](T[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?)?)?)?Z?"> => DatetimeLiteral {
+        text: dt.to_string()
+    }
+}
+
+pub TimeLiteral: TimeLiteral = {
+    <t: r"@T[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?"> => TimeLiteral {
+        text: t.to_string()
+    }
+}
+
+pub QuantityLiteral: QuantityLiteral = {
+    <ql: r"([0-9]+(\\.[0-9]+)?)(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|\'([^']*)\')"> => {
+        let quantity_regex = r"([0-9]+(\\.[0-9]+)?)(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|\'([^']*)\')";
+
+        let captures = Regex::captures(&Regex::new(quantity_regex).unwrap(), ql).unwrap();
+
+        let capture_text = captures[0].to_string();
+
+        let capture_unit = captures[1].to_string();
+
+        QuantityLiteral {
+            text: capture_text,
+            unit: Some(capture_unit),
+        }
+    }
+}
+
+TypeSpecifier: TypeSpecifier = {
+    <qi: QualifiedIdentifier> => TypeSpecifier::QualifiedIdentifier(Box::new(qi))
+}
+
+QualifiedIdentifier: QualifiedIdentifier = {
+    <i: Identifier> <v:("." <Identifier>)*> => {
+        let mut items = vec![Box::new(i)];
+
+        let mut additional: Vec<Box<Identifier>> = v.into_iter().map(|item| Box::new(item)).collect();
+
+        items.append(&mut additional);
+
+        QualifiedIdentifier {
+            children: items
+        }
+    }
+}
+
+ParamList: ParamList = {
+    <v:(<Expression> ",")*> <e: Expression?> => {
+        let mut items: Vec<Box<Expression>> = v.into_iter().map(|item| Box::new(item)).collect();
+
+        match e {
+            Some(exp) => {
+                items.push(Box::new(exp));
+            }
+            None => {}
+        }
+
+        ParamList {
+            children: items
+        }
+    }
+}

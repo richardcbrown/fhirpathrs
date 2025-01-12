@@ -14,19 +14,21 @@ use invocation_table::invocation_table;
 use serde_json::{json, Number, Value};
 
 use crate::error::FhirpathError;
-use crate::lexer::tokeniser::tokenise;
-use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
-    AdditiveExpression, EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
-    InvocationExpression, PolarityExpression, Term, TermExpression, UnionExpression,
+    AdditiveExpression, EntireExpression, EqualityExpression, Expression, ExpressionAndInvocation,
+    IndexerExpression, InvocationExpression, PolarityExpression, Term, TermExpression,
+    UnionExpression,
 };
-use crate::parser::identifier::{Identifier, LiteralIdentifier};
+use crate::parser::identifier::{Identifier, LiteralContains, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
 use crate::parser::literal::{Literal, LiteralTerm, NumberLiteral, StringLiteral};
-use crate::parser::traits::Parse;
+
+use lalrpop_util::lalrpop_mod;
+
+lalrpop_mod!(pub fhirpath);
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
 
@@ -247,12 +249,22 @@ impl Evaluate for LiteralIdentifier {
     }
 }
 
+impl Evaluate for LiteralContains {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        Ok(ResourceNode {
+            data_root: input.data_root.clone(),
+            data: Some(Value::String(self.text.clone())),
+            parent_node: Some(Box::new(input)),
+        })
+    }
+}
+
 impl Evaluate for Identifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
             Identifier::LiteralAs(exp) => todo!(),
-            Identifier::LiteralContains(exp) => todo!(),
+            Identifier::LiteralContains(exp) => exp.evaluate(input),
             Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
             Identifier::LiteralIn(exp) => todo!(),
             Identifier::LiteralIs(exp) => todo!(),
@@ -452,7 +464,7 @@ impl Evaluate for PolarityExpression {
                         msg: "PolarityExpression result was not a number".to_string(),
                     })?;
 
-                    if self.text == "-" {
+                    if self.op == "-" {
                         num = -num;
                     }
 
@@ -475,16 +487,16 @@ impl Evaluate for PolarityExpression {
 impl Evaluate for Expression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
-            Expression::TermExpression(exp) => exp.value.evaluate(input),
-            Expression::InvocationExpression(exp) => exp.value.evaluate(input),
-            Expression::IndexerExpression(exp) => exp.value.evaluate(input),
-            Expression::PolarityExpression(exp) => exp.value.evaluate(input),
+            Expression::TermExpression(exp) => exp.evaluate(input),
+            Expression::InvocationExpression(exp) => exp.evaluate(input),
+            Expression::IndexerExpression(exp) => exp.evaluate(input),
+            Expression::PolarityExpression(exp) => exp.evaluate(input),
             Expression::MultiplicativeExpression(exp) => todo!(),
-            Expression::AdditiveExpression(exp) => exp.value.evaluate(input),
-            Expression::UnionExpression(exp) => exp.value.evaluate(input),
+            Expression::AdditiveExpression(exp) => exp.evaluate(input),
+            Expression::UnionExpression(exp) => exp.evaluate(input),
             Expression::InequalityExpression(exp) => todo!(),
             Expression::TypeExpression(exp) => todo!(),
-            Expression::EqualityExpression(exp) => exp.value.evaluate(input),
+            Expression::EqualityExpression(exp) => exp.evaluate(input),
             Expression::MembershipExpression(exp) => todo!(),
             Expression::AndExpression(exp) => todo!(),
             Expression::OrExpression(exp) => todo!(),
@@ -518,10 +530,8 @@ impl CompiledPath {
 }
 
 pub fn compile(path: &String) -> CompileResult<CompiledPath> {
-    let tokens = tokenise(path)?;
-
     Ok(CompiledPath {
-        expression: EntireExpression::parse(&tokens, 0)?.value,
+        expression: Box::new(fhirpath::EntireExpressionParser::new().parse(path).unwrap()),
     })
 }
 
@@ -594,6 +604,31 @@ mod tests {
         println!("{:?}", evaluate_result);
 
         assert_json_eq!(evaluate_result, json!(["test", "test2"]));
+    }
+
+    #[test]
+    fn evaluate_where_path_simple() {
+        let compiled = compile(&"Patient.name.where(use = 'usual')".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test"]
+            }]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"]
+            }])
+        );
     }
 
     #[test]
