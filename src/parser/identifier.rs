@@ -1,5 +1,5 @@
 use super::traits::{Parse, ParseResult};
-use crate::error::FhirpathError;
+use crate::{error::FhirpathError, lexer::tokens::Token};
 use regex::Regex;
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub enum Identifier {
 // }
 
 impl Parse for Identifier {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         if let Ok(literal_identifier) = LiteralIdentifier::parse(input, cursor) {
             return Ok(Box::new(Identifier::LiteralIdentifier(literal_identifier)));
         }
@@ -44,7 +44,7 @@ static IDENTIFIER_REGEX: &str = "^([A-Za-z]|_)([A-Za-z0-9]|_)*$";
 // }
 
 impl Parse for LiteralIdentifier {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let captures =
             Regex::captures(&Regex::new(IDENTIFIER_REGEX).unwrap(), input).ok_or_else(|| {
                 FhirpathError::ParserError {
@@ -99,7 +99,7 @@ pub enum TypeSpecifier {
 // }
 
 impl Parse for TypeSpecifier {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         Ok(Box::new(TypeSpecifier::QualifiedIdentifier(
             QualifiedIdentifier::parse(input, cursor)?,
         )))
@@ -111,18 +111,8 @@ pub struct QualifiedIdentifier {
     pub children: Vec<Box<Identifier>>,
 }
 
-// impl Matches for QualifiedIdentifier {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         let identifiers: Vec<&str> = input.split('.').collect();
-
-//         identifiers
-//             .iter()
-//             .all(|&identifier| Identifier::matches(&identifier.to_string(), 0))
-//     }
-// }
-
 impl Parse for QualifiedIdentifier {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Identifier>>::new();
 
         let identifiers: Vec<&str> = input.split('.').collect();

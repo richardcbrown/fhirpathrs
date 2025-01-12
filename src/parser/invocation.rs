@@ -1,6 +1,6 @@
 use fancy_regex::Regex;
 
-use crate::error::FhirpathError;
+use crate::{error::FhirpathError, lexer::tokens::Token};
 
 use super::{
     expression::Expression,
@@ -13,14 +13,8 @@ pub struct InvocationTerm {
     pub children: Vec<Box<Invocation>>,
 }
 
-// impl Matches for InvocationTerm {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         return MemberInvocation::matches(input, cursor);
-//     }
-// }
-
 impl Parse for InvocationTerm {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Invocation>>::new();
 
         let invocation = Invocation::parse(input, cursor)?;
@@ -40,18 +34,8 @@ pub enum Invocation {
     TotalInvocation(Box<TotalInvocation>),
 }
 
-// impl Matches for Invocation {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         MemberInvocation::matches(input, cursor)
-//             || FunctionInvocation::matches(input, cursor)
-//             || ThisInvocation::matches(input, cursor)
-//             || IndexInvocation::matches(input, cursor)
-//             || TotalInvocation::matches(input, cursor)
-//     }
-// }
-
 impl Parse for Invocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         if let Ok(member_invocation) = MemberInvocation::parse(input, cursor) {
             return Ok(Box::new(Invocation::MemberInvocation(member_invocation)));
         } else if let Ok(function_invocation) = FunctionInvocation::parse(input, cursor) {
@@ -77,14 +61,8 @@ pub struct MemberInvocation {
     pub children: Vec<Box<Identifier>>,
 }
 
-// impl Matches for MemberInvocation {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         return Identifier::matches(input, cursor);
-//     }
-// }
-
 impl Parse for MemberInvocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Identifier>>::new();
 
         let identifier = Identifier::parse(input, cursor)?;
@@ -114,24 +92,8 @@ pub struct ParamList {
     pub children: Vec<Box<Expression>>,
 }
 
-// impl Matches for ParamList {
-//     fn matches(input: &String, _cursor: usize) -> bool {
-//         let expr: ParseResult<Vec<String>> =
-//             input.split(',').map(|s| filter_ignored_data(s)).collect();
-
-//         expr.and_then(|expressions| {
-//             Ok(expressions.iter().all(|exp| {
-//                 dbg!(exp);
-
-//                 Expression::matches(&exp.to_string(), 0)
-//             }))
-//         })
-//         .unwrap_or(false)
-//     }
-// }
-
 impl Parse for ParamList {
-    fn parse(input: &String, _cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, _cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         let expressions: Vec<String> = input
             .split(',')
             .map(|s| filter_ignored_data(s))
@@ -160,26 +122,8 @@ pub struct FunctionInvocation {
     pub children: Vec<Box<IdentifierAndParamList>>,
 }
 
-// impl Matches for FunctionInvocation {
-//     fn matches(input: &String, _cursor: usize) -> bool {
-//         let captures =
-//             Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input).unwrap();
-
-//         match captures {
-//             Some(capture) => {
-//                 let identifier_match = Identifier::matches(&capture[1].to_string(), 0);
-//                 let param_list_match_or_empty =
-//                     capture[2].is_empty() || ParamList::matches(&capture[2].to_string(), 0);
-
-//                 return identifier_match && param_list_match_or_empty;
-//             }
-//             None => false,
-//         }
-//     }
-// }
-
 impl Parse for FunctionInvocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         let mut children = Vec::<Box<IdentifierAndParamList>>::new();
 
         let captures = Regex::captures(&Regex::new(FUNCTION_INVOCATION_REGEX).unwrap(), input)
@@ -209,14 +153,8 @@ pub struct ThisInvocation {
     pub text: String,
 }
 
-// impl Matches for ThisInvocation {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         input.eq("$this")
-//     }
-// }
-
 impl Parse for ThisInvocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         if !input.eq("$this") {
             return Err(FhirpathError::ParserError {
                 msg: "No match for TotalInvocation".to_string(),
@@ -234,14 +172,8 @@ pub struct IndexInvocation {
     pub text: String,
 }
 
-// impl Matches for IndexInvocation {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         input.eq("$index")
-//     }
-// }
-
 impl Parse for IndexInvocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         if !input.eq("$index") {
             return Err(FhirpathError::ParserError {
                 msg: "No match for TotalInvocation".to_string(),
@@ -259,14 +191,8 @@ pub struct TotalInvocation {
     pub text: String,
 }
 
-// impl Matches for TotalInvocation {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         input.eq("$total")
-//     }
-// }
-
 impl Parse for TotalInvocation {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
         if !input.eq("$total") {
             return Err(FhirpathError::ParserError {
                 msg: "No match for TotalInvocation".to_string(),

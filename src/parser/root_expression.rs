@@ -1,8 +1,8 @@
-use std::io::Cursor;
+use crate::lexer::tokens::Token;
 
 use super::{
     entire_expression::EntireExpression,
-    traits::{Parse, ParseResult},
+    traits::{Parse, ParseDetails, ParseResult},
 };
 
 pub struct RootExpression {
@@ -10,13 +10,16 @@ pub struct RootExpression {
 }
 
 impl Parse for RootExpression {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>> {
+    fn parse(tokens: &Vec<Token>, cursor: usize) -> ParseResult<ParseDetails<Box<Self>>> {
         let mut children = Vec::<Box<EntireExpression>>::new();
 
-        let entire_expression = EntireExpression::parse(input, cursor)?;
+        let entire_expression = EntireExpression::parse(tokens, cursor)?;
 
-        children.push(entire_expression);
+        children.push(entire_expression.value);
 
-        Ok(Box::new(Self { children }))
+        Ok(ParseDetails {
+            position: entire_expression.position,
+            value: Box::new(Self { children }),
+        })
     }
 }

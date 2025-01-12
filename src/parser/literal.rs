@@ -1,8 +1,8 @@
 use regex::Regex;
 
-use crate::error::FhirpathError;
+use crate::{error::FhirpathError, lexer::tokens::Token};
 
-use super::traits::Parse;
+use super::traits::{Parse, ParseDetails, ParseResult};
 
 static DATETIME_PRECISION_REGEX: &str = "year|month|week|day|hour|minute|second|millisecond";
 static PLURAL_DATETIME_PRECISION_REGEX: &str =
@@ -13,14 +13,8 @@ pub struct LiteralTerm {
     pub children: Vec<Box<Literal>>,
 }
 
-// impl Matches for LiteralTerm {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         Literal::matches(input, cursor)
-//     }
-// }
-
 impl Parse for LiteralTerm {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let mut children = Vec::<Box<Literal>>::new();
 
         children.push(Literal::parse(input, cursor)?);
@@ -40,20 +34,8 @@ pub enum Literal {
     QuantityLiteral(Box<QuantityLiteral>),
 }
 
-// impl Matches for Literal {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         NullLiteral::matches(input, cursor)
-//             || BooleanLiteral::matches(input, cursor)
-//             || StringLiteral::matches(input, cursor)
-//             || NumberLiteral::matches(input, cursor)
-//             || DatetimeLiteral::matches(input, cursor)
-//             || TimeLiteral::matches(input, cursor)
-//             || QuantityLiteral::matches(input, cursor)
-//     }
-// }
-
 impl Parse for Literal {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<ParseDetails<Box<Self>>> {
         if let Ok(null_literal) = NullLiteral::parse(input, cursor) {
             Ok(Box::new(Literal::NullLiteral(null_literal)))
         } else if let Ok(boolean_literal) = BooleanLiteral::parse(input, cursor) {
@@ -81,14 +63,8 @@ pub struct NullLiteral {
     pub text: String,
 }
 
-// impl Matches for NullLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         input.eq("{}")
-//     }
-// }
-
 impl Parse for NullLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         if !input.eq("null") {
             return Err(FhirpathError::ParserError {
                 msg: "No match for TotalInvocation".to_string(),
@@ -106,14 +82,8 @@ pub struct BooleanLiteral {
     pub text: String,
 }
 
-// impl Matches for BooleanLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         input.eq("true") || input.eq("false")
-//     }
-// }
-
 impl Parse for BooleanLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         if !input.eq("true") && !input.eq("false") {
             return Err(FhirpathError::ParserError {
                 msg: "No match for BooleanLiteral".to_string(),
@@ -133,14 +103,8 @@ pub struct StringLiteral {
     pub text: String,
 }
 
-// impl Matches for StringLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         Regex::is_match(&Regex::new(STRING_REGEX).unwrap(), input)
-//     }
-// }
-
 impl Parse for StringLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let captures =
             Regex::captures(&Regex::new(STRING_REGEX).unwrap(), input).ok_or_else(|| {
                 FhirpathError::ParserError {
@@ -161,14 +125,8 @@ pub struct NumberLiteral {
     pub text: String,
 }
 
-// impl Matches for NumberLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         Regex::is_match(&Regex::new(NUMBER_REGEX).unwrap(), input)
-//     }
-// }
-
 impl Parse for NumberLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let captures =
             Regex::captures(&Regex::new(NUMBER_REGEX).unwrap(), input).ok_or_else(|| {
                 FhirpathError::ParserError {
@@ -190,24 +148,8 @@ pub struct DatetimeLiteral {
     pub text: String,
 }
 
-// impl Matches for DatetimeLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         Regex::is_match(
-//             &Regex::new(
-//                 format!(
-//                     "@[0-9][0-9][0-9][0-9](\\-[0-9][0-9](\\-[0-9][0-9](T{})?)?)?Z?",
-//                     TIME_FORMAT
-//                 )
-//                 .as_str(),
-//             )
-//             .unwrap(),
-//             input,
-//         )
-//     }
-// }
-
 impl Parse for DatetimeLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let captures = Regex::captures(
             &Regex::new(
                 format!(
@@ -234,17 +176,8 @@ pub struct TimeLiteral {
     pub text: String,
 }
 
-// impl Matches for TimeLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         Regex::is_match(
-//             &Regex::new(format!("@T{}", TIME_FORMAT).as_str()).unwrap(),
-//             input,
-//         )
-//     }
-// }
-
 impl Parse for TimeLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let captures = Regex::captures(
             &Regex::new(format!("@T{}", TIME_FORMAT).as_str()).unwrap(),
             input,
@@ -265,19 +198,8 @@ pub struct QuantityLiteral {
     pub unit: Option<String>,
 }
 
-// impl Matches for QuantityLiteral {
-//     fn matches(input: &String, cursor: usize) -> bool {
-//         let quantity_regex = format!(
-//             "({})({}|{}|{})?",
-//             NUMBER_REGEX, DATETIME_PRECISION_REGEX, PLURAL_DATETIME_PRECISION_REGEX, STRING_REGEX
-//         );
-
-//         Regex::is_match(&Regex::new(quantity_regex.as_str()).unwrap(), input)
-//     }
-// }
-
 impl Parse for QuantityLiteral {
-    fn parse(input: &String, cursor: usize) -> super::traits::ParseResult<Box<Self>> {
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<Box<Self>> {
         let quantity_regex = format!(
             "({})({}|{}|{})?",
             NUMBER_REGEX, DATETIME_PRECISION_REGEX, PLURAL_DATETIME_PRECISION_REGEX, STRING_REGEX

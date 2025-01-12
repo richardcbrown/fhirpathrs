@@ -6,26 +6,20 @@ pub trait Matches {
     fn matches(input: &String, position: usize) -> Option<Token>;
 }
 
+#[derive(Debug)]
 pub struct Eq;
-
 impl Matches for Eq {
     fn matches(input: &String, position: usize) -> Option<Token> {
-        match_value(
-            TokenType::Eq(Eq),
-            &"=".to_string(),
-            input,
-            position,
-            None,
-            None,
-        )
+        match_value(TokenType::Eq, &"=".to_string(), input, position, None, None)
     }
 }
 
+#[derive(Debug)]
 pub struct True;
 impl Matches for True {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::True(True),
+            TokenType::True,
             &"true".to_string(),
             input,
             position,
@@ -34,11 +28,13 @@ impl Matches for True {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct False;
 impl Matches for False {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::False(False),
+            TokenType::False,
             &"false".to_string(),
             input,
             position,
@@ -47,11 +43,13 @@ impl Matches for False {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Integer;
 impl Matches for Integer {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_regex(
-            TokenType::Integer(Integer),
+            TokenType::Integer,
             &Regex::new(r"$[\d+]").unwrap(),
             input,
             position,
@@ -60,11 +58,13 @@ impl Matches for Integer {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Number;
 impl Matches for Number {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_regex(
-            TokenType::Number(Number),
+            TokenType::Number,
             &Regex::new(r"$[\d+].[\d+]").unwrap(),
             input,
             position,
@@ -73,21 +73,41 @@ impl Matches for Number {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Add;
+
+#[derive(Debug)]
 pub struct Sub;
+
+#[derive(Debug)]
 pub struct Identifier;
+
+#[derive(Debug)]
 pub struct StringLiteral;
+
+#[derive(Debug)]
 pub struct Whitespace;
+
+#[derive(Debug)]
 pub struct Lparen;
+
+#[derive(Debug)]
 pub struct Rparen;
+
+#[derive(Debug)]
 pub struct Lbracket;
+
+#[derive(Debug)]
 pub struct Rbracket;
+
+#[derive(Debug)]
 pub struct Gt;
 
 impl Matches for Gt {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Gt(Gt),
+            TokenType::Gt,
             &">".to_string(),
             input,
             position,
@@ -96,12 +116,13 @@ impl Matches for Gt {
         )
     }
 }
-pub struct Ge;
 
+#[derive(Debug)]
+pub struct Ge;
 impl Matches for Ge {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Ge(Ge),
+            TokenType::Ge,
             &">=".to_string(),
             input,
             position,
@@ -110,11 +131,13 @@ impl Matches for Ge {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Lt;
 impl Matches for Lt {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Lt(Lt),
+            TokenType::Lt,
             &"<".to_string(),
             input,
             position,
@@ -123,11 +146,13 @@ impl Matches for Lt {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Le;
 impl Matches for Le {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Le(Le),
+            TokenType::Le,
             &"<=".to_string(),
             input,
             position,
@@ -136,11 +161,13 @@ impl Matches for Le {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Ne;
 impl Matches for Ne {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Ne(Ne),
+            TokenType::Ne,
             &"!=".to_string(),
             input,
             position,
@@ -149,11 +176,13 @@ impl Matches for Ne {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Mul;
 impl Matches for Mul {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Mul(Mul),
+            TokenType::Mul,
             &"*".to_string(),
             input,
             position,
@@ -162,11 +191,13 @@ impl Matches for Mul {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Div;
 impl Matches for Div {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Div(Div),
+            TokenType::Div,
             &"div".to_string(),
             input,
             position,
@@ -175,11 +206,13 @@ impl Matches for Div {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Slash;
 impl Matches for Slash {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Slash(Slash),
+            TokenType::Slash,
             &"/".to_string(),
             input,
             position,
@@ -188,11 +221,13 @@ impl Matches for Slash {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct And;
 impl Matches for And {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::And(And),
+            TokenType::And,
             &"and".to_string(),
             input,
             position,
@@ -201,11 +236,13 @@ impl Matches for And {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Or;
 impl Matches for Or {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Or(Or),
+            TokenType::Or,
             &"or".to_string(),
             input,
             position,
@@ -214,11 +251,13 @@ impl Matches for Or {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Xor;
 impl Matches for Xor {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Xor(Xor),
+            TokenType::Xor,
             &"xor".to_string(),
             input,
             position,
@@ -227,11 +266,13 @@ impl Matches for Xor {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct As;
 impl Matches for As {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::As(As),
+            TokenType::As,
             &"as".to_string(),
             input,
             position,
@@ -240,11 +281,13 @@ impl Matches for As {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Is;
 impl Matches for Is {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Is(Is),
+            TokenType::Is,
             &"is".to_string(),
             input,
             position,
@@ -253,11 +296,13 @@ impl Matches for Is {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Dot;
 impl Matches for Dot {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Dot(Dot),
+            TokenType::Dot,
             &".".to_string(),
             input,
             position,
@@ -266,11 +311,13 @@ impl Matches for Dot {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Mod;
 impl Matches for Mod {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Mod(Mod),
+            TokenType::Mod,
             &"mod".to_string(),
             input,
             position,
@@ -279,11 +326,13 @@ impl Matches for Mod {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Tilde;
 impl Matches for Tilde {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Tilde(Tilde),
+            TokenType::Tilde,
             &"~".to_string(),
             input,
             position,
@@ -292,11 +341,13 @@ impl Matches for Tilde {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Ntilde;
 impl Matches for Ntilde {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Ntilde(Ntilde),
+            TokenType::Ntilde,
             &"!~".to_string(),
             input,
             position,
@@ -305,11 +356,13 @@ impl Matches for Ntilde {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Amp;
 impl Matches for Amp {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Amp(Amp),
+            TokenType::Amp,
             &"&".to_string(),
             input,
             position,
@@ -318,11 +371,13 @@ impl Matches for Amp {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Pipe;
 impl Matches for Pipe {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Pipe(Pipe),
+            TokenType::Pipe,
             &"|".to_string(),
             input,
             position,
@@ -331,11 +386,13 @@ impl Matches for Pipe {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct In;
 impl Matches for In {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::In(In),
+            TokenType::In,
             &"in".to_string(),
             input,
             position,
@@ -344,11 +401,13 @@ impl Matches for In {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Contains;
 impl Matches for Contains {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Contains(Contains),
+            TokenType::Contains,
             &"contains".to_string(),
             input,
             position,
@@ -357,11 +416,13 @@ impl Matches for Contains {
         )
     }
 }
+
+#[derive(Debug)]
 pub struct Implies;
 impl Matches for Implies {
     fn matches(input: &String, position: usize) -> Option<Token> {
         match_value(
-            TokenType::Implies(Implies),
+            TokenType::Implies,
             &"implies".to_string(),
             input,
             position,
@@ -371,43 +432,44 @@ impl Matches for Implies {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
-    Add(Add),
-    Sub(Sub),
-    Identifier(Identifier),
-    StringLiteral(StringLiteral),
-    Whitespace(Whitespace),
-    Lparen(Lparen),
-    Rparen(Rparen),
-    Lbracket(Lbracket),
-    Rbracket(Rbracket),
-    Gt(Gt),
-    Ge(Ge),
-    Lt(Lt),
-    Le(Le),
-    Ne(Ne),
-    Mul(Mul),
-    Div(Div),
-    And(And),
-    Or(Or),
-    Xor(Xor),
-    As(As),
-    Is(Is),
-    Dot(Dot),
-    Eq(Eq),
-    Mod(Mod),
-    Slash(Slash),
-    Tilde(Tilde),
-    Ntilde(Ntilde),
-    Contains(Contains),
-    In(In),
-    Implies(Implies),
-    Amp(Amp),
-    Pipe(Pipe),
-    True(True),
-    False(False),
-    Number(Number),
-    Integer(Integer),
+    Add,
+    Sub,
+    Identifier,
+    StringLiteral,
+    Whitespace,
+    Lparen,
+    Rparen,
+    Lbracket,
+    Rbracket,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+    Ne,
+    Mul,
+    Div,
+    And,
+    Or,
+    Xor,
+    As,
+    Is,
+    Dot,
+    Eq,
+    Mod,
+    Slash,
+    Tilde,
+    Ntilde,
+    Contains,
+    In,
+    Implies,
+    Amp,
+    Pipe,
+    True,
+    False,
+    Number,
+    Integer,
 }
 
 impl Matches for Token {
@@ -558,7 +620,7 @@ impl Matches for Add {
 
         if next_char.eq(&'+') {
             return Some(Token {
-                token_type: TokenType::Add(Add),
+                token_type: TokenType::Add,
                 start: position,
                 end: position + 1,
                 value: "+".to_string(),
@@ -574,7 +636,7 @@ impl Matches for Sub {
         let next_char = input.chars().nth(position)?;
 
         if next_char.eq(&'-') {
-            return Some(Token::new(TokenType::Sub(Sub), position, &"-".to_string()));
+            return Some(Token::new(TokenType::Sub, position, &"-".to_string()));
         }
 
         None
@@ -592,11 +654,7 @@ impl Matches for Identifier {
 
         let capture_text = captures[0].to_string();
 
-        Some(Token::new(
-            TokenType::Identifier(Identifier),
-            position,
-            &capture_text,
-        ))
+        Some(Token::new(TokenType::Identifier, position, &capture_text))
     }
 }
 
@@ -612,7 +670,7 @@ impl Matches for StringLiteral {
         let capture_text = captures[0].to_string();
 
         Some(Token::new(
-            TokenType::StringLiteral(StringLiteral),
+            TokenType::StringLiteral,
             position,
             &capture_text,
         ))
@@ -625,7 +683,7 @@ impl Matches for Whitespace {
 
         if first.eq(&' ') {
             return Some(Token::new(
-                TokenType::Whitespace(Whitespace),
+                TokenType::Whitespace,
                 position,
                 &" ".to_string(),
             ));
@@ -638,7 +696,7 @@ impl Matches for Whitespace {
 impl Matches for Lparen {
     fn matches(input: &String, position: usize) -> Option<Token> {
         return match_value(
-            TokenType::Lparen(Lparen),
+            TokenType::Lparen,
             &"(".to_string(),
             input,
             position,
@@ -651,7 +709,7 @@ impl Matches for Lparen {
 impl Matches for Rparen {
     fn matches(input: &String, position: usize) -> Option<Token> {
         return match_value(
-            TokenType::Rparen(Rparen),
+            TokenType::Rparen,
             &")".to_string(),
             input,
             position,
@@ -664,7 +722,7 @@ impl Matches for Rparen {
 impl Matches for Lbracket {
     fn matches(input: &String, position: usize) -> Option<Token> {
         return match_value(
-            TokenType::Lbracket(Lbracket),
+            TokenType::Lbracket,
             &"[".to_string(),
             input,
             position,
@@ -677,7 +735,7 @@ impl Matches for Lbracket {
 impl Matches for Rbracket {
     fn matches(input: &String, position: usize) -> Option<Token> {
         return match_value(
-            TokenType::Rbracket(Rbracket),
+            TokenType::Rbracket,
             &"]".to_string(),
             input,
             position,
@@ -687,6 +745,7 @@ impl Matches for Rbracket {
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub value: String,

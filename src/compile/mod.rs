@@ -14,6 +14,7 @@ use invocation_table::invocation_table;
 use serde_json::{json, Number, Value};
 
 use crate::error::FhirpathError;
+use crate::lexer::tokeniser::tokenise;
 use crate::parser::entire_expression::EntireExpression;
 use crate::parser::expression::{
     AdditiveExpression, EqualityExpression, Expression, ExpressionAndInvocation, IndexerExpression,
@@ -474,16 +475,16 @@ impl Evaluate for PolarityExpression {
 impl Evaluate for Expression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
-            Expression::TermExpression(exp) => exp.evaluate(input),
-            Expression::InvocationExpression(exp) => exp.evaluate(input),
-            Expression::IndexerExpression(exp) => exp.evaluate(input),
-            Expression::PolarityExpression(exp) => exp.evaluate(input),
+            Expression::TermExpression(exp) => exp.value.evaluate(input),
+            Expression::InvocationExpression(exp) => exp.value.evaluate(input),
+            Expression::IndexerExpression(exp) => exp.value.evaluate(input),
+            Expression::PolarityExpression(exp) => exp.value.evaluate(input),
             Expression::MultiplicativeExpression(exp) => todo!(),
-            Expression::AdditiveExpression(exp) => exp.evaluate(input),
-            Expression::UnionExpression(exp) => exp.evaluate(input),
+            Expression::AdditiveExpression(exp) => exp.value.evaluate(input),
+            Expression::UnionExpression(exp) => exp.value.evaluate(input),
             Expression::InequalityExpression(exp) => todo!(),
             Expression::TypeExpression(exp) => todo!(),
-            Expression::EqualityExpression(exp) => exp.evaluate(input),
+            Expression::EqualityExpression(exp) => exp.value.evaluate(input),
             Expression::MembershipExpression(exp) => todo!(),
             Expression::AndExpression(exp) => todo!(),
             Expression::OrExpression(exp) => todo!(),
@@ -517,8 +518,10 @@ impl CompiledPath {
 }
 
 pub fn compile(path: &String) -> CompileResult<CompiledPath> {
+    let tokens = tokenise(path)?;
+
     Ok(CompiledPath {
-        expression: EntireExpression::parse(path, 0)?,
+        expression: EntireExpression::parse(&tokens, 0)?.value,
     })
 }
 

@@ -1,4 +1,4 @@
-use crate::error::FhirpathError;
+use crate::{error::FhirpathError, lexer::tokens::Token};
 
 // pub trait Matches {
 //     fn matches(input: &String, cursor: usize) -> bool;
@@ -6,6 +6,12 @@ use crate::error::FhirpathError;
 
 pub type ParseResult<T> = std::result::Result<T, FhirpathError>;
 
+#[derive(Debug)]
+pub struct ParseDetails<T> {
+    pub position: usize,
+    pub value: T,
+}
+
 pub trait Parse {
-    fn parse(input: &String, cursor: usize) -> ParseResult<Box<Self>>;
+    fn parse(input: &Vec<Token>, cursor: usize) -> ParseResult<ParseDetails<Box<Self>>>;
 }
