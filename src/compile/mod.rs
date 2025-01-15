@@ -1,5 +1,6 @@
 mod arity;
 mod combining;
+mod conversion;
 mod equality;
 mod filtering;
 mod invocation_table;
@@ -1561,5 +1562,148 @@ mod tests {
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 3]));
+    }
+
+    #[test]
+    fn evaluate_combine_path() {
+        let compiled = compile(&"Patient.a.combine(Patient.b)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([1, 2, 1, 2, 3]));
+    }
+
+    #[test]
+    fn evaluate_iif_path() {
+        let compiled = compile(&"iif(Patient.c, Patient.a, Patient.b)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3],
+            "c": true
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([1, 2]));
+    }
+
+    #[test]
+    fn evaluate_iif_path_default_else() {
+        let compiled = compile(&"iif(Patient.c, Patient.a)".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_toboolean_true_path() {
+        let compiled = compile(&"Patient.a[0].toBoolean()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_toboolean_false_path() {
+        let compiled = compile(&"Patient.a[1].toBoolean()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,0],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_toboolean_empty_path() {
+        let compiled = compile(&"Patient.b[2].toBoolean()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,0],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([]));
+    }
+
+    #[test]
+    fn evaluate_convertstoboolean_true_path() {
+        let compiled = compile(&"Patient.a[0].convertsToBoolean()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(true));
+    }
+
+    #[test]
+    fn evaluate_convertstoboolean_false_path() {
+        let compiled = compile(&"Patient.b[2].convertsToBoolean()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,0],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(false));
     }
 }

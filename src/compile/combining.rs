@@ -34,3 +34,18 @@ pub fn union<'a>(
         data: Some(Value::Array(unique_array_elements(&union_array))),
     })
 }
+
+pub fn combine<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let (mut first_array, mut second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
+
+    first_array.append(&mut second_array);
+
+    Ok(ResourceNode {
+        data_root: input.data_root.clone(),
+        parent_node: Some(Box::new(input)),
+        data: Some(Value::Array(first_array)),
+    })
+}

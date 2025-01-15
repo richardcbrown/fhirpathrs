@@ -1,6 +1,7 @@
 use super::{
     arity::Arity,
-    combining::union,
+    combining::{combine, union},
+    conversion::{convertsToBoolean, iif, toBoolean},
     equality::{equal, not_equal},
     filtering::{select, where_function},
     math::add,
@@ -90,6 +91,14 @@ pub fn invocation_table<'a>() -> HashMap<
     };
 
     map.insert("|".to_string(), union_expr);
+
+    map.insert("combine".to_string(), combine);
+
+    map.insert("iif".to_string(), iif);
+
+    map.insert("toBoolean".to_string(), toBoolean);
+
+    map.insert("convertsToBoolean".to_string(), convertsToBoolean);
 
     map
 }

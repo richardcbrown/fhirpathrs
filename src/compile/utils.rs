@@ -1,14 +1,27 @@
-use std::ops::Deref;
-
-use serde_json::{value, Number, Value};
+use serde_json::{Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     arity::{get_input_for_arity, Arity},
-    equality::{equal, values_are_equal},
+    equality::values_are_equal,
     CompileResult, Evaluate, ResourceNode,
 };
+
+static TRUTHY_STRINGS: [&str; 6] = ["1", "1.0", "y", "yes", "t", "true"];
+static FALSEY_STRINGS: [&str; 6] = ["0", "0.0", "n", "no", "f", "false"];
+
+pub fn bool_from_string(string_value: &String) -> Option<bool> {
+    let lower_value = string_value.to_lowercase();
+
+    if TRUTHY_STRINGS.contains(&lower_value.as_str()) {
+        Some(true)
+    } else if FALSEY_STRINGS.contains(&&lower_value.as_str()) {
+        Some(false)
+    } else {
+        None
+    }
+}
 
 pub fn get_string(value: &Value) -> CompileResult<String> {
     match value {
@@ -103,6 +116,20 @@ pub fn get_string_from_expression(
         Value::String(str_result) => Ok(str_result),
         _ => Err(FhirpathError::CompileError {
             msg: "Value was not a String".to_string(),
+        }),
+    }
+}
+
+pub fn get_boolean_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<bool> {
+    let value = get_value_from_expression(input, expression)?;
+
+    match value {
+        Value::Bool(bool_result) => Ok(bool_result),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Value was not a Boolean".to_string(),
         }),
     }
 }
