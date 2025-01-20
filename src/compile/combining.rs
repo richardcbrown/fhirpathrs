@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::parser::expression::Expression;
 
@@ -28,11 +28,11 @@ pub fn union<'a>(
 
     union_array.append(&mut second_array);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(unique_array_elements(&union_array))),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(unique_array_elements(&union_array)),
+    ))
 }
 
 pub fn combine<'a>(
@@ -43,9 +43,9 @@ pub fn combine<'a>(
 
     first_array.append(&mut second_array);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(first_array)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(first_array),
+    ))
 }

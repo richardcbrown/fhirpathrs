@@ -32,29 +32,16 @@ pub fn get_string(value: &Value) -> CompileResult<String> {
     }
 }
 
-pub fn get_option_string(value: &Option<Value>) -> CompileResult<String> {
-    let string_val = value.clone().ok_or(FhirpathError::CompileError {
-        msg: "Expected String but got None".to_string(),
-    })?;
-
-    get_string(&string_val)
-}
-
-pub fn get_option_string_vec(value: &Option<Value>) -> CompileResult<Vec<String>> {
-    let val = value.clone().ok_or(FhirpathError::CompileError {
-        msg: "Expected String or Vec<String> but got None".to_string(),
-    })?;
-
-    match val {
+pub fn get_string_vec(value: &Value) -> CompileResult<Vec<String>> {
+    match value {
         Value::Array(array) => {
             let string_vec: CompileResult<Vec<String>> =
                 array.iter().map(|item| get_string(item)).collect();
 
             Ok(string_vec?)
         }
-        Value::String(string_item) => Ok(vec![string_item]),
         _ => Err(FhirpathError::CompileError {
-            msg: "Expected String or Vec<String>".to_string(),
+            msg: "Expected Vec<String>".to_string(),
         }),
     }
 }
@@ -63,22 +50,16 @@ pub fn get_value_from_expression(
     input: &ResourceNode,
     expression: &Expression,
 ) -> CompileResult<Value> {
-    expression.evaluate(input).and_then(|res| {
-        res.data.ok_or(FhirpathError::CompileError {
-            msg: "Expression evaluation contained no result".to_string(),
-        })
-    })
+    expression.evaluate(input).and_then(|res| Ok(res.data))
 }
 
 pub fn get_number_from_expression(
     input: &ResourceNode,
     expression: &Expression,
 ) -> CompileResult<Number> {
-    let expr_result = expression.evaluate(input).and_then(|res| {
-        res.data.ok_or(FhirpathError::CompileError {
-            msg: "Expression evaluation contained no result".to_string(),
-        })
-    })?;
+    let expr_result = expression
+        .evaluate(input)
+        .and_then(|res| Ok(res.get_single()?))?;
 
     match expr_result {
         Value::Number(num) => Ok(num),
@@ -110,7 +91,7 @@ pub fn get_string_from_expression(
     input: &ResourceNode,
     expression: &Expression,
 ) -> CompileResult<String> {
-    let value = get_value_from_expression(input, expression)?;
+    let value = get_single_value(get_value_from_expression(input, expression)?)?;
 
     match value {
         Value::String(str_result) => Ok(str_result),
@@ -124,7 +105,7 @@ pub fn get_boolean_from_expression(
     input: &ResourceNode,
     expression: &Expression,
 ) -> CompileResult<bool> {
-    let value = get_value_from_expression(input, expression)?;
+    let value = get_single_value(get_value_from_expression(input, expression)?)?;
 
     match value {
         Value::Bool(bool_result) => Ok(bool_result),
@@ -154,21 +135,6 @@ pub fn get_single_value(value: Value) -> CompileResult<Value> {
     }
 }
 
-pub fn get_option_array(value: &Option<Value>) -> CompileResult<Vec<Value>> {
-    let unpacked_value = value.clone().ok_or_else(|| FhirpathError::CompileError {
-        msg: "Expected array but got None".to_string(),
-    })?;
-
-    dbg!(unpacked_value.clone());
-
-    match unpacked_value {
-        Value::Array(array) => Ok(array),
-        _ => Err(FhirpathError::CompileError {
-            msg: "Expected array".to_string(),
-        }),
-    }
-}
-
 pub fn get_array_from_expression(
     input: &ResourceNode,
     expression: &Expression,
@@ -192,7 +158,7 @@ pub fn get_arrays<'a>(
 ) -> CompileResult<(Vec<Value>, Vec<Value>)> {
     match arity {
         Arity::AnyAtRoot => {
-            let array = get_option_array(&input.data)?;
+            let array = input.get_array()?;
 
             if expressions.len() > 1 {
                 return Err(FhirpathError::CompileError {
@@ -210,7 +176,7 @@ pub fn get_arrays<'a>(
 
             let second_array = get_array_from_expression(&second_input, &expression)?;
 
-            Ok((array, second_array))
+            Ok((array.to_vec(), second_array))
         }
         Arity::Expr => {
             if expressions.len() != 2 {

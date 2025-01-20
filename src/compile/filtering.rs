@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
@@ -12,15 +12,11 @@ fn evaluate_array_expression(
     let results: Vec<Value> = array
         .iter()
         .filter_map(|item| {
-            let node = ResourceNode {
-                data_root: input.data_root.clone(),
-                data: Some(item.to_owned()),
-                parent_node: None,
-            };
+            let node = ResourceNode::new(input.data_root.clone(), None, item.to_owned());
 
             expr.evaluate(&node)
                 .ok()
-                .and_then(|result| result.data)
+                .and_then(|result| result.get_single().ok())
                 .and_then(|value| {
                     if let Value::Bool(bool) = value {
                         if bool {
@@ -42,24 +38,19 @@ pub fn where_function<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     expressions
         .first()
-        .and_then(|expr| {
-            let data = input.data.as_ref().and_then(|val| match val {
-                Value::Array(array) => {
-                    let results: Vec<Value> = evaluate_array_expression(input.clone(), array, expr);
-
-                    Some(Value::Array(results))
-                }
-                _ => None,
-            });
-
-            Some(ResourceNode {
-                data_root: input.data_root.clone(),
-                parent_node: Some(Box::new(input)),
-                data,
-            })
-        })
         .ok_or(FhirpathError::CompileError {
-            msg: "where_function requires single expression argument".to_string(),
+            msg: "Missing first expression".to_string(),
+        })
+        .and_then(|expr| {
+            let data = input
+                .get_array()
+                .and_then(|val| Ok(evaluate_array_expression(input.clone(), val, expr)))?;
+
+            Ok(ResourceNode::new(
+                input.data_root.clone(),
+                Some(Box::new(input)),
+                json!(data),
+            ))
         })
 }
 
@@ -71,38 +62,35 @@ pub fn select<'a>(
         msg: "select function requires single expression argument".to_string(),
     })?;
 
-    let value = input
-        .data
-        .as_ref()
-        .and_then(|data| match data {
-            Value::Array(array) => Some(array),
-            _ => None,
-        })
-        .ok_or(FhirpathError::CompileError {
-            msg: "expect input data to be an Array".to_string(),
-        })?;
+    let value = input.get_array()?;
 
-    let result: CompileResult<Vec<Value>> = value
+    let result = value
         .iter()
         .map(|val| {
-            let node = ResourceNode {
-                data_root: input.data_root.clone(),
-                parent_node: None,
-                data: Some(val.clone()),
-            };
+            let node = ResourceNode::new(input.data_root.clone(), None, json!(val.clone()));
 
-            expression
-                .evaluate(&node)?
-                .data
-                .ok_or(FhirpathError::CompileError {
-                    msg: "expected evaluation to return a value but recieved None".to_string(),
-                })
+            let result = expression.evaluate(&node)?.data;
+
+            Ok(result)
         })
+        .collect::<CompileResult<Vec<Value>>>()?;
+
+    let combined: Vec<Value> = result
+        .iter()
+        .map(|item| match item {
+            Value::Array(array) => Ok(array.to_owned()),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Result was not an array".to_string(),
+            }),
+        })
+        .collect::<CompileResult<Vec<Vec<Value>>>>()?
+        .into_iter()
+        .flatten()
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(result?)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(combined),
+    ))
 }

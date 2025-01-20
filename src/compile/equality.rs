@@ -19,8 +19,8 @@ fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> Compil
     let first = &expressions[0];
     let second = &expressions[1];
 
-    let first_val = first.evaluate(input)?.data.unwrap_or(json!(false));
-    let second_val = second.evaluate(input)?.data.unwrap_or(json!(false));
+    let first_val = first.evaluate(input)?.data;
+    let second_val = second.evaluate(input)?.data;
 
     Ok(values_are_equal(&first_val, &second_val))
 }
@@ -31,11 +31,11 @@ pub fn equal<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(json!(result)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(result),
+    ))
 }
 
 pub fn not_equal<'a>(
@@ -44,9 +44,9 @@ pub fn not_equal<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(json!(!result)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(!result),
+    ))
 }

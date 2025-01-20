@@ -1,10 +1,10 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     utils::{bool_from_string, get_array_from_expression, get_boolean_from_expression},
-    CompileResult, Evaluate, ResourceNode,
+    CompileResult, ResourceNode,
 };
 
 pub fn iif<'a>(
@@ -39,11 +39,11 @@ pub fn iif<'a>(
         },
     };
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(output)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(output),
+    ))
 }
 
 fn try_convert_to_boolean(value: &Value) -> Option<bool> {
@@ -69,44 +69,34 @@ pub fn toBoolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let result = input
-        .data
-        .clone()
-        .ok_or_else(|| FhirpathError::CompileError {
-            msg: "Node has no data".to_string(),
-        })?;
+    let result = input.get_single()?;
 
     let bool_result: Vec<Value> = match try_convert_to_boolean(&result) {
         Some(val) => vec![Value::Bool(val)],
         None => vec![],
     };
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(bool_result)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(bool_result),
+    ))
 }
 
 pub fn convertsToBoolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let result = input
-        .data
-        .clone()
-        .ok_or_else(|| FhirpathError::CompileError {
-            msg: "Node has no data".to_string(),
-        })?;
+    let result = input.get_single()?;
 
     let converts_bool: bool = match try_convert_to_boolean(&result) {
         Some(_val) => true,
         None => false,
     };
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Bool(converts_bool)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(converts_bool),
+    ))
 }

@@ -127,11 +127,11 @@ mod tests {
               { "use": "b" },
               { "use": "c" }
             ]),
-            data: Some(json!([
+            data: json!([
               { "use": "a" },
               { "use": "b" },
               { "use": "c" }
-            ])),
+            ]),
             parent_node: None,
         };
 
@@ -169,6 +169,6 @@ mod tests {
 
         let result = where_function(&node, &expressions).unwrap();
 
-        assert_eq!(result.data, Some(json!([{ "use": "a" }])));
+        assert_eq!(result.data, json!([{ "use": "a" }]));
     }
 }

@@ -6,10 +6,7 @@ use serde_json::{json, Number, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    utils::{
-        get_option_string, get_option_string_vec, get_string, get_string_from_expression,
-        get_usize_from_expression,
-    },
+    utils::{get_string, get_string_from_expression, get_string_vec, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };
 
@@ -19,8 +16,8 @@ pub fn index_of<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     let second = &expressions[0];
 
-    let first_val = input.data.as_ref().unwrap_or(&json!(null)).clone();
-    let second_val = second.evaluate(input)?.data.unwrap_or(json!(null));
+    let first_val = input.get_single()?;
+    let second_val = second.evaluate(input)?.get_single()?;
 
     let first_string = get_string(&first_val)?;
     let second_string = get_string(&second_val)?;
@@ -31,11 +28,11 @@ pub fn index_of<'a>(
         .and_then(|val| i64::try_from(val).ok())
         .unwrap_or(-1);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(json!(index)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(index),
+    ))
 }
 
 pub fn substring<'a>(
@@ -46,7 +43,7 @@ pub fn substring<'a>(
         msg: "Substring expects at least one expression".to_string(),
     })?;
 
-    let string_value = get_option_string(&input.data)?;
+    let string_value = get_string(&input.get_single()?)?;
 
     let second_expr = expressions.iter().nth(1);
 
@@ -65,11 +62,11 @@ pub fn substring<'a>(
                 ),
             })?;
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::String(sub_string.to_string())),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(sub_string.to_string()),
+    ))
 }
 
 pub fn starts_with<'a>(
@@ -80,16 +77,16 @@ pub fn starts_with<'a>(
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
-    let string_value = get_option_string(&input.data)?;
+    let string_value = get_string(&input.get_single()?)?;
     let match_string = get_string_from_expression(input, first_expr)?;
 
     let starts_with = string_value.starts_with(&match_string);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Bool(starts_with)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(starts_with),
+    ))
 }
 
 pub fn ends_with<'a>(
@@ -100,16 +97,16 @@ pub fn ends_with<'a>(
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
-    let string_value = get_option_string(&input.data)?;
+    let string_value = get_string(&input.get_single()?)?;
     let match_string = get_string_from_expression(input, first_expr)?;
 
     let ends_with = string_value.ends_with(&match_string);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Bool(ends_with)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(ends_with),
+    ))
 }
 
 pub fn contains<'a>(
@@ -120,23 +117,23 @@ pub fn contains<'a>(
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
-    let string_value = get_option_string(&input.data)?;
+    let string_value = get_string(&input.get_single()?)?;
     let match_string = get_string_from_expression(input, first_expr)?;
 
     let contains = string_value.contains(&match_string);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Bool(contains)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(contains),
+    ))
 }
 
 pub fn upper<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
 
     let replaced: Vec<Value> = string_values
         .iter()
@@ -144,18 +141,18 @@ pub fn upper<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(replaced)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(replaced),
+    ))
 }
 
 pub fn lower<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
 
     let replaced: Vec<Value> = string_values
         .iter()
@@ -163,18 +160,18 @@ pub fn lower<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(replaced)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(replaced),
+    ))
 }
 
 pub fn replace<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
     let replacement = get_string_from_expression(input, &expressions[1])?;
 
@@ -184,18 +181,18 @@ pub fn replace<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(replaced)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(replaced),
+    ))
 }
 
 pub fn matches<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_value = get_option_string(&input.data)?;
+    let string_value = get_string(&input.get_single()?)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
     let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
         msg: "Failed to parse Regex".to_string(),
@@ -203,18 +200,18 @@ pub fn matches<'a>(
 
     let matches = Regex::is_match(&regex, &string_value);
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Bool(matches)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        Value::Bool(matches),
+    ))
 }
 
 pub fn replace_matches<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
     let replacement = get_string_from_expression(input, &expressions[1])?;
     let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
@@ -228,20 +225,20 @@ pub fn replace_matches<'a>(
         })
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(replace_result)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(replace_result),
+    ))
 }
 
 pub fn length<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
 
-    let lengths = string_values
+    let lengths: Vec<Value> = string_values
         .iter()
         .map(|string_value| {
             let num = Number::from(string_value.len());
@@ -250,18 +247,18 @@ pub fn length<'a>(
         })
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(lengths)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(lengths),
+    ))
 }
 
 pub fn to_chars<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let string_values = get_option_string_vec(&input.data)?;
+    let string_values = get_string_vec(&input.data)?;
 
     let char_sets = string_values
         .iter()
@@ -275,9 +272,9 @@ pub fn to_chars<'a>(
         })
         .collect();
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(Value::Array(char_sets)),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        Value::Array(char_sets),
+    ))
 }

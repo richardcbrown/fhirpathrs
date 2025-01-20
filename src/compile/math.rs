@@ -1,11 +1,8 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
-use super::{
-    utils::{get_single_value, get_string},
-    CompileResult, Evaluate, ResourceNode,
-};
+use super::{utils::get_string, CompileResult, Evaluate, ResourceNode};
 
 pub fn add<'a>(
     input: &'a ResourceNode<'a>,
@@ -17,25 +14,13 @@ pub fn add<'a>(
         });
     }
 
-    let first = expressions[0]
-        .evaluate(input)?
-        .data
-        .ok_or(FhirpathError::CompileError {
-            msg: "first expression returned no result".to_string(),
-        })?;
-    let second = expressions[1]
-        .evaluate(input)?
-        .data
-        .ok_or(FhirpathError::CompileError {
-            msg: "second expression returned no result".to_string(),
-        })?;
+    let first = expressions[0].evaluate(input)?.get_single()?;
 
-    let first_result = get_single_value(first)?;
-    let second_result = get_single_value(second)?;
+    let second = expressions[1].evaluate(input)?.get_single()?;
 
-    let result: Value = match first_result {
+    let result: Value = match first {
         Value::String(mut first_string) => {
-            let second_string = get_string(&second_result)?;
+            let second_string = get_string(&second)?;
 
             first_string.push_str(second_string.as_str());
 
@@ -44,9 +29,9 @@ pub fn add<'a>(
         _ => todo!(),
     };
 
-    Ok(ResourceNode {
-        data_root: input.data_root.clone(),
-        parent_node: Some(Box::new(input)),
-        data: Some(result),
-    })
+    Ok(ResourceNode::new(
+        input.data_root.clone(),
+        Some(Box::new(input)),
+        json!(result),
+    ))
 }

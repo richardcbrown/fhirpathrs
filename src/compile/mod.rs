@@ -37,7 +37,76 @@ pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
 pub struct ResourceNode<'a> {
     pub data_root: Value,
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
-    pub data: Option<Value>,
+    pub data: Value,
+}
+
+impl<'a> ResourceNode<'a> {
+    pub fn new(
+        data_root: Value,
+        parent_node: Option<Box<&'a ResourceNode<'a>>>,
+        data: Value,
+    ) -> Self {
+        Self {
+            data_root,
+            parent_node,
+            data: match data {
+                Value::Array(array) => json!(array),
+                Value::Bool(boolean) => json!([boolean]),
+                Value::Number(num) => json!([num]),
+                Value::Object(obj) => json!([obj]),
+                Value::Null => json!([]),
+                Value::String(string) => json!([string]),
+            },
+        }
+    }
+
+    pub fn is_empty(&self) -> CompileResult<bool> {
+        match &self.data {
+            Value::Array(array) => Ok(array.len() == 0),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Data must be a Value::Array".to_string(),
+            }),
+        }
+    }
+
+    pub fn is_single(&self) -> CompileResult<bool> {
+        match &self.data {
+            Value::Array(array) => Ok(array.len() == 1),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Data must be a Value::Array".to_string(),
+            }),
+        }
+    }
+
+    pub fn get_single(&self) -> CompileResult<Value> {
+        if !self.is_single()? {
+            return Err(FhirpathError::CompileError {
+                msg: "Expected single value for node".to_string(),
+            });
+        }
+
+        match &self.data {
+            Value::Array(array) => {
+                let first = array.first().ok_or_else(|| FhirpathError::CompileError {
+                    msg: "Expected single value for node".to_string(),
+                })?;
+
+                Ok(first.clone())
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: "Data must be a Value::Array".to_string(),
+            }),
+        }
+    }
+
+    pub fn get_array(&self) -> CompileResult<&Vec<Value>> {
+        match &self.data {
+            Value::Array(array) => Ok(array),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Data must be a Value::Array".to_string(),
+            }),
+        }
+    }
 }
 
 pub struct CompiledPath {
@@ -50,11 +119,11 @@ pub trait Evaluate {
 
 impl Evaluate for StringLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            parent_node: Some(Box::new(input)),
-            data: Some(json!(self.text)),
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            json!(self.text),
+        ))
     }
 }
 
@@ -67,11 +136,11 @@ impl Evaluate for NumberLiteral {
                 msg: "NumberLiteral is not a Number".to_string(),
             })?;
 
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            parent_node: Some(Box::new(input)),
-            data: Some(json!(value)),
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            json!(value),
+        ))
     }
 }
 
@@ -91,12 +160,12 @@ impl Evaluate for Literal {
 
 impl Evaluate for MemberInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        if input.data.is_none() {
-            return Ok(ResourceNode {
-                data_root: input.data_root.clone(),
-                parent_node: Some(Box::new(input)),
-                data: None,
-            });
+        if input.is_empty()? {
+            return Ok(ResourceNode::new(
+                input.data_root.clone(),
+                Some(Box::new(input)),
+                json!([]),
+            ));
         }
 
         let key_node = self
@@ -107,67 +176,59 @@ impl Evaluate for MemberInvocation {
             })?
             .evaluate(input)?;
 
-        let key = key_node.data;
-
-        if key.is_none() {
+        if !key_node.is_single()? {
             return Err(FhirpathError::CompileError {
                 msg: "Could not determine property to invoke".to_string(),
             });
         }
 
-        let key_value = match key.unwrap() {
+        let key = key_node.get_single()?;
+
+        let key_value = match key {
             Value::String(str) => str,
             _ => "".to_string(),
         };
 
-        let input_data = input.data.as_ref().unwrap();
+        let input_data = input.get_array()?;
 
-        let node_resource_type = input_data.get("resourceType");
+        let node_resource_type = input_data.first().and_then(|item| item.get("resourceType"));
 
         // MemberInvocation is resourceType, so return whole resource
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
-            return Ok(ResourceNode {
-                data_root: input.data_root.clone(),
-                parent_node: Some(Box::new(input)),
-                data: Some(input_data.to_owned()),
-            });
+            return Ok(ResourceNode::new(
+                input.data_root.clone(),
+                Some(Box::new(input)),
+                json!(input_data),
+            ));
         }
 
         print!("data");
-        println!("{}", input_data);
+        println!("{:?}", input_data);
         println!("{:?}", &key_value.to_string());
 
         // Else look for a child property of the resource that matches the key
-        let child_data = match input_data {
-            Value::Object(obj) => obj.get(&key_value.to_string()).cloned(),
-            Value::Array(array) => {
-                let values: Vec<Value> = array
-                    .to_owned()
-                    .into_iter()
-                    .filter_map(|item| item.get(&key_value.to_string()).cloned())
-                    .collect();
+        let values: Vec<Value> = input_data
+            .to_owned()
+            .into_iter()
+            .filter_map(|item| item.get(&key_value.to_string()).cloned())
+            .collect();
 
-                dbg!(&values);
+        dbg!(&values);
 
-                let mut flattened_values: Vec<Value> = vec![];
+        let mut flattened_values: Vec<Value> = vec![];
 
-                values.iter().for_each(|val| match val {
-                    Value::Array(array_val) => flattened_values.append(&mut array_val.clone()),
-                    val => flattened_values.push(val.clone()),
-                });
+        values.iter().for_each(|val| match val {
+            Value::Array(array_val) => flattened_values.append(&mut array_val.clone()),
+            val => flattened_values.push(val.clone()),
+        });
 
-                Some(Value::Array(flattened_values))
-            }
-            _ => None,
-        };
+        println!("{:?}", flattened_values);
 
-        println!("{:?}", child_data);
-
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            parent_node: Some(Box::new(input)),
-            data: child_data,
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            json!(flattened_values),
+        ))
     }
 }
 
@@ -208,13 +269,12 @@ impl Evaluate for FunctionInvocation {
 
         let function_name = identifier
             .evaluate(input)?
-            .data
+            .get_single()
             .and_then(|val| match val {
-                Value::String(string) => Some(string),
-                _ => None,
-            })
-            .ok_or(FhirpathError::CompileError {
-                msg: "First child of FunctionInvocation should be function name".to_string(),
+                Value::String(string) => Ok(string),
+                _ => Err(FhirpathError::CompileError {
+                    msg: "First child of FunctionInvocation should be function name".to_string(),
+                }),
             })?;
 
         let invocation = invocation_table()
@@ -242,21 +302,21 @@ impl Evaluate for Invocation {
 
 impl Evaluate for LiteralIdentifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            data: Some(Value::String(self.text.clone())),
-            parent_node: Some(Box::new(input)),
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            json!(self.text.clone()),
+        ))
     }
 }
 
 impl Evaluate for LiteralContains {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            data: Some(Value::String(self.text.clone())),
-            parent_node: Some(Box::new(input)),
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            json!(self.text.clone()),
+        ))
     }
 }
 
@@ -293,11 +353,11 @@ impl Evaluate for LiteralTerm {
 
         let first = &self.children[0];
 
-        Ok(ResourceNode {
-            data_root: input.data_root.clone(),
-            parent_node: Some(Box::new(input)),
-            data: first.evaluate(input)?.data,
-        })
+        Ok(ResourceNode::new(
+            input.data_root.clone(),
+            Some(Box::new(input)),
+            first.evaluate(input)?.data,
+        ))
     }
 }
 
@@ -338,11 +398,11 @@ impl Evaluate for InvocationExpression {
                 let result = child.evaluate(&val);
 
                 match result {
-                    Ok(res) => Ok(ResourceNode {
-                        data_root: input.data_root.clone(),
-                        parent_node: Some(Box::new(input)),
-                        data: res.data,
-                    }),
+                    Ok(res) => Ok(ResourceNode::new(
+                        input.data_root.clone(),
+                        Some(Box::new(input)),
+                        res.data,
+                    )),
                     Err(err) => Err(err),
                 }
             })
@@ -410,9 +470,7 @@ impl Evaluate for IndexerExpression {
         let array_node = self.children[0].evaluate(input)?;
         let index_node = self.children[1].evaluate(input)?;
 
-        let index_value = index_node.data.ok_or(FhirpathError::ParserError {
-            msg: "IndexerExpression index has no value".to_string(),
-        })?;
+        let index_value = index_node.get_single()?;
 
         let index: i64 = match index_value {
             Value::Number(num) => num.as_i64().ok_or(FhirpathError::ParserError {
@@ -428,16 +486,14 @@ impl Evaluate for IndexerExpression {
             }),
         }?;
 
-        let array_data = array_node.data.ok_or(FhirpathError::ParserError {
-            msg: "IndexerExpression did not contain a Value".to_string(),
-        })?;
+        let array_data = array_node.data;
 
         match array_data {
-            Value::Array(array) => Ok(ResourceNode {
-                data_root: input.data_root.clone(),
-                parent_node: Some(Box::new(input)),
-                data: Some(array[index as usize].clone()),
-            }),
+            Value::Array(array) => Ok(ResourceNode::new(
+                input.data_root.clone(),
+                Some(Box::new(input)),
+                array[index as usize].clone(),
+            )),
             _ => Err(FhirpathError::ParserError {
                 msg: "Element is not an array".to_string(),
             }),
@@ -454,11 +510,7 @@ impl Evaluate for PolarityExpression {
                 msg: "PolarityExpression must have a single child expression".to_string(),
             })
             .and_then(|child_expr| child_expr.evaluate(input))
-            .and_then(|result| {
-                result.data.ok_or(FhirpathError::CompileError {
-                    msg: "PolarityExpression had no result".to_string(),
-                })
-            })
+            .and_then(|result| Ok(result.get_single()?))
             .and_then(|expr_result| match expr_result {
                 Value::Number(json_num) => {
                     let mut num: i64 = json_num.as_i64().ok_or(FhirpathError::CompileError {
@@ -476,11 +528,11 @@ impl Evaluate for PolarityExpression {
                 }),
             })
             .and_then(|result| {
-                Ok(ResourceNode {
-                    data_root: input.data_root.clone(),
-                    parent_node: Some(Box::new(input)),
-                    data: Some(result),
-                })
+                Ok(ResourceNode::new(
+                    input.data_root.clone(),
+                    Some(Box::new(input)),
+                    result,
+                ))
             })
     }
 }
@@ -517,12 +569,8 @@ impl Evaluate for EntireExpression {
 }
 
 impl CompiledPath {
-    fn evaluate(&self, resource: Value) -> CompileResult<Option<Value>> {
-        let node = ResourceNode {
-            data_root: resource.clone(),
-            data: Some(resource),
-            parent_node: None,
-        };
+    fn evaluate(&self, resource: Value) -> CompileResult<Value> {
+        let node = ResourceNode::new(resource.clone(), None, resource);
 
         let evaluate_result = self.expression.evaluate(&node)?;
 
@@ -551,13 +599,13 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap().unwrap();
+        let evaluate_result = compiled.evaluate(patient).unwrap();
 
         assert_json_eq!(
             evaluate_result,
-            json!({
+            json!([{
                 "resourceType": "Patient"
-            })
+            }])
         );
     }
 
@@ -669,10 +717,10 @@ mod tests {
 
         assert_json_eq!(
             evaluate_result,
-            json!({
+            json!([{
                 "use": "usual",
                 "given": ["test"]
-            })
+            }])
         );
     }
 
@@ -693,7 +741,7 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!("test"));
+        assert_json_eq!(evaluate_result, json!(["test"]));
     }
 
     #[test]
@@ -712,7 +760,7 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!("test1"));
+        assert_json_eq!(evaluate_result, json!(["test1"]));
     }
 
     #[test]
@@ -1018,7 +1066,7 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!(true));
+        assert_json_eq!(evaluate_result, json!([true]));
     }
 
     #[test]
@@ -1686,7 +1734,7 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!(true));
+        assert_json_eq!(evaluate_result, json!([true]));
     }
 
     #[test]
@@ -1704,6 +1752,6 @@ mod tests {
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
 
-        assert_json_eq!(evaluate_result, json!(false));
+        assert_json_eq!(evaluate_result, json!([false]));
     }
 }
