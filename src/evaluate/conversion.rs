@@ -3,10 +3,7 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    utils::{
-        bool_from_string, get_array_from_expression, get_boolean_from_expression,
-        try_convert_to_boolean,
-    },
+    utils::{get_array_from_expression, get_boolean_from_expression, try_convert_to_boolean},
     CompileResult, ResourceNode,
 };
 
