@@ -4,7 +4,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{CompileResult, Evaluate, ResourceNode};
 
-fn evaluate_array_expression(
+fn evaluate_filter_expression(
     input: ResourceNode,
     array: &Vec<Value>,
     expr: &Expression,
@@ -44,7 +44,7 @@ pub fn where_function<'a>(
         .and_then(|expr| {
             let data = input
                 .get_array()
-                .and_then(|val| Ok(evaluate_array_expression(input.clone(), val, expr)))?;
+                .and_then(|val| Ok(evaluate_filter_expression(input.clone(), val, expr)))?;
 
             Ok(ResourceNode::new(
                 input.data_root.clone(),

@@ -225,3 +225,61 @@ pub fn unique_array_elements(array: &Vec<Value>) -> Vec<Value> {
 
     unique
 }
+
+pub fn evaluate_array_boolean_expression(
+    input: &ResourceNode,
+    expr: &Expression,
+) -> CompileResult<Vec<bool>> {
+    let results: Vec<bool> = input
+        .get_array()?
+        .iter()
+        .map(|item| {
+            let node = ResourceNode::new(input.data_root.clone(), None, item.to_owned());
+
+            expr.evaluate(&node)
+                .and_then(|result| result.get_single())
+                .and_then(|value| {
+                    let bool_result = try_convert_to_boolean(&value);
+
+                    match bool_result {
+                        Some(bool) => Ok(bool),
+                        None => Err(FhirpathError::CompileError {
+                            msg: "Value was not a boolean".to_string(),
+                        }),
+                    }
+                })
+        })
+        .collect::<CompileResult<Vec<bool>>>()?;
+
+    Ok(results)
+}
+
+pub fn try_convert_to_boolean(value: &Value) -> Option<bool> {
+    match value {
+        Value::Bool(val) => Some(*val),
+        Value::Number(val) => {
+            if let Some(num) = val.as_i64() {
+                match num {
+                    0 => return Some(false),
+                    1 => return Some(true),
+                    _ => return None,
+                }
+            }
+
+            if let Some(num) = val.as_f64() {
+                match num {
+                    0.0 => return Some(false),
+                    1.0 => return Some(true),
+                    _ => return None,
+                }
+            }
+
+            None
+        }
+        Value::String(val) => match bool_from_string(&val) {
+            Some(val) => Some(val),
+            None => None,
+        },
+        _ => None,
+    }
+}

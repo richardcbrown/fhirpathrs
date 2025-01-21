@@ -3,7 +3,10 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    utils::{bool_from_string, get_array_from_expression, get_boolean_from_expression},
+    utils::{
+        bool_from_string, get_array_from_expression, get_boolean_from_expression,
+        try_convert_to_boolean,
+    },
     CompileResult, ResourceNode,
 };
 
@@ -44,25 +47,6 @@ pub fn iif<'a>(
         Some(Box::new(input)),
         json!(output),
     ))
-}
-
-fn try_convert_to_boolean(value: &Value) -> Option<bool> {
-    match value {
-        Value::Bool(val) => Some(*val),
-        Value::Number(val) => match val.as_i64() {
-            Some(num) => match num {
-                0 => Some(false),
-                1 => Some(true),
-                _ => None,
-            },
-            None => None,
-        },
-        Value::String(val) => match bool_from_string(&val) {
-            Some(val) => Some(val),
-            None => None,
-        },
-        _ => None,
-    }
 }
 
 pub fn toBoolean<'a>(

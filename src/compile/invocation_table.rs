@@ -3,6 +3,7 @@ use super::{
     combining::{combine, union},
     conversion::{convertsToBoolean, iif, toBoolean},
     equality::{equal, not_equal},
+    existence::{all, all_true, empty, exists},
     filtering::{select, where_function},
     math::add,
     strings::{
@@ -29,6 +30,14 @@ pub fn invocation_table<'a>() -> HashMap<
             expressions: &Vec<Box<Expression>>,
         ) -> CompileResult<ResourceNode<'a>>,
     >::new();
+
+    map.insert("empty".to_string(), empty);
+
+    map.insert("exists".to_string(), exists);
+
+    map.insert("all".to_string(), all);
+
+    map.insert("allTrue".to_string(), all_true);
 
     map.insert("substring".to_string(), substring);
 

@@ -2,6 +2,7 @@ mod arity;
 mod combining;
 mod conversion;
 mod equality;
+mod existence;
 mod filtering;
 mod invocation_table;
 mod math;
@@ -1748,6 +1749,234 @@ mod tests {
             "a": [1,0],
             "b": [1,2,3],
             "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_empty_true_path() {
+        let compiled = compile(&"Patient.a.empty()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_empty_false_path() {
+        let compiled = compile(&"Patient.b.empty()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_exists_true_path() {
+        let compiled = compile(&"Patient.b.exists()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_exists_false_path() {
+        let compiled = compile(&"Patient.a.exists()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [],
+            "b": [1,2,3],
+            "c": false
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_exists_criteria_true_path() {
+        let compiled = compile(&"Patient.name.exists(family.endsWith('bc'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_exists_criteria_false_path() {
+        let compiled = compile(&"Patient.name.exists(family.endsWith('bb'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_all_criteria_true_path() {
+        let compiled = compile(&"Patient.name.all(family.endsWith('bc'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "tebc"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_all_criteria_empty_path() {
+        let compiled = compile(&"Patient.name.all(family.endsWith('bc'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": []
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_all_criteria_false_path() {
+        let compiled = compile(&"Patient.name.all(family.endsWith('bc'))".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [
+                {
+                    "use": "usual",
+                    "given": ["test"],
+                    "family": "test"
+                },
+                {
+                    "use": "official",
+                    "given": ["test1"],
+                    "family": "abc"
+                }
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([false]));
+    }
+
+    #[test]
+    fn evaluate_alltrue_true_path() {
+        let compiled = compile(&"Patient.b.allTrue()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "b": [1, "1", 1.0, "1.0", "y", "yes", true]
+        });
+
+        let evaluate_result = compiled.evaluate(patient).unwrap();
+
+        assert_json_eq!(evaluate_result, json!([true]));
+    }
+
+    #[test]
+    fn evaluate_alltrue_false_path() {
+        let compiled = compile(&"Patient.b.allTrue()".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "b": [1, "1", 1.0, "1.0", "y", "yes", true, false]
         });
 
         let evaluate_result = compiled.evaluate(patient).unwrap();
