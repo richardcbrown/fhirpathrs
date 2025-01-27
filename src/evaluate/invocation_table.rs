@@ -114,7 +114,9 @@ pub fn invocation_table<'a>() -> HashMap<
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use std::collections::HashMap;
+
+    use serde_json::{json, Value};
 
     use crate::{
         evaluate::{FhirContext, ResourceNode},
@@ -142,7 +144,10 @@ mod tests {
               { "use": "c" }
             ]),
             parent_node: None,
-            context: &FhirContext { model: None },
+            context: &FhirContext {
+                model: None,
+                vars: HashMap::<String, Value>::new(),
+            },
             path: None,
         };
 
