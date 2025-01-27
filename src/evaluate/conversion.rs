@@ -39,11 +39,7 @@ pub fn iif<'a>(
         },
     };
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(output),
-    ))
+    Ok(ResourceNode::from_node(input, json!(output)))
 }
 
 pub fn toBoolean<'a>(
@@ -57,11 +53,7 @@ pub fn toBoolean<'a>(
         None => vec![],
     };
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(bool_result),
-    ))
+    Ok(ResourceNode::from_node(input, json!(bool_result)))
 }
 
 pub fn convertsToBoolean<'a>(
@@ -75,9 +67,5 @@ pub fn convertsToBoolean<'a>(
         None => false,
     };
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(converts_bool),
-    ))
+    Ok(ResourceNode::from_node(input, json!(converts_bool)))
 }

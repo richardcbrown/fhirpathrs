@@ -1,22 +1,11 @@
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
-use serde::de::DeserializeOwned;
-use serde_json::from_str;
+mod stu3;
 
 pub enum ModelType {
     Stu3,
     R4,
     R5,
-}
-
-impl ModelType {
-    fn get_dir(&self) -> &str {
-        match self {
-            ModelType::Stu3 => "stu3",
-            ModelType::R4 => "r4",
-            ModelType::R5 => "r5",
-        }
-    }
 }
 
 pub struct ModelDetails {
@@ -27,6 +16,7 @@ pub struct ModelDetails {
     pub type_to_parent: HashMap<String, String>,
 }
 
+#[derive(Debug)]
 pub enum ModelError {
     FileLoadFail { msg: String },
     ParseFail { msg: String },
@@ -34,38 +24,15 @@ pub enum ModelError {
 
 type ModelResult<T> = Result<T, ModelError>;
 
-fn parse_file<T>(path: &str, file: &str) -> ModelResult<T>
-where
-    T: DeserializeOwned,
-{
-    let file_path = format!("./{}/{}", path, file);
-
-    fs::read_to_string(&file_path)
-        .map_err(|err| ModelError::FileLoadFail {
-            msg: format!("Failed to load {}: {}", file_path, err.to_string()),
-        })
-        .and_then(|file| {
-            from_str::<T>(&file).map_err(|err| ModelError::ParseFail {
-                msg: format!("Failed to parse {}: {}", file_path, err.to_string()),
-            })
-        })
-}
-
 pub fn get_model_details(model_type: ModelType) -> ModelResult<ModelDetails> {
-    let model_dir = model_type.get_dir();
-
-    let choice_type_paths =
-        parse_file::<HashMap<String, Vec<String>>>(model_dir, "choice_type_paths.json")?;
-    let path_to_type = parse_file::<HashMap<String, String>>(model_dir, "path_to_type.json")?;
-    let paths_defined_elsewhere =
-        parse_file::<HashMap<String, String>>(model_dir, "paths_defined_elsewhere.json")?;
-    let type_to_parent = parse_file::<HashMap<String, String>>(model_dir, "type_to_parent.json")?;
-
-    Ok(ModelDetails {
-        model_type,
-        choice_type_paths,
-        path_to_type,
-        paths_defined_elsewhere,
-        type_to_parent,
-    })
+    match model_type {
+        ModelType::Stu3 => Ok(ModelDetails {
+            model_type,
+            choice_type_paths: stu3::choice_type_paths::choice_type_paths(),
+            path_to_type: stu3::path_to_type::path_to_type(),
+            paths_defined_elsewhere: stu3::paths_defined_elsewhere::paths_defined_elsewhere(),
+            type_to_parent: stu3::type_to_parent::type_to_parent(),
+        }),
+        _ => todo!(),
+    }
 }

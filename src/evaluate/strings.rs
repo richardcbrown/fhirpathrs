@@ -28,11 +28,7 @@ pub fn index_of<'a>(
         .and_then(|val| i64::try_from(val).ok())
         .unwrap_or(-1);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(index),
-    ))
+    Ok(ResourceNode::from_node(input, json!(index)))
 }
 
 pub fn substring<'a>(
@@ -62,9 +58,8 @@ pub fn substring<'a>(
                 ),
             })?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         json!(sub_string.to_string()),
     ))
 }
@@ -82,11 +77,7 @@ pub fn starts_with<'a>(
 
     let starts_with = string_value.starts_with(&match_string);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(starts_with),
-    ))
+    Ok(ResourceNode::from_node(input, json!(starts_with)))
 }
 
 pub fn ends_with<'a>(
@@ -102,11 +93,7 @@ pub fn ends_with<'a>(
 
     let ends_with = string_value.ends_with(&match_string);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(ends_with),
-    ))
+    Ok(ResourceNode::from_node(input, json!(ends_with)))
 }
 
 pub fn contains<'a>(
@@ -122,11 +109,7 @@ pub fn contains<'a>(
 
     let contains = string_value.contains(&match_string);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(contains),
-    ))
+    Ok(ResourceNode::from_node(input, json!(contains)))
 }
 
 pub fn upper<'a>(
@@ -141,11 +124,7 @@ pub fn upper<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(replaced),
-    ))
+    Ok(ResourceNode::from_node(input, json!(replaced)))
 }
 
 pub fn lower<'a>(
@@ -160,11 +139,7 @@ pub fn lower<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(replaced),
-    ))
+    Ok(ResourceNode::from_node(input, json!(replaced)))
 }
 
 pub fn replace<'a>(
@@ -181,11 +156,7 @@ pub fn replace<'a>(
         .map(|item| Value::String(item))
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(replaced),
-    ))
+    Ok(ResourceNode::from_node(input, json!(replaced)))
 }
 
 pub fn matches<'a>(
@@ -200,11 +171,7 @@ pub fn matches<'a>(
 
     let matches = Regex::is_match(&regex, &string_value);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        Value::Bool(matches),
-    ))
+    Ok(ResourceNode::from_node(input, Value::Bool(matches)))
 }
 
 pub fn replace_matches<'a>(
@@ -225,11 +192,7 @@ pub fn replace_matches<'a>(
         })
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(replace_result),
-    ))
+    Ok(ResourceNode::from_node(input, json!(replace_result)))
 }
 
 pub fn length<'a>(
@@ -247,11 +210,7 @@ pub fn length<'a>(
         })
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(lengths),
-    ))
+    Ok(ResourceNode::from_node(input, json!(lengths)))
 }
 
 pub fn to_chars<'a>(
@@ -272,9 +231,5 @@ pub fn to_chars<'a>(
         })
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        Value::Array(char_sets),
-    ))
+    Ok(ResourceNode::from_node(input, Value::Array(char_sets)))
 }

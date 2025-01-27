@@ -31,11 +31,7 @@ pub fn equal<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(result),
-    ))
+    Ok(ResourceNode::from_node(input, json!(result)))
 }
 
 pub fn not_equal<'a>(
@@ -44,9 +40,5 @@ pub fn not_equal<'a>(
 ) -> CompileResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(!result),
-    ))
+    Ok(ResourceNode::from_node(input, json!(!result)))
 }

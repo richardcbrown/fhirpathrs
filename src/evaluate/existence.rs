@@ -12,11 +12,7 @@ pub fn empty<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(input.is_empty()?),
-    ))
+    Ok(ResourceNode::from_node(input, json!(input.is_empty()?)))
 }
 
 pub fn exists<'a>(
@@ -24,20 +20,12 @@ pub fn exists<'a>(
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
     if expressions.len() == 0 {
-        return Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(!input.is_empty()?),
-        ));
+        return Ok(ResourceNode::from_node(input, json!(!input.is_empty()?)));
     }
 
     let result = where_function(input, expressions)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(!result.is_empty()?),
-    ))
+    Ok(ResourceNode::from_node(input, json!(!result.is_empty()?)))
 }
 
 pub fn all<'a>(
@@ -58,9 +46,8 @@ pub fn all<'a>(
 
     let results = evaluate_array_boolean_expression(input, expr)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         json!(results.iter().all(|item| *item)),
     ))
 }
@@ -87,9 +74,5 @@ pub fn all_true<'a>(
 
     let all_true = results.iter().all(|item| *item);
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(all_true),
-    ))
+    Ok(ResourceNode::from_node(input, json!(all_true)))
 }

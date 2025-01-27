@@ -117,7 +117,7 @@ mod tests {
     use serde_json::json;
 
     use crate::{
-        compile::ResourceNode,
+        evaluate::{FhirContext, ResourceNode},
         parser::{
             expression::{EqualityExpression, Expression, Term, TermExpression},
             identifier::{Identifier, LiteralIdentifier},
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_where_function() {
         let node = ResourceNode {
-            data_root: json!([
+            data_root: &json!([
               { "use": "a" },
               { "use": "b" },
               { "use": "c" }
@@ -142,6 +142,8 @@ mod tests {
               { "use": "c" }
             ]),
             parent_node: None,
+            context: &FhirContext { model: None },
+            path: None,
         };
 
         let term_expr1 = TermExpression {

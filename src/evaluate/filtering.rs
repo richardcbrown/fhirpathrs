@@ -12,7 +12,13 @@ fn evaluate_filter_expression(
     let results: Vec<Value> = array
         .iter()
         .filter_map(|item| {
-            let node = ResourceNode::new(input.data_root.clone(), None, item.to_owned());
+            let node = ResourceNode::new(
+                input.data_root,
+                None,
+                item.to_owned(),
+                input.context,
+                input.path.clone(),
+            );
 
             expr.evaluate(&node)
                 .ok()
@@ -46,11 +52,7 @@ pub fn where_function<'a>(
                 .get_array()
                 .and_then(|val| Ok(evaluate_filter_expression(input.clone(), val, expr)))?;
 
-            Ok(ResourceNode::new(
-                input.data_root.clone(),
-                Some(Box::new(input)),
-                json!(data),
-            ))
+            Ok(ResourceNode::from_node(input, json!(data)))
         })
 }
 
@@ -67,7 +69,13 @@ pub fn select<'a>(
     let result = value
         .iter()
         .map(|val| {
-            let node = ResourceNode::new(input.data_root.clone(), None, json!(val.clone()));
+            let node = ResourceNode::new(
+                input.data_root,
+                None,
+                json!(val.clone()),
+                input.context,
+                input.path.clone(),
+            );
 
             let result = expression.evaluate(&node)?.data;
 
@@ -88,9 +96,5 @@ pub fn select<'a>(
         .flatten()
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(combined),
-    ))
+    Ok(ResourceNode::from_node(input, json!(combined)))
 }

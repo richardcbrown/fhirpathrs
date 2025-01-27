@@ -1,5 +1,5 @@
-mod compile;
 mod error;
+mod evaluate;
 mod models;
 mod parser;
 

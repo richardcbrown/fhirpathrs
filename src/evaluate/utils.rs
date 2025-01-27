@@ -234,7 +234,13 @@ pub fn evaluate_array_boolean_expression(
         .get_array()?
         .iter()
         .map(|item| {
-            let node = ResourceNode::new(input.data_root.clone(), None, item.to_owned());
+            let node = ResourceNode::new(
+                input.data_root,
+                None,
+                item.to_owned(),
+                input.context,
+                input.path.clone(),
+            );
 
             expr.evaluate(&node)
                 .and_then(|result| result.get_single())

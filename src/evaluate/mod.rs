@@ -3,6 +3,7 @@ mod combining;
 mod conversion;
 mod equality;
 mod existence;
+mod fhir_type;
 mod filtering;
 mod invocation_table;
 mod math;
@@ -12,10 +13,12 @@ mod utils;
 
 use std::ops::Deref;
 
+use fhir_type::determine_fhir_type;
 use invocation_table::invocation_table;
 use serde_json::{json, Number, Value};
 
 use crate::error::FhirpathError;
+use crate::models::ModelDetails;
 use crate::parser::expression::{
     AdditiveExpression, EntireExpression, EqualityExpression, Expression, ExpressionAndInvocation,
     IndexerExpression, InvocationExpression, PolarityExpression, Term, TermExpression,
@@ -34,18 +37,32 @@ lalrpop_mod!(pub fhirpath);
 
 pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
 
+pub struct FhirContext {
+    pub model: Option<ModelDetails>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PathDetails {
+    pub path: String,
+    pub fhir_type: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct ResourceNode<'a> {
-    pub data_root: Value,
+    pub data_root: &'a Value,
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
     pub data: Value,
+    pub context: &'a FhirContext,
+    pub path: Option<PathDetails>,
 }
 
 impl<'a> ResourceNode<'a> {
     pub fn new(
-        data_root: Value,
+        data_root: &'a Value,
         parent_node: Option<Box<&'a ResourceNode<'a>>>,
         data: Value,
+        context: &'a FhirContext,
+        path: Option<PathDetails>,
     ) -> Self {
         Self {
             data_root,
@@ -58,7 +75,19 @@ impl<'a> ResourceNode<'a> {
                 Value::Null => json!([]),
                 Value::String(string) => json!([string]),
             },
+            context,
+            path,
         }
+    }
+
+    pub fn from_node(node: &'a ResourceNode, data: Value) -> Self {
+        Self::new(
+            node.data_root,
+            Some(Box::new(node)),
+            data,
+            node.context,
+            node.path.clone(),
+        )
     }
 
     pub fn is_empty(&self) -> CompileResult<bool> {
@@ -120,11 +149,7 @@ pub trait Evaluate {
 
 impl Evaluate for StringLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(self.text),
-        ))
+        Ok(ResourceNode::from_node(input, json!(self.text)))
     }
 }
 
@@ -137,11 +162,7 @@ impl Evaluate for NumberLiteral {
                 msg: "NumberLiteral is not a Number".to_string(),
             })?;
 
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(value),
-        ))
+        Ok(ResourceNode::from_node(input, json!(value)))
     }
 }
 
@@ -162,11 +183,7 @@ impl Evaluate for Literal {
 impl Evaluate for MemberInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if input.is_empty()? {
-            return Ok(ResourceNode::new(
-                input.data_root.clone(),
-                Some(Box::new(input)),
-                json!([]),
-            ));
+            return Ok(ResourceNode::from_node(input, json!([])));
         }
 
         let key_node = self
@@ -196,11 +213,14 @@ impl Evaluate for MemberInvocation {
 
         // MemberInvocation is resourceType, so return whole resource
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
-            return Ok(ResourceNode::new(
-                input.data_root.clone(),
-                Some(Box::new(input)),
-                json!(input_data),
-            ));
+            let mut node = ResourceNode::from_node(input, json!(input_data));
+
+            node.path = Some(PathDetails {
+                path: key_value.clone(),
+                fhir_type: Some(key_value.clone()),
+            });
+
+            return Ok(node);
         }
 
         print!("data");
@@ -225,19 +245,22 @@ impl Evaluate for MemberInvocation {
 
         println!("{:?}", flattened_values);
 
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(flattened_values),
-        ))
+        let mut node = ResourceNode::from_node(input, json!(flattened_values));
+
+        node.path = match &input.path {
+            Some(path) => Some(determine_fhir_type(path, &key_value, input.context)),
+            None => None,
+        };
+
+        Ok(node)
     }
 }
 
-impl Evaluate for ParamList {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        todo!()
-    }
-}
+// impl Evaluate for ParamList {
+//     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+//         todo!()
+//     }
+// }
 
 impl Evaluate for FunctionInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
@@ -303,21 +326,13 @@ impl Evaluate for Invocation {
 
 impl Evaluate for LiteralIdentifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(self.text.clone()),
-        ))
+        Ok(ResourceNode::from_node(input, json!(self.text.clone())))
     }
 }
 
 impl Evaluate for LiteralContains {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            json!(self.text.clone()),
-        ))
+        Ok(ResourceNode::from_node(input, json!(self.text.clone())))
     }
 }
 
@@ -354,11 +369,7 @@ impl Evaluate for LiteralTerm {
 
         let first = &self.children[0];
 
-        Ok(ResourceNode::new(
-            input.data_root.clone(),
-            Some(Box::new(input)),
-            first.evaluate(input)?.data,
-        ))
+        Ok(ResourceNode::from_node(input, first.evaluate(input)?.data))
     }
 }
 
@@ -399,11 +410,13 @@ impl Evaluate for InvocationExpression {
                 let result = child.evaluate(&val);
 
                 match result {
-                    Ok(res) => Ok(ResourceNode::new(
-                        input.data_root.clone(),
-                        Some(Box::new(input)),
-                        res.data,
-                    )),
+                    Ok(res) => {
+                        let mut node = ResourceNode::from_node(input, res.data);
+
+                        node.path = res.path.clone();
+
+                        Ok(node)
+                    }
                     Err(err) => Err(err),
                 }
             })
@@ -490,9 +503,8 @@ impl Evaluate for IndexerExpression {
         let array_data = array_node.data;
 
         match array_data {
-            Value::Array(array) => Ok(ResourceNode::new(
-                input.data_root.clone(),
-                Some(Box::new(input)),
+            Value::Array(array) => Ok(ResourceNode::from_node(
+                input,
                 array[index as usize].clone(),
             )),
             _ => Err(FhirpathError::ParserError {
@@ -528,13 +540,7 @@ impl Evaluate for PolarityExpression {
                     msg: "PolarityExpression result was not a number".to_string(),
                 }),
             })
-            .and_then(|result| {
-                Ok(ResourceNode::new(
-                    input.data_root.clone(),
-                    Some(Box::new(input)),
-                    result,
-                ))
-            })
+            .and_then(|result| Ok(ResourceNode::from_node(input, result)))
     }
 }
 
@@ -570,10 +576,12 @@ impl Evaluate for EntireExpression {
 }
 
 impl CompiledPath {
-    fn evaluate(&self, resource: Value) -> CompileResult<Value> {
-        let node = ResourceNode::new(resource.clone(), None, resource);
+    fn evaluate(&self, resource: Value, context: &FhirContext) -> CompileResult<Value> {
+        let node = ResourceNode::new(&resource, None, resource.clone(), context, None);
 
         let evaluate_result = self.expression.evaluate(&node)?;
+
+        dbg!(evaluate_result.path);
 
         Ok(evaluate_result.data)
     }
@@ -590,17 +598,23 @@ mod tests {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
+    use crate::models::{get_model_details, ModelType};
+
     use super::*;
 
     #[test]
     fn evaluates_basic_path() {
         let compiled = compile(&"Patient".to_string()).unwrap();
 
+        print!("{:?}", compiled.expression);
+
         let patient = json!({
             "resourceType": "Patient"
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -624,7 +638,14 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(
+                patient,
+                &FhirContext {
+                    model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                },
+            )
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -649,7 +670,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         println!("{:?}", evaluate_result);
 
@@ -670,7 +693,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -695,7 +720,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
     }
@@ -714,7 +741,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -740,7 +769,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
     }
@@ -759,7 +790,9 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test1"]));
     }
@@ -784,7 +817,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test1"]));
     }
@@ -812,7 +847,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -847,7 +884,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -882,7 +921,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -916,7 +957,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -950,7 +993,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -984,7 +1029,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["TEST"]));
     }
@@ -1011,7 +1058,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
     }
@@ -1038,7 +1087,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
     }
@@ -1065,7 +1116,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1093,7 +1146,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
     }
@@ -1120,7 +1175,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([4, 3]));
     }
@@ -1147,7 +1204,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1178,7 +1237,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test test", "test1 abc"]));
     }
@@ -1200,7 +1261,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1223,7 +1286,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient);
+        let evaluate_result = compiled.evaluate(patient, &FhirContext { model: None });
 
         assert_eq!(
             evaluate_result,
@@ -1255,7 +1318,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient);
+        let evaluate_result = compiled.evaluate(patient, &FhirContext { model: None });
 
         assert_eq!(
             evaluate_result,
@@ -1287,7 +1350,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1310,7 +1375,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1337,7 +1404,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1360,7 +1429,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1392,7 +1463,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1420,7 +1493,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1452,7 +1527,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1480,7 +1557,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1512,7 +1591,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1540,7 +1621,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1557,7 +1640,9 @@ mod tests {
             "b": [1,2]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2]));
     }
@@ -1574,7 +1659,9 @@ mod tests {
             "b": [1,2]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([3]));
     }
@@ -1591,7 +1678,9 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 3]));
     }
@@ -1608,7 +1697,9 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 3]));
     }
@@ -1625,7 +1716,9 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 1, 2, 3]));
     }
@@ -1643,7 +1736,9 @@ mod tests {
             "c": true
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2]));
     }
@@ -1661,7 +1756,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1679,7 +1776,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1697,7 +1796,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1715,7 +1816,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1733,7 +1836,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1751,7 +1856,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1769,7 +1876,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1787,7 +1896,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1805,7 +1916,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1823,7 +1936,9 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1850,7 +1965,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1877,7 +1994,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1904,7 +2023,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1920,7 +2041,9 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1947,7 +2070,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1963,7 +2088,9 @@ mod tests {
             "b": [1, "1", 1.0, "1.0", "y", "yes", true]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1979,7 +2106,9 @@ mod tests {
             "b": [1, "1", 1.0, "1.0", "y", "yes", true, false]
         });
 
-        let evaluate_result = compiled.evaluate(patient).unwrap();
+        let evaluate_result = compiled
+            .evaluate(patient, &FhirContext { model: None })
+            .unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }

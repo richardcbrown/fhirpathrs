@@ -25,11 +25,7 @@ pub fn single<'a>(
         msg: "Failed to get single item from array".to_string(),
     })?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        single_value.clone(),
-    ))
+    Ok(ResourceNode::from_node(input, single_value.clone()))
 }
 
 pub fn first<'a>(
@@ -40,9 +36,8 @@ pub fn first<'a>(
 
     let first_value = array.first();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         match first_value {
             Some(first) => json!(first),
             None => Value::Array(vec![]),
@@ -58,9 +53,8 @@ pub fn last<'a>(
 
     let last_value = array.last();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         match last_value {
             Some(first) => json!(first),
             None => Value::Array(vec![]),
@@ -76,11 +70,7 @@ pub fn tail<'a>(
 
     let tail_values: Vec<&Value> = array.iter().skip(1).collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(tail_values),
-    ))
+    Ok(ResourceNode::from_node(input, json!(tail_values)))
 }
 
 pub fn skip<'a>(
@@ -103,9 +93,8 @@ pub fn skip<'a>(
 
     let skip_num = get_usize_from_expression(input, expression)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         json!(array.into_iter().skip(skip_num).collect::<Vec<&Value>>()),
     ))
 }
@@ -130,9 +119,8 @@ pub fn take<'a>(
 
     let take_num = get_usize_from_expression(input, expression)?;
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         json!(array.into_iter().take(take_num).collect::<Vec<&Value>>()),
     ))
 }
@@ -153,9 +141,8 @@ pub fn intersect<'a>(
         })
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
+    Ok(ResourceNode::from_node(
+        input,
         json!(unique_array_elements(&intersect_array)),
     ))
 }
@@ -176,9 +163,5 @@ pub fn exclude<'a>(
         })
         .collect();
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(exclude_array),
-    ))
+    Ok(ResourceNode::from_node(input, json!(exclude_array)))
 }

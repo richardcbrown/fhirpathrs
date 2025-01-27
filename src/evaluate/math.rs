@@ -29,9 +29,5 @@ pub fn add<'a>(
         _ => todo!(),
     };
 
-    Ok(ResourceNode::new(
-        input.data_root.clone(),
-        Some(Box::new(input)),
-        json!(result),
-    ))
+    Ok(ResourceNode::from_node(input, json!(result)))
 }
