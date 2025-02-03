@@ -5,7 +5,7 @@ use super::{
     equality::{equal, not_equal},
     existence::{all, all_true, empty, exists},
     filtering::{select, where_function},
-    math::add,
+    math::{add, amp, div, divide, mul, rem, sub},
     strings::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
@@ -68,6 +68,18 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("=".to_string(), equal);
 
     map.insert("+".to_string(), add);
+
+    map.insert("-".to_string(), sub);
+
+    map.insert("div".to_string(), div);
+
+    map.insert("mod".to_string(), rem);
+
+    map.insert("/".to_string(), divide);
+
+    map.insert("*".to_string(), mul);
+
+    map.insert("&".to_string(), amp);
 
     map.insert("where".to_string(), where_function);
 

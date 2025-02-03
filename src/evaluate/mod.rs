@@ -12,7 +12,6 @@ mod subsetting;
 mod utils;
 
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::ops::Deref;
 
 use fhir_type::determine_fhir_type;
@@ -25,9 +24,9 @@ use crate::models::ModelDetails;
 use crate::parser::expression::{
     AdditiveExpression, EntireExpression, EqualityExpression, Expression, ExpressionAndInvocation,
     ExternalConstantTerm, IdentifierOrStringLiteral, IndexerExpression, InvocationExpression,
-    PolarityExpression, Term, TermExpression, UnionExpression,
+    MultiplicativeExpression, PolarityExpression, Term, TermExpression, UnionExpression,
 };
-use crate::parser::identifier::{self, Identifier, LiteralContains, LiteralIdentifier};
+use crate::parser::identifier::{Identifier, LiteralContains, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
@@ -127,6 +126,15 @@ impl<'a> ResourceNode<'a> {
 
                 Ok(first.clone())
             }
+            _ => Err(FhirpathError::CompileError {
+                msg: "Data must be a Value::Array".to_string(),
+            }),
+        }
+    }
+
+    pub fn get_single_or_empty(&self) -> CompileResult<Option<Value>> {
+        match &self.data {
+            Value::Array(array) => Ok(array.first().cloned()),
             _ => Err(FhirpathError::CompileError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
@@ -263,12 +271,6 @@ impl Evaluate for MemberInvocation {
         Ok(node)
     }
 }
-
-// impl Evaluate for ParamList {
-//     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-//         todo!()
-//     }
-// }
 
 impl Evaluate for FunctionInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
@@ -503,6 +505,18 @@ impl Evaluate for AdditiveExpression {
     }
 }
 
+impl Evaluate for MultiplicativeExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "MultiplicativeExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
 impl Evaluate for UnionExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -593,7 +607,7 @@ impl Evaluate for Expression {
             Expression::InvocationExpression(exp) => exp.evaluate(input),
             Expression::IndexerExpression(exp) => exp.evaluate(input),
             Expression::PolarityExpression(exp) => exp.evaluate(input),
-            Expression::MultiplicativeExpression(exp) => todo!(),
+            Expression::MultiplicativeExpression(exp) => exp.evaluate(input),
             Expression::AdditiveExpression(exp) => exp.evaluate(input),
             Expression::UnionExpression(exp) => exp.evaluate(input),
             Expression::InequalityExpression(exp) => todo!(),
@@ -2078,6 +2092,26 @@ mod tests {
     #[test]
     fn evaluate_variable_basic_path() {
         let compiled = compile(&"Patient.b.where(value = %ucum).value".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "b": [
+                { "value": "1" },
+                { "value": "2" },
+                { "value": "http://unitsofmeasure.org"}
+            ]
+        });
+
+        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+
+        assert_json_eq!(evaluate_result, json!(["http://unitsofmeasure.org"]));
+    }
+
+    #[test]
+    fn evaluate_variable_resource_path() {
+        let compiled = compile(&"%resource.b.where(value = %ucum).value".to_string()).unwrap();
 
         print!("{:?}", compiled.expression);
 
