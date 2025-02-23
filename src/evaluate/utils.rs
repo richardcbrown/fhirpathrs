@@ -76,7 +76,8 @@ pub fn get_usize_from_expression(
     let json_num = get_number_from_expression(input, expression)?;
 
     json_num
-        .as_u64()
+        .as_f64()
+        .and_then(|num| Some(num as u64))
         .ok_or(FhirpathError::CompileError {
             msg: "Could not convert number to u64".to_string(),
         })
@@ -287,5 +288,37 @@ pub fn try_convert_to_boolean(value: &Value) -> Option<bool> {
             None => None,
         },
         _ => None,
+    }
+}
+
+pub fn get_i128_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<i128> {
+    let value = get_single_value(get_value_from_expression(input, expression)?)?;
+
+    match value {
+        Value::Number(num) => num.as_i128().ok_or_else(|| FhirpathError::CompileError {
+            msg: "Value was not an i128".to_string(),
+        }),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Value was not a Number".to_string(),
+        }),
+    }
+}
+
+pub fn get_f64_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> CompileResult<f64> {
+    let value = get_single_value(get_value_from_expression(input, expression)?)?;
+
+    match value {
+        Value::Number(num) => num.as_f64().ok_or_else(|| FhirpathError::CompileError {
+            msg: "Value was not an f64".to_string(),
+        }),
+        _ => Err(FhirpathError::CompileError {
+            msg: "Value was not a Number".to_string(),
+        }),
     }
 }

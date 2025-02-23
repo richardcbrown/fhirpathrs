@@ -1,14 +1,17 @@
 mod arity;
 mod combining;
+mod comparison;
 mod conversion;
 mod equality;
 mod existence;
 mod fhir_type;
 mod filtering;
 mod invocation_table;
+mod logic;
 mod math;
 mod strings;
 mod subsetting;
+mod types;
 mod utils;
 
 use std::collections::HashMap;
@@ -22,9 +25,10 @@ use utils::get_string;
 use crate::error::FhirpathError;
 use crate::models::ModelDetails;
 use crate::parser::expression::{
-    AdditiveExpression, EntireExpression, EqualityExpression, Expression, ExpressionAndInvocation,
-    ExternalConstantTerm, IdentifierOrStringLiteral, IndexerExpression, InvocationExpression,
-    MultiplicativeExpression, PolarityExpression, Term, TermExpression, UnionExpression,
+    AdditiveExpression, AndExpression, EntireExpression, EqualityExpression, Expression,
+    ExpressionAndInvocation, ExternalConstantTerm, IdentifierOrStringLiteral, IndexerExpression,
+    InvocationExpression, MultiplicativeExpression, OrExpression, PolarityExpression, Term,
+    TermExpression, UnionExpression,
 };
 use crate::parser::identifier::{Identifier, LiteralContains, LiteralIdentifier};
 use crate::parser::invocation::{
@@ -173,7 +177,7 @@ impl Evaluate for NumberLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let value = self
             .text
-            .parse::<i64>()
+            .parse::<f64>()
             .map_err(|_| FhirpathError::ParserError {
                 msg: "NumberLiteral is not a Number".to_string(),
             })?;
@@ -529,6 +533,30 @@ impl Evaluate for UnionExpression {
     }
 }
 
+impl Evaluate for AndExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "AndExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
+impl Evaluate for OrExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "OrExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
 impl Evaluate for IndexerExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -543,9 +571,14 @@ impl Evaluate for IndexerExpression {
         let index_value = index_node.get_single()?;
 
         let index: i64 = match index_value {
-            Value::Number(num) => num.as_i64().ok_or(FhirpathError::ParserError {
-                msg: "IndexerExpression index is not a Number".to_string(),
-            }),
+            Value::Number(num) => {
+                let fpn: f64 = num.as_f64().ok_or(FhirpathError::ParserError {
+                    msg: "IndexerExpression index is not a Number".to_string(),
+                })?;
+
+                // @todo check conversion here
+                Ok(fpn as i64)
+            }
             Value::String(num_string) => {
                 num_string.parse().map_err(|_| FhirpathError::ParserError {
                     msg: "IndexerExpression index is not a Number".to_string(),
@@ -614,8 +647,8 @@ impl Evaluate for Expression {
             Expression::TypeExpression(exp) => todo!(),
             Expression::EqualityExpression(exp) => exp.evaluate(input),
             Expression::MembershipExpression(exp) => todo!(),
-            Expression::AndExpression(exp) => todo!(),
-            Expression::OrExpression(exp) => todo!(),
+            Expression::AndExpression(exp) => exp.evaluate(input),
+            Expression::OrExpression(exp) => exp.evaluate(input),
             Expression::ImpliesExpression(exp) => todo!(),
         }
     }

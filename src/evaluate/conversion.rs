@@ -42,7 +42,7 @@ pub fn iif<'a>(
     Ok(ResourceNode::from_node(input, json!(output)))
 }
 
-pub fn toBoolean<'a>(
+pub fn to_boolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
@@ -56,7 +56,7 @@ pub fn toBoolean<'a>(
     Ok(ResourceNode::from_node(input, json!(bool_result)))
 }
 
-pub fn convertsToBoolean<'a>(
+pub fn converts_to_boolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {

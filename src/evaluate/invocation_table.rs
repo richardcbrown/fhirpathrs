@@ -1,11 +1,15 @@
 use super::{
     arity::Arity,
     combining::{combine, union},
-    conversion::{convertsToBoolean, iif, toBoolean},
+    conversion::{converts_to_boolean, iif, to_boolean},
     equality::{equal, not_equal},
     existence::{all, all_true, empty, exists},
     filtering::{select, where_function},
-    math::{add, amp, div, divide, mul, rem, sub},
+    logic::{and, implies, not, or, xor},
+    math::{
+        abs, add, amp, ceiling, div, divide, exp, floor, ln, log, mul, power, rem, round, sqrt,
+        sub, truncate,
+    },
     strings::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
@@ -81,6 +85,26 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("&".to_string(), amp);
 
+    map.insert("abs".to_string(), abs);
+
+    map.insert("ceiling".to_string(), ceiling);
+
+    map.insert("exp".to_string(), exp);
+
+    map.insert("floor".to_string(), floor);
+
+    map.insert("ln".to_string(), ln);
+
+    map.insert("log".to_string(), log);
+
+    map.insert("power".to_string(), power);
+
+    map.insert("round".to_string(), round);
+
+    map.insert("sqrt".to_string(), sqrt);
+
+    map.insert("truncate".to_string(), truncate);
+
     map.insert("where".to_string(), where_function);
 
     map.insert("select".to_string(), select);
@@ -117,9 +141,19 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("iif".to_string(), iif);
 
-    map.insert("toBoolean".to_string(), toBoolean);
+    map.insert("toBoolean".to_string(), to_boolean);
 
-    map.insert("convertsToBoolean".to_string(), convertsToBoolean);
+    map.insert("convertsToBoolean".to_string(), converts_to_boolean);
+
+    map.insert("and".to_string(), and);
+
+    map.insert("or".to_string(), or);
+
+    map.insert("not".to_string(), not);
+
+    map.insert("xor".to_string(), xor);
+
+    map.insert("implies".to_string(), implies);
 
     map
 }

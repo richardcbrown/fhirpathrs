@@ -264,7 +264,7 @@ Expression: Expression = {
     })),
 
     // AndExpression
-    #[precedence(level="1")] #[assoc(side="left")]
+    #[precedence(level="11")] #[assoc(side="left")]
     <e1: Expression> "and" <e2: Expression> => Expression::AndExpression(Box::new(AndExpression {
         op: "and".to_string(),
         children: vec![
@@ -274,7 +274,7 @@ Expression: Expression = {
     })),
 
     // OrExpression
-    #[precedence(level="1")] #[assoc(side="left")]
+    #[precedence(level="11")] #[assoc(side="left")]
     <e1: Expression> "or" <e2: Expression> => Expression::OrExpression(Box::new(OrExpression {
         op: "or".to_string(),
         children: vec![
@@ -291,7 +291,7 @@ Expression: Expression = {
     })),
 
     // ImpliesExpression
-    #[precedence(level="1")] #[assoc(side="left")]
+    #[precedence(level="11")] #[assoc(side="left")]
     <e1: Expression> "implies" <e2: Expression> => Expression::ImpliesExpression(Box::new(ImpliesExpression {
         op: "implies".to_string(),
         children: vec![
@@ -479,13 +479,13 @@ pub NumberLiteral: NumberLiteral = {
 }
 
 pub DatetimeLiteral: DatetimeLiteral = {
-    <dt: r"@[0-9][0-9][0-9][0-9](\\-[0-9][0-9](\\-[0-9][0-9](T[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?)?)?)?Z?"> => DatetimeLiteral {
+    <dt: r"@[0-9][0-9][0-9][0-9](\\-[0-9][0-9](\\-[0-9][0-9](T[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?)?)?)?"> => DatetimeLiteral {
         text: dt.to_string()
     }
 }
 
 pub TimeLiteral: TimeLiteral = {
-    <t: r"@T[0-9][0-9](:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?(Z|(\\+|\\-)[0-9][0-9]:[0-9][0-9])?"> => TimeLiteral {
+    <t: r"@T([0-9][0-9])(:[0-9][0-9](:[0-9][0-9](\\.[0-9]+)?)?)?"> => TimeLiteral {
         text: t.to_string()
     }
 }
