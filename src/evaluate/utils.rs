@@ -322,3 +322,16 @@ pub fn get_f64_from_expression(
         }),
     }
 }
+
+pub fn get_number(num: &Number) -> CompileResult<f64> {
+    num.as_f64().ok_or_else(|| FhirpathError::CompileError {
+        msg: "Could not convert to f64".to_string(),
+    })
+}
+
+pub fn get_numbers(num1: &Number, num2: &Number) -> CompileResult<(f64, f64)> {
+    let f1 = get_number(num1)?;
+    let f2 = get_number(num2)?;
+
+    Ok((f1, f2))
+}

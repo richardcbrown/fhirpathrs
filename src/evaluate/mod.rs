@@ -20,6 +20,7 @@ use std::ops::Deref;
 use fhir_type::determine_fhir_type;
 use invocation_table::invocation_table;
 use serde_json::{json, Number, Value};
+use types::DateTime;
 use utils::get_string;
 
 use crate::error::FhirpathError;
@@ -27,15 +28,15 @@ use crate::models::ModelDetails;
 use crate::parser::expression::{
     AdditiveExpression, AndExpression, EntireExpression, EqualityExpression, Expression,
     ExpressionAndInvocation, ExternalConstantTerm, IdentifierOrStringLiteral, IndexerExpression,
-    InvocationExpression, MultiplicativeExpression, OrExpression, PolarityExpression, Term,
-    TermExpression, UnionExpression,
+    InequalityExpression, InvocationExpression, MultiplicativeExpression, OrExpression,
+    PolarityExpression, Term, TermExpression, UnionExpression,
 };
 use crate::parser::identifier::{Identifier, LiteralContains, LiteralIdentifier};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
-use crate::parser::literal::{Literal, LiteralTerm, NumberLiteral, StringLiteral};
+use crate::parser::literal::{DatetimeLiteral, Literal, LiteralTerm, NumberLiteral, StringLiteral};
 
 use lalrpop_util::lalrpop_mod;
 
@@ -186,11 +187,20 @@ impl Evaluate for NumberLiteral {
     }
 }
 
+impl Evaluate for DatetimeLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        Ok(ResourceNode::from_node(
+            input,
+            json!(DateTime::try_from(&self.text)?),
+        ))
+    }
+}
+
 impl Evaluate for Literal {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Literal::BooleanLiteral(exp) => todo!(),
-            Literal::DatetimeLiteral(exp) => todo!(),
+            Literal::DatetimeLiteral(exp) => exp.evaluate(input),
             Literal::NullLiteral(exp) => todo!(),
             Literal::NumberLiteral(exp) => exp.evaluate(input),
             Literal::QuantityLiteral(exp) => todo!(),
@@ -557,6 +567,18 @@ impl Evaluate for OrExpression {
     }
 }
 
+impl Evaluate for InequalityExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "InequalityExpression must have exactly two children".to_string(),
+            });
+        }
+
+        invoke_operation(&self.op, input, &self.children)
+    }
+}
+
 impl Evaluate for IndexerExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -643,7 +665,7 @@ impl Evaluate for Expression {
             Expression::MultiplicativeExpression(exp) => exp.evaluate(input),
             Expression::AdditiveExpression(exp) => exp.evaluate(input),
             Expression::UnionExpression(exp) => exp.evaluate(input),
-            Expression::InequalityExpression(exp) => todo!(),
+            Expression::InequalityExpression(exp) => exp.evaluate(input),
             Expression::TypeExpression(exp) => todo!(),
             Expression::EqualityExpression(exp) => exp.evaluate(input),
             Expression::MembershipExpression(exp) => todo!(),

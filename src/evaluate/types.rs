@@ -1,14 +1,15 @@
-use std::cell::LazyCell;
+use std::{cell::LazyCell, cmp::Ordering};
 
 use chrono::{Datelike, FixedOffset, Local, NaiveDateTime, Timelike, Utc};
 use regex::{Match, Regex};
+use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
 use crate::error::FhirpathError;
 
 use super::CompileResult;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum DateTimePrecision {
     Years,
     Months,
@@ -19,17 +20,6 @@ enum DateTimePrecision {
 }
 
 impl DateTimePrecision {
-    fn get_format(&self) -> &str {
-        match self {
-            DateTimePrecision::Years => "@%Y",
-            DateTimePrecision::Months => "@%Y-%m",
-            DateTimePrecision::Days => "@%Y-%m-%d",
-            DateTimePrecision::Hours => "@%Y-%m-%dT%H",
-            DateTimePrecision::Minutes => "@%Y-%m-%dT%H:%M",
-            DateTimePrecision::Seconds => "@%Y-%m-%dT%H:%M:%S",
-        }
-    }
-
     fn from_components(
         seconds: Option<f64>,
         minutes: Option<u32>,
@@ -52,7 +42,7 @@ impl DateTimePrecision {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum TimePrecision {
     Hours,
     Minutes,
@@ -179,12 +169,64 @@ fn get_fixed_offset(offset: &Option<Offset>) -> CompileResult<FixedOffset> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Time {
     hours: Option<u32>,
     minutes: Option<u32>,
     seconds: Option<f64>,
     precision: TimePrecision,
+}
+
+impl PartialOrd for Time {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.precision != other.precision {
+            return None;
+        }
+
+        match (self.hours, other.hours) {
+            (Some(self_hours), Some(other_hours)) => {
+                if self_hours > other_hours {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_hours < other_hours {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        match (self.minutes, other.minutes) {
+            (Some(self_minutes), Some(other_minutes)) => {
+                if self_minutes > other_minutes {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_minutes < other_minutes {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        match (self.seconds, other.seconds) {
+            (Some(self_seconds), Some(other_seconds)) => {
+                if self_seconds > other_seconds {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_seconds < other_seconds {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        return Some(Ordering::Equal);
+    }
 }
 
 impl Time {
@@ -220,6 +262,37 @@ impl Time {
                     precision: TimePrecision::Seconds,
                 })
             }
+        }
+    }
+
+    fn from_components(
+        seconds: Option<f64>,
+        minutes: Option<u32>,
+        hours: Option<u32>,
+        precision: &DateTimePrecision,
+    ) -> Option<Time> {
+        match precision {
+            DateTimePrecision::Years => None,
+            DateTimePrecision::Months => None,
+            DateTimePrecision::Days => None,
+            DateTimePrecision::Hours => Some(Time {
+                precision: TimePrecision::Hours,
+                hours,
+                minutes: None,
+                seconds: None,
+            }),
+            DateTimePrecision::Minutes => Some(Time {
+                precision: TimePrecision::Minutes,
+                hours,
+                minutes,
+                seconds: None,
+            }),
+            DateTimePrecision::Seconds => Some(Time {
+                precision: TimePrecision::Seconds,
+                hours,
+                minutes,
+                seconds,
+            }),
         }
     }
 }
@@ -261,33 +334,7 @@ impl TryFrom<&Value> for Time {
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
-            Value::String(val) => {
-                let captures = Regex::captures(&TIME_REGEX, val).ok_or_else(|| {
-                    FhirpathError::CompileError {
-                        msg: format!("{} is not a Time", val),
-                    }
-                })?;
-
-                let hours = parse_optional_u32(captures.get(1))?;
-                let minutes = parse_optional_u32(captures.get(3))?;
-                let seconds = parse_optional_f64(captures.get(5))?;
-
-                let precision = match (seconds, minutes, hours) {
-                    (Some(_sec), _, _) => Ok(TimePrecision::Seconds),
-                    (None, Some(_min), _) => Ok(TimePrecision::Minutes),
-                    (None, None, Some(_hr)) => Ok(TimePrecision::Hours),
-                    (None, None, None) => Err(FhirpathError::CompileError {
-                        msg: "No matching time precision".to_string(),
-                    }),
-                }?;
-
-                Ok(Self {
-                    hours,
-                    minutes,
-                    seconds,
-                    precision,
-                })
-            }
+            Value::String(val) => Time::try_from(val),
             _ => Err(FhirpathError::CompileError {
                 msg: "Only parsing times from strings is supported".to_string(),
             }),
@@ -295,18 +342,109 @@ impl TryFrom<&Value> for Time {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl TryFrom<&String> for Time {
+    type Error = FhirpathError;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        let captures =
+            Regex::captures(&TIME_REGEX, value).ok_or_else(|| FhirpathError::CompileError {
+                msg: format!("{} is not a Time", value),
+            })?;
+
+        let hours = parse_optional_u32(captures.get(1))?;
+        let minutes = parse_optional_u32(captures.get(3))?;
+        let seconds = parse_optional_f64(captures.get(5))?;
+
+        let precision = TimePrecision::from_components(seconds, minutes, hours)?;
+
+        Ok(Self {
+            hours,
+            minutes,
+            seconds,
+            precision,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Date {
     years: Option<u32>,
     months: Option<u32>,
     days: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PartialOrd for Date {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self.years, other.years) {
+            (Some(self_years), Some(other_years)) => {
+                if self_years > other_years {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_years < other_years {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        match (self.months, other.months) {
+            (Some(self_months), Some(other_months)) => {
+                if self_months > other_months {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_months < other_months {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        match (self.days, other.days) {
+            (Some(self_days), Some(other_days)) => {
+                if self_days > other_days {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_days < other_days {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        Some(Ordering::Equal)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DateTime {
     precision: DateTimePrecision,
     date: Date,
     time: Option<Time>,
+}
+
+impl PartialOrd for DateTime {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.precision != other.precision {
+            return None;
+        }
+
+        let cmp = self.date.partial_cmp(&other.date)?;
+
+        match cmp {
+            Ordering::Equal => match (&self.time, &other.time) {
+                (None, None) => Some(Ordering::Equal),
+                (Some(t1), Some(t2)) => t1.partial_cmp(t2),
+                _ => None,
+            },
+            _ => return Some(cmp),
+        }
+    }
 }
 
 impl DateTime {
@@ -341,6 +479,26 @@ impl DateTime {
             },
         }
     }
+
+    fn from_components(
+        seconds: Option<f64>,
+        minutes: Option<u32>,
+        hours: Option<u32>,
+        days: Option<u32>,
+        months: Option<u32>,
+        years: Option<u32>,
+        precision: DateTimePrecision,
+    ) -> Self {
+        Self {
+            precision: precision.clone(),
+            date: Date {
+                years,
+                months,
+                days,
+            },
+            time: Time::from_components(seconds, minutes, hours, &precision),
+        }
+    }
 }
 
 impl TryFrom<&Value> for DateTime {
@@ -348,68 +506,74 @@ impl TryFrom<&Value> for DateTime {
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
-            Value::String(val) => {
-                let captures = Regex::captures(&DATETIME_REGEX, val).ok_or_else(|| {
-                    FhirpathError::CompileError {
-                        msg: format!("{} is not a DateTime", val),
-                    }
-                })?;
-
-                let years = parse_optional_u32(captures.get(1))?;
-                let months = parse_optional_u32(captures.get(3))?;
-                let days = parse_optional_u32(captures.get(5))?;
-
-                let hours = parse_optional_u32(captures.get(7))?;
-                let minutes = parse_optional_u32(captures.get(9))?;
-                let seconds = parse_optional_f64(captures.get(11))?;
-
-                let fractional_secs = captures.get(12).is_some();
-
-                let tz = captures.get(13).and_then(|val| Some(val.as_str()));
-                let tz_dir = captures.get(14).and_then(|val| Some(val.as_str()));
-                let tz_hours = parse_optional_u32(captures.get(15))?;
-                let tz_minutes = parse_optional_u32(captures.get(16))?;
-
-                let precision = match (seconds, minutes, hours, days, months, years) {
-                    (Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
-                    (None, Some(_min), _, _, _, _) => Ok(DateTimePrecision::Minutes),
-                    (None, None, Some(_h), _, _, _) => Ok(DateTimePrecision::Hours),
-                    (None, None, None, Some(_day), _, _) => Ok(DateTimePrecision::Days),
-                    (None, None, None, None, Some(_mon), _) => Ok(DateTimePrecision::Months),
-                    (None, None, None, None, None, Some(_yr)) => Ok(DateTimePrecision::Years),
-                    (None, None, None, None, None, None) => Err(FhirpathError::CompileError {
-                        msg: "Invalid DateTime precision".to_string(),
-                    }),
-                }?;
-
-                let mut date_format = precision.get_format().to_string();
-
-                if fractional_secs {
-                    date_format.extend("%.f".chars());
-                }
-
-                if tz.is_some() {
-                    date_format.extend("%z".chars());
-                }
-
-                let offset = Offset::from_components(tz, tz_dir, tz_hours, tz_minutes);
-
-                let adjusted_datetime = NaiveDateTime::parse_from_str(val, &date_format)
-                    .map_err(|err| FhirpathError::CompileError {
-                        msg: format!("Failed to parse DateTime: {}", err.to_string()),
-                    })?
-                    .and_local_timezone(get_fixed_offset(&offset)?)
-                    .single()
-                    .ok_or_else(|| FhirpathError::CompileError {
-                        msg: "Failed to map DateTime".to_string(),
-                    })?
-                    .to_utc();
-
-                Ok(Self::from_datetime_precision(adjusted_datetime, &precision))
-            }
+            Value::String(val) => DateTime::try_from(val),
             _ => Err(FhirpathError::CompileError {
                 msg: "Only parsing times from strings is supported".to_string(),
             }),
+        }
+    }
+}
+
+impl TryFrom<&String> for DateTime {
+    type Error = FhirpathError;
+
+    fn try_from(string_value: &String) -> Result<Self, Self::Error> {
+        let value = match string_value.starts_with("@") {
+            true => string_value.clone(),
+            false => format!("@{}", string_value),
+        };
+
+        let captures = Regex::captures(&DATETIME_REGEX, &value).ok_or_else(|| {
+            FhirpathError::CompileError {
+                msg: format!("{} is not a DateTime", value),
+            }
+        })?;
+
+        let years = parse_optional_u32(captures.get(1))?;
+        let months = parse_optional_u32(captures.get(3))?;
+        let days = parse_optional_u32(captures.get(5))?;
+
+        let hours = parse_optional_u32(captures.get(7))?;
+        let minutes = parse_optional_u32(captures.get(9))?;
+        let seconds = parse_optional_f64(captures.get(11))?;
+
+        let fractional_secs = captures.get(12).is_some();
+
+        let tz = captures.get(13).and_then(|val| Some(val.as_str()));
+        let tz_dir = captures.get(14).and_then(|val| Some(val.as_str()));
+        let tz_hours = parse_optional_u32(captures.get(15))?;
+        let tz_minutes = parse_optional_u32(captures.get(16))?;
+
+        let precision =
+            DateTimePrecision::from_components(seconds, minutes, hours, days, months, years)?;
+
+        if tz.is_some() {
+            let mut date_format = "@%Y-%m-%dT%H:%M:%S".to_string();
+
+            if fractional_secs {
+                date_format.extend("%.f".chars());
+            }
+
+            date_format.extend("%z".chars());
+
+            let offset = Offset::from_components(tz, tz_dir, tz_hours, tz_minutes);
+
+            let adjusted_datetime = NaiveDateTime::parse_from_str(&value, &date_format)
+                .map_err(|err| FhirpathError::CompileError {
+                    msg: format!("Failed to parse DateTime: {}", err.to_string()),
+                })?
+                .and_local_timezone(get_fixed_offset(&offset)?)
+                .single()
+                .ok_or_else(|| FhirpathError::CompileError {
+                    msg: "Failed to map DateTime".to_string(),
+                })?
+                .to_utc();
+
+            Ok(Self::from_datetime_precision(adjusted_datetime, &precision))
+        } else {
+            Ok(Self::from_components(
+                seconds, minutes, hours, days, months, years, precision,
+            ))
         }
     }
 }
@@ -430,16 +594,31 @@ impl TryFrom<&Value> for ArithmeticType {
             Value::String(string_num) => {
                 let num = string_num
                     .parse::<f64>()
-                    .map_err(|_| FhirpathError::CompileError {
-                        msg: "String was not a number".to_string(),
-                    })?;
+                    .ok()
+                    .and_then(|num| Number::from_f64(num));
 
-                let num_value =
-                    Number::from_f64(num).ok_or_else(|| FhirpathError::CompileError {
-                        msg: "Failed to convert f64 to Number".to_string(),
-                    })?;
+                if let Some(num_value) = num {
+                    return Ok(ArithmeticType::Number(num_value));
+                }
 
-                Ok(ArithmeticType::Number(num_value))
+                if let Some(datetime_value) = DateTime::try_from(string_num).ok() {
+                    return Ok(ArithmeticType::DateTime(datetime_value));
+                }
+
+                Err(FhirpathError::CompileError {
+                    msg: "Could not convert string to ArithmeticType".to_string(),
+                })
+            }
+            Value::Object(_) => {
+                let datetime: Option<DateTime> = serde_json::from_value(value.clone()).ok();
+
+                if let Some(datetime_value) = datetime {
+                    return Ok(ArithmeticType::DateTime(datetime_value));
+                }
+
+                Err(FhirpathError::CompileError {
+                    msg: "Could not convert object to ArithmeticType".to_string(),
+                })
             }
             _ => todo!(),
         }
@@ -492,5 +671,56 @@ mod test {
                 precision: DateTimePrecision::Seconds
             }
         )
+    }
+
+    #[test]
+    fn test_datetime_cmp_none() {
+        let result =
+            DateTime::try_from(&Value::String("@2025-01-01T10:11:12.123+02:00".to_string()))
+                .unwrap()
+                .partial_cmp(
+                    &DateTime::try_from(&Value::String("@2025-01-01T10:11".to_string())).unwrap(),
+                );
+
+        assert_eq!(result, None)
+    }
+
+    #[test]
+    fn test_datetime_cmp_greater() {
+        let result =
+            DateTime::try_from(&Value::String("@2025-01-01T10:11:12.123+01:00".to_string()))
+                .unwrap()
+                .partial_cmp(
+                    &DateTime::try_from(&Value::String(
+                        "@2025-01-01T10:11:12.123+02:00".to_string(),
+                    ))
+                    .unwrap(),
+                );
+
+        assert_eq!(result, Some(std::cmp::Ordering::Greater))
+    }
+
+    #[test]
+    fn test_datetime_cmp_lesser() {
+        let result =
+            DateTime::try_from(&Value::String("@2025-01-01T10:11:12.123+02:00".to_string()))
+                .unwrap()
+                .partial_cmp(
+                    &DateTime::try_from(&Value::String(
+                        "@2025-01-01T10:11:12.123+01:00".to_string(),
+                    ))
+                    .unwrap(),
+                );
+
+        assert_eq!(result, Some(std::cmp::Ordering::Less))
+    }
+
+    #[test]
+    fn test_datetime_cmp_equal() {
+        let result = DateTime::try_from(&Value::String("@2025-01-01".to_string()))
+            .unwrap()
+            .partial_cmp(&DateTime::try_from(&Value::String("@2025-01-01".to_string())).unwrap());
+
+        assert_eq!(result, Some(std::cmp::Ordering::Equal))
     }
 }

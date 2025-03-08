@@ -1,6 +1,7 @@
 use super::{
     arity::Arity,
     combining::{combine, union},
+    comparison::{gt, lt},
     conversion::{converts_to_boolean, iif, to_boolean},
     equality::{equal, not_equal},
     existence::{all, all_true, empty, exists},
@@ -104,6 +105,10 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("sqrt".to_string(), sqrt);
 
     map.insert("truncate".to_string(), truncate);
+
+    map.insert(">".to_string(), gt);
+
+    map.insert("<".to_string(), lt);
 
     map.insert("where".to_string(), where_function);
 
