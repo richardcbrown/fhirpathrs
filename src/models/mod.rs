@@ -2,12 +2,14 @@ use std::collections::HashMap;
 
 mod stu3;
 
+#[derive(Clone)]
 pub enum ModelType {
     Stu3,
     R4,
     R5,
 }
 
+#[derive(Clone)]
 pub struct ModelDetails {
     pub model_type: ModelType,
     pub choice_type_paths: HashMap<String, Vec<String>>,

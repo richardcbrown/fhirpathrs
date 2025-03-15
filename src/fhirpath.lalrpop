@@ -437,13 +437,13 @@ LiteralTerm: LiteralTerm = {
 }
 
 Literal: Literal = {
+    <ql: QuantityLiteral> => Literal::QuantityLiteral(Box::new(ql)),
     <nl: NullLiteral> => Literal::NullLiteral(Box::new(nl)),
     <bl: BooleanLiteral> => Literal::BooleanLiteral(Box::new(bl)),
     <sl: StringLiteral> => Literal::StringLiteral(Box::new(sl)),
     <numl: NumberLiteral> => Literal::NumberLiteral(Box::new(numl)),
     <dl: DatetimeLiteral> => Literal::DatetimeLiteral(Box::new(dl)),
-    <tl: TimeLiteral> => Literal::TimeLiteral(Box::new(tl)),
-    <ql: QuantityLiteral> => Literal::QuantityLiteral(Box::new(ql))
+    <tl: TimeLiteral> => Literal::TimeLiteral(Box::new(tl))
 }
 
 NullLiteral: NullLiteral = {
@@ -491,14 +491,14 @@ pub TimeLiteral: TimeLiteral = {
 }
 
 pub QuantityLiteral: QuantityLiteral = {
-    <ql: r"([0-9]+(\\.[0-9]+)?)(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|\'([^']*)\')"> => {
-        let quantity_regex = r"([0-9]+(\\.[0-9]+)?)(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|\'([^']*)\')";
+    <ql: r"([0-9]+(\.[0-9]+)?)\s*'(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|([^']*))'"> => {
+        let quantity_regex = r"([0-9]+(\.[0-9]+)?)\s*'(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|([^']*))'";
 
         let captures = Regex::captures(&Regex::new(quantity_regex).unwrap(), ql).unwrap();
 
-        let capture_text = captures[0].to_string();
+        let capture_text = captures[1].to_string();
 
-        let capture_unit = captures[1].to_string();
+        let capture_unit = captures[3].to_string();
 
         QuantityLiteral {
             text: capture_text,

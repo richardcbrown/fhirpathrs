@@ -1,11 +1,11 @@
-use std::{cell::LazyCell, cmp::Ordering};
+use std::{cell::LazyCell, cmp::Ordering, fmt::format};
 
 use chrono::{Datelike, FixedOffset, Local, NaiveDateTime, Timelike, Utc};
 use regex::{Match, Regex};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
-use crate::error::FhirpathError;
+use crate::{error::FhirpathError, parser::literal::QuantityLiteral};
 
 use super::CompileResult;
 
@@ -94,8 +94,59 @@ const TIME_REGEX: LazyCell<Regex> = LazyCell::new(|| {
         .expect("Invalid Time Regex")
 });
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Quantity {}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Quantity {
+    value: f64,
+    unit: Option<String>,
+}
+
+impl TryFrom<&QuantityLiteral> for Quantity {
+    type Error = FhirpathError;
+
+    fn try_from(value: &QuantityLiteral) -> Result<Self, Self::Error> {
+        let quant_value = value
+            .text
+            .parse::<f64>()
+            .map_err(|err| FhirpathError::CompileError {
+                msg: format!("Failed to parse Quantity.value: {}", err.to_string()),
+            })?;
+
+        Ok(Self {
+            value: quant_value,
+            unit: value.unit.clone(),
+        })
+    }
+}
+
+impl Quantity {
+    fn try_convert_unit(&self, unit: &Option<String>) -> CompileResult<Quantity> {
+        match (&self.unit, unit) {
+            (None, None) => Ok(self.clone()),
+            (Some(u1), Some(u2)) => {
+                if u1.eq(u2) {
+                    return Ok(self.clone());
+                }
+
+                Err(FhirpathError::CompileError {
+                    msg: format!("Converting between {u1} and {u2} not supported."),
+                })
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: format!("Cannot convert Quantities with mismatched units."),
+            }),
+        }
+    }
+}
+
+impl PartialOrd for Quantity {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // attempt to convert self so units match with other
+        let converted = self.try_convert_unit(&other.unit).ok()?;
+
+        // units match so only need to compare values
+        converted.value.partial_cmp(&other.value)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OffsetDirection {
@@ -578,11 +629,43 @@ impl TryFrom<&String> for DateTime {
     }
 }
 
+#[derive(Clone)]
 pub enum ArithmeticType {
     Number(Number),
     Quantity(Quantity),
     Time(Time),
     DateTime(DateTime),
+    String(String),
+}
+
+pub fn implicit_convert(
+    first: ArithmeticType,
+    second: ArithmeticType,
+) -> (ArithmeticType, ArithmeticType) {
+    match (&first, &second) {
+        // can implicitly convert num to Quantity
+        (ArithmeticType::Number(num), ArithmeticType::Quantity(_)) => match num.as_f64() {
+            Some(parsed) => (
+                ArithmeticType::Quantity(Quantity {
+                    value: parsed,
+                    unit: None,
+                }),
+                second.clone(),
+            ),
+            None => (first, second),
+        },
+        (ArithmeticType::Quantity(_), ArithmeticType::Number(num)) => match num.as_f64() {
+            Some(parsed) => (
+                first.clone(),
+                ArithmeticType::Quantity(Quantity {
+                    value: parsed,
+                    unit: None,
+                }),
+            ),
+            None => (first, second),
+        },
+        _ => (first, second),
+    }
 }
 
 impl TryFrom<&Value> for ArithmeticType {
@@ -591,8 +674,8 @@ impl TryFrom<&Value> for ArithmeticType {
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(num) => Ok(ArithmeticType::Number(num.clone())),
-            Value::String(string_num) => {
-                let num = string_num
+            Value::String(string_val) => {
+                let num = string_val
                     .parse::<f64>()
                     .ok()
                     .and_then(|num| Number::from_f64(num));
@@ -601,19 +684,29 @@ impl TryFrom<&Value> for ArithmeticType {
                     return Ok(ArithmeticType::Number(num_value));
                 }
 
-                if let Some(datetime_value) = DateTime::try_from(string_num).ok() {
+                if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
                     return Ok(ArithmeticType::DateTime(datetime_value));
                 }
 
-                Err(FhirpathError::CompileError {
-                    msg: "Could not convert string to ArithmeticType".to_string(),
-                })
+                Ok(ArithmeticType::String(string_val.to_string()))
             }
             Value::Object(_) => {
                 let datetime: Option<DateTime> = serde_json::from_value(value.clone()).ok();
 
                 if let Some(datetime_value) = datetime {
                     return Ok(ArithmeticType::DateTime(datetime_value));
+                }
+
+                let time: Option<Time> = serde_json::from_value(value.clone()).ok();
+
+                if let Some(time_value) = time {
+                    return Ok(ArithmeticType::Time(time_value));
+                }
+
+                let quantity: Option<Quantity> = serde_json::from_value(value.clone()).ok();
+
+                if let Some(quantity_value) = quantity {
+                    return Ok(ArithmeticType::Quantity(quantity_value));
                 }
 
                 Err(FhirpathError::CompileError {

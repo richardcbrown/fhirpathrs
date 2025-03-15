@@ -11,6 +11,7 @@ mod logic;
 mod math;
 mod strings;
 mod subsetting;
+mod test;
 mod types;
 mod utils;
 
@@ -20,7 +21,7 @@ use std::ops::Deref;
 use fhir_type::determine_fhir_type;
 use invocation_table::invocation_table;
 use serde_json::{json, Number, Value};
-use types::DateTime;
+use types::{DateTime, Quantity, Time};
 use utils::get_string;
 
 use crate::error::FhirpathError;
@@ -36,7 +37,10 @@ use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
 };
-use crate::parser::literal::{DatetimeLiteral, Literal, LiteralTerm, NumberLiteral, StringLiteral};
+use crate::parser::literal::{
+    DatetimeLiteral, Literal, LiteralTerm, NumberLiteral, QuantityLiteral, StringLiteral,
+    TimeLiteral,
+};
 
 use lalrpop_util::lalrpop_mod;
 
@@ -196,6 +200,24 @@ impl Evaluate for DatetimeLiteral {
     }
 }
 
+impl Evaluate for TimeLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        Ok(ResourceNode::from_node(
+            input,
+            json!(Time::try_from(&self.text)?),
+        ))
+    }
+}
+
+impl Evaluate for QuantityLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        Ok(ResourceNode::from_node(
+            input,
+            json!(Quantity::try_from(self)?),
+        ))
+    }
+}
+
 impl Evaluate for Literal {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
@@ -203,9 +225,9 @@ impl Evaluate for Literal {
             Literal::DatetimeLiteral(exp) => exp.evaluate(input),
             Literal::NullLiteral(exp) => todo!(),
             Literal::NumberLiteral(exp) => exp.evaluate(input),
-            Literal::QuantityLiteral(exp) => todo!(),
+            Literal::QuantityLiteral(exp) => exp.evaluate(input),
             Literal::StringLiteral(exp) => exp.evaluate(input),
-            Literal::TimeLiteral(exp) => todo!(),
+            Literal::TimeLiteral(exp) => exp.evaluate(input),
         }
     }
 }
@@ -686,6 +708,7 @@ impl Evaluate for EntireExpression {
     }
 }
 
+#[derive(Clone)]
 pub struct EvaluateOptions {
     model: Option<ModelDetails>,
     vars: Option<HashMap<String, Value>>,
