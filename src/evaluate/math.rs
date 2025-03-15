@@ -1,55 +1,38 @@
-use serde_json::{json, Number, Value};
+use assert_json_diff::assert_json_eq;
+use rust_decimal::{
+    prelude::{FromPrimitive, ToPrimitive},
+    Decimal, MathematicalOps,
+};
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     types::ArithmeticType,
-    utils::{get_f64_from_expression, get_number, get_numbers, get_usize_from_expression},
+    utils::{
+        from_decimal, get_f64_from_expression, get_number, get_numbers, get_usize_from_expression,
+    },
     CompileResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
     pub fn mul(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
-            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
-
-                Ok(Value::Number(Number::from_f64(f1 * f2).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
-            }
+            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 * num2)),
             _ => todo!(),
         }
     }
 
     pub fn add(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
-            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
-
-                Ok(Value::Number(Number::from_f64(f1 + f2).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
-            }
+            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 + num2)),
             _ => todo!(),
         }
     }
 
     pub fn sub(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
-            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
-
-                Ok(Value::Number(Number::from_f64(f1 - f2).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
-            }
+            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 - num2)),
             _ => todo!(),
         }
     }
@@ -57,19 +40,24 @@ impl ArithmeticType {
     pub fn div(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
-
-                if f2 == 0.0 {
+                if num2.is_zero() {
                     return Ok(Value::Array(vec![]));
                 }
 
-                Ok(Value::Number(
-                    Number::from_f64(f1.div_euclid(f2)).ok_or_else(|| {
-                        FhirpathError::CompileError {
-                            msg: "Could not convert to f64".to_string(),
-                        }
+                let f1: f64 = from_decimal(num1.to_owned())?;
+                let f2: f64 = from_decimal(num2.to_owned())?;
+
+                let result = Decimal::from_f64(f1.div_euclid(f2)).ok_or_else(|| {
+                    FhirpathError::CompileError {
+                        msg: "Failed to convert to Decimal".to_string(),
+                    }
+                })?;
+
+                Ok(
+                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
-                ))
+                )
             }
             _ => todo!(),
         }
@@ -78,19 +66,20 @@ impl ArithmeticType {
     pub fn rem(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
+                let f1: f64 = from_decimal(num1.to_owned())?;
+                let f2: f64 = from_decimal(num2.to_owned())?;
 
-                if f2 == 0.0 {
-                    return Ok(Value::Array(vec![]));
-                }
+                let result = Decimal::from_f64(f1.rem_euclid(f2)).ok_or_else(|| {
+                    FhirpathError::CompileError {
+                        msg: "Failed to convert to Decimal".to_string(),
+                    }
+                })?;
 
-                Ok(Value::Number(
-                    Number::from_f64(f1.rem_euclid(f2)).ok_or_else(|| {
-                        FhirpathError::CompileError {
-                            msg: "Could not convert to f64".to_string(),
-                        }
+                Ok(
+                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
-                ))
+                )
             }
             _ => todo!(),
         }
@@ -99,17 +88,15 @@ impl ArithmeticType {
     pub fn divide(&self, other: &ArithmeticType) -> CompileResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let (f1, f2) = get_numbers(num1, num2)?;
-
-                if f2 == 0.0 {
+                if num2.is_zero() {
                     return Ok(Value::Array(vec![]));
                 }
 
-                Ok(Value::Number(Number::from_f64(f1 / f2).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
+                Ok(serde_json::to_value(num1 / num2).map_err(|err| {
+                    FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    }
+                })?)
             }
             _ => todo!(),
         }
@@ -118,13 +105,18 @@ impl ArithmeticType {
     pub fn exp(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
+                let f1 = from_decimal(num.to_owned())?;
 
-                Ok(Value::Number(Number::from_f64(f1.exp()).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
+                let result =
+                    Decimal::from_f64(f1.exp()).ok_or_else(|| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal"),
+                    })?;
+
+                Ok(
+                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    })?,
+                )
             }
             _ => todo!(),
         }
@@ -133,13 +125,11 @@ impl ArithmeticType {
     pub fn abs(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                Ok(Value::Number(Number::from_f64(f1.abs()).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert to f64".to_string(),
-                    },
-                )?))
+                Ok(
+                    serde_json::to_value(num.abs()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    })?,
+                )
             }
             _ => todo!(),
         }
@@ -148,15 +138,13 @@ impl ArithmeticType {
     pub fn ceiling(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                Ok(Value::Number(
-                    Number::from_i128(f1.ceil() as i128).ok_or_else(|| {
+                Ok(
+                    serde_json::to_value(num.ceil()).map_err(|err| {
                         FhirpathError::CompileError {
-                            msg: "Could not convert to f64".to_string(),
+                            msg: format!("Could not convert from Decimal: {}", err.to_string()),
                         }
                     })?,
-                ))
+                )
             }
             _ => todo!(),
         }
@@ -165,15 +153,11 @@ impl ArithmeticType {
     pub fn floor(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                Ok(Value::Number(
-                    Number::from_i128(f1.floor() as i128).ok_or_else(|| {
-                        FhirpathError::CompileError {
-                            msg: "Could not convert to f64".to_string(),
-                        }
-                    })?,
-                ))
+                Ok(serde_json::to_value(num.floor()).map_err(|err| {
+                    FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    }
+                })?)
             }
             _ => todo!(),
         }
@@ -182,13 +166,11 @@ impl ArithmeticType {
     pub fn ln(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                Ok(Value::Number(Number::from_f64(f1.ln()).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert from f64".to_string(),
-                    },
-                )?))
+                Ok(
+                    serde_json::to_value(num.ln()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    })?,
+                )
             }
             _ => todo!(),
         }
@@ -197,13 +179,18 @@ impl ArithmeticType {
     pub fn log(&self, base: f64) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
+                let f1 = from_decimal(num.to_owned())?;
 
-                Ok(Value::Number(Number::from_f64(f1.log(base)).ok_or_else(
-                    || FhirpathError::CompileError {
-                        msg: "Could not convert from f64".to_string(),
-                    },
-                )?))
+                let result =
+                    Decimal::from_f64(f1.log(base)).ok_or_else(|| FhirpathError::CompileError {
+                        msg: "Failed to convert to Decimal".to_string(),
+                    })?;
+
+                Ok(
+                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    })?,
+                )
             }
             _ => todo!(),
         }
@@ -212,17 +199,11 @@ impl ArithmeticType {
     pub fn power(&self, exponent: f64) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                // @todo - Integer representation
-
-                Ok(Value::Number(
-                    Number::from_f64(f1.powf(exponent)).ok_or_else(|| {
-                        FhirpathError::CompileError {
-                            msg: "Could not convert from f64".to_string(),
-                        }
-                    })?,
-                ))
+                Ok(serde_json::to_value(num.powf(exponent)).map_err(|err| {
+                    FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    }
+                })?)
             }
             _ => todo!(),
         }
@@ -231,31 +212,30 @@ impl ArithmeticType {
     pub fn round(&self, precision: usize) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
                 let rounded = match precision {
-                    0 => Ok(Number::from_i128(f1.round() as i128).ok_or_else(|| {
+                    0 => Ok(serde_json::to_value(num.round()).map_err(|err| {
                         FhirpathError::CompileError {
-                            msg: "Could not convert from f64".to_string(),
+                            msg: format!("Could not convert from Decimal: {}", err.to_string()),
                         }
                     })?),
                     _ => {
-                        let round_string: String = format!("{:.1$}", f1, precision);
+                        let dp = precision
+                            .to_u32()
+                            .ok_or_else(|| FhirpathError::CompileError {
+                                msg: format!("Could not convert to u32"),
+                            })?;
 
-                        let num = Number::from_f64(round_string.parse::<f64>().map_err(|_| {
+                        let val = serde_json::to_value(num.round_dp(dp)).map_err(|err| {
                             FhirpathError::CompileError {
-                                msg: format!("Could not parse {} as f64", round_string),
+                                msg: format!("Could not convert from Decimal: {}", err.to_string()),
                             }
-                        })?)
-                        .ok_or_else(|| FhirpathError::CompileError {
-                            msg: "Could not convert from f64".to_string(),
                         })?;
 
-                        Ok(num)
+                        Ok(val)
                     }
                 }?;
 
-                Ok(Value::Number(rounded))
+                Ok(rounded)
             }
             _ => todo!(),
         }
@@ -264,19 +244,17 @@ impl ArithmeticType {
     pub fn sqrt(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
+                let root = num.sqrt();
 
-                let root = f1.sqrt();
-
-                if root.is_nan() {
-                    return Ok(Value::Array(vec![]));
+                if let Some(root_val) = root {
+                    return serde_json::to_value(root_val).map_err(|err| {
+                        FhirpathError::CompileError {
+                            msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                        }
+                    });
                 }
 
-                Ok(Value::Number(Number::from_f64(root).ok_or_else(|| {
-                    FhirpathError::CompileError {
-                        msg: "Could not convert from f64".to_string(),
-                    }
-                })?))
+                return Ok(Value::Array(vec![]));
             }
             _ => todo!(),
         }
@@ -285,15 +263,11 @@ impl ArithmeticType {
     pub fn truncate(&self) -> CompileResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                let f1 = get_number(num)?;
-
-                Ok(Value::Number(
-                    Number::from_i128(f1.trunc() as i128).ok_or_else(|| {
-                        FhirpathError::CompileError {
-                            msg: "Could not convert from f64".to_string(),
-                        }
-                    })?,
-                ))
+                Ok(serde_json::to_value(num.trunc()).map_err(|err| {
+                    FhirpathError::CompileError {
+                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                    }
+                })?)
             }
             _ => todo!(),
         }
@@ -614,6 +588,7 @@ pub fn truncate<'a>(
 #[cfg(test)]
 mod test {
     use assert_json_diff::assert_json_eq;
+    use rust_decimal_macros::dec;
     use serde_json::json;
 
     use crate::evaluate::compile;
@@ -632,7 +607,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([8.0]));
+        assert_json_eq!(evaluate_result, json!([8]));
     }
 
     #[test]
@@ -649,7 +624,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([-4.0]));
+        assert_json_eq!(evaluate_result, json!([-4]));
     }
 
     #[test]
@@ -666,7 +641,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([12.0]));
+        assert_json_eq!(evaluate_result, json!([12]));
     }
 
     #[test]
@@ -683,7 +658,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([2.0]));
+        assert_json_eq!(evaluate_result, json!([2]));
     }
 
     #[test]
@@ -700,7 +675,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([7.0]));
+        assert_json_eq!(evaluate_result, json!([7]));
     }
 
     #[test]
@@ -717,7 +692,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([1.0]));
+        assert_json_eq!(evaluate_result, json!([1]));
     }
 
     #[test]
@@ -735,7 +710,7 @@ mod test {
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
         // @todo - precision
-        assert_json_eq!(evaluate_result, json!([0.6000000000000003]));
+        assert_json_eq!(evaluate_result, json!([0.6]));
     }
 
     #[test]
@@ -752,7 +727,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([2.5]));
+        assert_json_eq!(evaluate_result, json!([dec!(2.50)]));
     }
 
     #[test]
@@ -769,7 +744,10 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([7.857142857142858]));
+        assert_json_eq!(
+            evaluate_result,
+            json!([dec!(7.8571428571428571428571428571)])
+        );
     }
 
     #[test]
@@ -947,7 +925,10 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([0.09531017980432493]));
+        assert_json_eq!(
+            evaluate_result,
+            json!([dec!(0.0953101798043248600439525528)])
+        );
     }
 
     #[test]
@@ -979,7 +960,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([0.13750352374993502]));
+        assert_json_eq!(evaluate_result, json!([0.137503523749935]));
     }
 
     #[test]
@@ -1011,7 +992,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([4.0]));
+        assert_json_eq!(evaluate_result, json!([4]));
     }
 
     #[test]
@@ -1091,7 +1072,7 @@ mod test {
 
         let evaluate_result = compiled.evaluate(patient, None).unwrap();
 
-        assert_json_eq!(evaluate_result, json!([2.0]));
+        assert_json_eq!(evaluate_result, json!([2]));
     }
 
     #[test]

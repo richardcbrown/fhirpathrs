@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use rust_decimal::Decimal;
 use serde_json::{Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
@@ -291,22 +294,6 @@ pub fn try_convert_to_boolean(value: &Value) -> Option<bool> {
     }
 }
 
-pub fn get_i128_from_expression(
-    input: &ResourceNode,
-    expression: &Expression,
-) -> CompileResult<i128> {
-    let value = get_single_value(get_value_from_expression(input, expression)?)?;
-
-    match value {
-        Value::Number(num) => num.as_i128().ok_or_else(|| FhirpathError::CompileError {
-            msg: "Value was not an i128".to_string(),
-        }),
-        _ => Err(FhirpathError::CompileError {
-            msg: "Value was not a Number".to_string(),
-        }),
-    }
-}
-
 pub fn get_f64_from_expression(
     input: &ResourceNode,
     expression: &Expression,
@@ -323,15 +310,21 @@ pub fn get_f64_from_expression(
     }
 }
 
-pub fn get_number(num: &Number) -> CompileResult<f64> {
-    num.as_f64().ok_or_else(|| FhirpathError::CompileError {
-        msg: "Could not convert to f64".to_string(),
+pub fn get_number(num: &Number) -> CompileResult<Decimal> {
+    Decimal::from_str(num.as_str()).map_err(|err| FhirpathError::CompileError {
+        msg: format!("Could not convert to Decimal: {}", err.to_string()),
     })
 }
 
-pub fn get_numbers(num1: &Number, num2: &Number) -> CompileResult<(f64, f64)> {
+pub fn get_numbers(num1: &Number, num2: &Number) -> CompileResult<(Decimal, Decimal)> {
     let f1 = get_number(num1)?;
     let f2 = get_number(num2)?;
 
     Ok((f1, f2))
+}
+
+pub fn from_decimal(dec: Decimal) -> CompileResult<f64> {
+    dec.try_into().map_err(|_| FhirpathError::CompileError {
+        msg: format!("Could not convert from Decimal"),
+    })
 }

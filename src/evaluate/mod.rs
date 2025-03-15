@@ -17,9 +17,11 @@ mod utils;
 
 use std::collections::HashMap;
 use std::ops::Deref;
+use std::str::FromStr;
 
 use fhir_type::determine_fhir_type;
 use invocation_table::invocation_table;
+use rust_decimal::Decimal;
 use serde_json::{json, Number, Value};
 use types::{DateTime, Quantity, Time};
 use utils::get_string;
@@ -180,14 +182,17 @@ impl Evaluate for StringLiteral {
 
 impl Evaluate for NumberLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        let value = self
-            .text
-            .parse::<f64>()
-            .map_err(|_| FhirpathError::ParserError {
+        let value =
+            Decimal::from_str(self.text.as_str()).map_err(|_| FhirpathError::ParserError {
                 msg: "NumberLiteral is not a Number".to_string(),
             })?;
 
-        Ok(ResourceNode::from_node(input, json!(value)))
+        let decimal_value =
+            serde_json::to_value(value).map_err(|err| FhirpathError::ParserError {
+                msg: format!("Failed to serialize Decimal: {}", err.to_string()),
+            })?;
+
+        Ok(ResourceNode::from_node(input, decimal_value))
     }
 }
 

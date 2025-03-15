@@ -1,7 +1,8 @@
-use std::{cell::LazyCell, cmp::Ordering, fmt::format};
+use std::{cell::LazyCell, cmp::Ordering, fmt::format, str::FromStr};
 
 use chrono::{Datelike, FixedOffset, Local, NaiveDateTime, Timelike, Utc};
 use regex::{Match, Regex};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
@@ -96,7 +97,7 @@ const TIME_REGEX: LazyCell<Regex> = LazyCell::new(|| {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Quantity {
-    value: f64,
+    value: Decimal,
     unit: Option<String>,
 }
 
@@ -104,10 +105,8 @@ impl TryFrom<&QuantityLiteral> for Quantity {
     type Error = FhirpathError;
 
     fn try_from(value: &QuantityLiteral) -> Result<Self, Self::Error> {
-        let quant_value = value
-            .text
-            .parse::<f64>()
-            .map_err(|err| FhirpathError::CompileError {
+        let quant_value =
+            Decimal::from_str(value.text.as_str()).map_err(|err| FhirpathError::CompileError {
                 msg: format!("Failed to parse Quantity.value: {}", err.to_string()),
             })?;
 
@@ -631,7 +630,7 @@ impl TryFrom<&String> for DateTime {
 
 #[derive(Clone)]
 pub enum ArithmeticType {
-    Number(Number),
+    Number(Decimal),
     Quantity(Quantity),
     Time(Time),
     DateTime(DateTime),
@@ -644,26 +643,20 @@ pub fn implicit_convert(
 ) -> (ArithmeticType, ArithmeticType) {
     match (&first, &second) {
         // can implicitly convert num to Quantity
-        (ArithmeticType::Number(num), ArithmeticType::Quantity(_)) => match num.as_f64() {
-            Some(parsed) => (
-                ArithmeticType::Quantity(Quantity {
-                    value: parsed,
-                    unit: None,
-                }),
-                second.clone(),
-            ),
-            None => (first, second),
-        },
-        (ArithmeticType::Quantity(_), ArithmeticType::Number(num)) => match num.as_f64() {
-            Some(parsed) => (
-                first.clone(),
-                ArithmeticType::Quantity(Quantity {
-                    value: parsed,
-                    unit: None,
-                }),
-            ),
-            None => (first, second),
-        },
+        (ArithmeticType::Number(num), ArithmeticType::Quantity(_)) => (
+            ArithmeticType::Quantity(Quantity {
+                value: num.clone(),
+                unit: None,
+            }),
+            second.clone(),
+        ),
+        (ArithmeticType::Quantity(_), ArithmeticType::Number(num)) => (
+            first.clone(),
+            ArithmeticType::Quantity(Quantity {
+                value: num.clone(),
+                unit: None,
+            }),
+        ),
         _ => (first, second),
     }
 }
@@ -673,14 +666,15 @@ impl TryFrom<&Value> for ArithmeticType {
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Number(num) => Ok(ArithmeticType::Number(num.clone())),
+            Value::Number(num) => Ok(ArithmeticType::Number(
+                Decimal::from_str(num.as_str()).map_err(|_| FhirpathError::CompileError {
+                    msg: "Failed to convert Number to Decimal".to_string(),
+                })?,
+            )),
             Value::String(string_val) => {
-                let num = string_val
-                    .parse::<f64>()
-                    .ok()
-                    .and_then(|num| Number::from_f64(num));
+                let num = Decimal::from_str(&string_val);
 
-                if let Some(num_value) = num {
+                if let Ok(num_value) = num {
                     return Ok(ArithmeticType::Number(num_value));
                 }
 

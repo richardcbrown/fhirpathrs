@@ -1,7 +1,7 @@
 use super::{
     arity::Arity,
     combining::{combine, union},
-    comparison::{gt, lt},
+    comparison::{gt, gte, lt},
     conversion::{converts_to_boolean, iif, to_boolean},
     equality::{equal, not_equal},
     existence::{all, all_true, empty, exists},
@@ -107,6 +107,8 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("truncate".to_string(), truncate);
 
     map.insert(">".to_string(), gt);
+
+    map.insert(">=".to_string(), gte);
 
     map.insert("<".to_string(), lt);
 
