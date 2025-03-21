@@ -9,9 +9,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     types::ArithmeticType,
-    utils::{
-        from_decimal, get_f64_from_expression, get_number, get_numbers, get_usize_from_expression,
-    },
+    utils::{from_decimal, get_f64_from_expression, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };
 

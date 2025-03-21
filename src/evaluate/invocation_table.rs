@@ -1,11 +1,13 @@
 use super::{
-    arity::Arity,
     combining::{combine, union},
-    comparison::{gt, gte, lt},
+    comparison::{gt, gte, lt, lte},
     conversion::{converts_to_boolean, iif, to_boolean},
     equality::{equal, not_equal},
-    existence::{all, all_true, empty, exists},
-    filtering::{select, where_function},
+    existence::{
+        all, all_false, all_true, any_false, any_true, count, distinct, empty, exists, is_distinct,
+        subset_of, superset_of,
+    },
+    filtering::{repeat, select, where_function},
     logic::{and, implies, not, or, xor},
     math::{
         abs, add, amp, ceiling, div, divide, exp, floor, ln, log, mul, power, rem, round, sqrt,
@@ -16,6 +18,7 @@ use super::{
         starts_with, substring, to_chars, upper,
     },
     subsetting::{exclude, first, intersect, last, single, skip, tail, take},
+    target::Target,
     CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
@@ -43,6 +46,30 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("all".to_string(), all);
 
     map.insert("allTrue".to_string(), all_true);
+
+    map.insert("anyTrue".to_string(), any_true);
+
+    map.insert("allFalse".to_string(), all_false);
+
+    map.insert("anyFalse".to_string(), any_false);
+
+    let subset_of_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+        subset_of(input, expressions, Target::AnyAtRoot)
+    };
+
+    map.insert("subsetOf".to_string(), subset_of_root);
+
+    let superset_of_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+        superset_of(input, expressions, Target::AnyAtRoot)
+    };
+
+    map.insert("supersetOf".to_string(), superset_of_root);
+
+    map.insert("count".to_string(), count);
+
+    map.insert("distinct".to_string(), distinct);
+
+    map.insert("isDistinct".to_string(), is_distinct);
 
     map.insert("substring".to_string(), substring);
 
@@ -112,9 +139,13 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("<".to_string(), lt);
 
+    map.insert("<=".to_string(), lte);
+
     map.insert("where".to_string(), where_function);
 
     map.insert("select".to_string(), select);
+
+    map.insert("repeat".to_string(), repeat);
 
     map.insert("single".to_string(), single);
 
@@ -133,13 +164,13 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("exclude".to_string(), exclude);
 
     let union_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
-        union(input, expressions, Arity::AnyAtRoot)
+        union(input, expressions, Target::AnyAtRoot)
     };
 
     map.insert("union".to_string(), union_root);
 
     let union_expr = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
-        union(input, expressions, Arity::Expr)
+        union(input, expressions, Target::Expr)
     };
 
     map.insert("|".to_string(), union_expr);

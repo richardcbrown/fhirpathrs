@@ -6,8 +6,8 @@ use serde_json::{Number, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    arity::{get_input_for_arity, Arity},
     equality::values_are_equal,
+    target::{get_input_for_target, Target},
     CompileResult, Evaluate, ResourceNode,
 };
 
@@ -158,10 +158,10 @@ pub fn get_array_from_expression(
 pub fn get_arrays<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-    arity: Arity,
+    arity: Target,
 ) -> CompileResult<(Vec<Value>, Vec<Value>)> {
     match arity {
-        Arity::AnyAtRoot => {
+        Target::AnyAtRoot => {
             let array = input.get_array()?;
 
             if expressions.len() > 1 {
@@ -176,13 +176,13 @@ pub fn get_arrays<'a>(
                     msg: "Expected exactly one expression".to_string(),
                 })?;
 
-            let second_input = get_input_for_arity(input, arity);
+            let second_input = get_input_for_target(input, arity);
 
             let second_array = get_array_from_expression(&second_input, &expression)?;
 
             Ok((array.to_vec(), second_array))
         }
-        Arity::Expr => {
+        Target::Expr => {
             if expressions.len() != 2 {
                 return Err(FhirpathError::CompileError {
                     msg: "Expected exactly two expressions".to_string(),

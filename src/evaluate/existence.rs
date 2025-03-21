@@ -1,11 +1,16 @@
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
+    equality::{equal, values_are_equal},
     filtering::where_function,
-    utils::{evaluate_array_boolean_expression, try_convert_to_boolean},
-    CompileResult, ResourceNode,
+    target::Target,
+    utils::{
+        evaluate_array_boolean_expression, get_array_from_expression, get_arrays,
+        try_convert_to_boolean, unique_array_elements,
+    },
+    CompileResult, Evaluate, ResourceNode,
 };
 
 pub fn empty<'a>(
@@ -52,13 +57,10 @@ pub fn all<'a>(
     ))
 }
 
-pub fn all_true<'a>(
-    input: &'a ResourceNode<'a>,
-    _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> CompileResult<Vec<bool>> {
     let array = input.get_array()?;
 
-    let results: Vec<bool> = array
+    array
         .iter()
         .map(|item| {
             let bool_result = try_convert_to_boolean(item);
@@ -70,9 +72,440 @@ pub fn all_true<'a>(
                 }),
             }
         })
-        .collect::<CompileResult<Vec<bool>>>()?;
+        .collect::<CompileResult<Vec<bool>>>()
+}
 
-    let all_true = results.iter().all(|item| *item);
+pub fn all_true<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = input_to_bool_array(input)?;
+
+    let all_true = array.iter().all(|item| *item);
 
     Ok(ResourceNode::from_node(input, json!(all_true)))
+}
+
+pub fn any_true<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = input_to_bool_array(input)?;
+
+    let any_true = array.iter().any(|item| *item);
+
+    Ok(ResourceNode::from_node(input, json!(any_true)))
+}
+
+pub fn all_false<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = input_to_bool_array(input)?;
+
+    let all_false = array.iter().all(|item| !*item);
+
+    Ok(ResourceNode::from_node(input, json!(all_false)))
+}
+
+pub fn any_false<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = input_to_bool_array(input)?;
+
+    let any_false = array.iter().any(|item| !*item);
+
+    Ok(ResourceNode::from_node(input, json!(any_false)))
+}
+
+pub fn subset_of<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+    target: Target,
+) -> CompileResult<ResourceNode<'a>> {
+    let (first_array, second_array) = get_arrays(input, expressions, target)?;
+
+    let is_subset = first_array.iter().all(|self_item| {
+        second_array
+            .iter()
+            .any(|other_item| values_are_equal(self_item, other_item))
+    });
+
+    Ok(ResourceNode::from_node(input, json!(is_subset)))
+}
+
+pub fn superset_of<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+    target: Target,
+) -> CompileResult<ResourceNode<'a>> {
+    let (first_array, second_array) = get_arrays(input, expressions, target)?;
+
+    let is_superset = second_array.iter().all(|self_item| {
+        first_array
+            .iter()
+            .any(|other_item| values_are_equal(self_item, other_item))
+    });
+
+    Ok(ResourceNode::from_node(input, json!(is_superset)))
+}
+
+pub fn count<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = input.get_array()?;
+
+    Ok(ResourceNode::from_node(input, json!(array.len())))
+}
+
+pub fn distinct<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let array = unique_array_elements(input.get_array()?);
+
+    Ok(ResourceNode::from_node(input, Value::Array(array)))
+}
+
+pub fn is_distinct<'a>(
+    input: &'a ResourceNode<'a>,
+    _expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let total_array = input.get_array()?;
+
+    let array = unique_array_elements(total_array);
+
+    let is_distinct = total_array.len() == array.len();
+
+    Ok(ResourceNode::from_node(input, Value::Bool(is_distinct)))
+}
+
+#[cfg(test)]
+mod test {
+    use serde_json::json;
+
+    use crate::evaluate::test::test::{run_tests, TestCase};
+
+    #[test]
+    fn test_any_true_path() {
+        let patient = json!({ "resourceType": "Patient", "a": [true] });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.anyTrue()".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyTrue()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyTrue()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }, { "value": 1 }, { "value": 2 }, { "value": 3 }] }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyTrue()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [] }),
+                expected: json!([false]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_all_false_path() {
+        let patient = json!({ "resourceType": "Patient", "a": [false] });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.allFalse()".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).allFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).allFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }, { "value": 1 }, { "value": 2 }, { "value": 2 }] }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).allFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [] }),
+                expected: json!([true]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_any_false_path() {
+        let patient = json!({ "resourceType": "Patient", "a": [false] });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.anyFalse()".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 3 }, { "value": 3 }, { "value": 2 }] }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [] }),
+                expected: json!([false]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_subset_of_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [false],
+            "b": [false]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.subsetOf(Patient.b)".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.subsetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [true, false],
+                    "b": [false]
+                }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.subsetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [true],
+                    "b": [true, false]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.subsetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [],
+                    "b": [false]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.subsetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [false],
+                    "b": []
+                }),
+                expected: json!([false]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_superset_of_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [false],
+            "b": [false]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.supersetOf(Patient.b)".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.supersetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [true, false],
+                    "b": [false]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.supersetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [true],
+                    "b": [true, false]
+                }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.supersetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [],
+                    "b": [false]
+                }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.supersetOf(Patient.b)".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [false],
+                    "b": []
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_count_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [{ "value": true }, { "value": false }]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.count()".to_string(),
+                input: patient.clone(),
+                expected: json!([2]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.where(value = true).count()".to_string(),
+                input: patient.clone(),
+                expected: json!([1]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.count()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": [],
+                }),
+                expected: json!([0]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_distinct_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": ['a', 'a', 'b']
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.distinct()".to_string(),
+                input: patient.clone(),
+                expected: json!(['a', 'b']),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.distinct()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": []
+                }),
+                expected: json!([]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_is_distinct_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": ['a', 'a', 'b']
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.isDistinct()".to_string(),
+                input: patient.clone(),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.isDistinct()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": []
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.isDistinct()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": ['a', 'b', 'c']
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 }

@@ -3,8 +3,8 @@ use serde_json::{json, Value};
 use crate::parser::expression::Expression;
 
 use super::{
-    arity::Arity,
     equality::values_are_equal,
+    target::Target,
     utils::{get_arrays, unique_array_elements},
     CompileResult, ResourceNode,
 };
@@ -12,7 +12,7 @@ use super::{
 pub fn union<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-    arity: Arity,
+    arity: Target,
 ) -> CompileResult<ResourceNode<'a>> {
     let (array, mut second_array) = get_arrays(input, expressions, arity)?;
 
@@ -38,7 +38,7 @@ pub fn combine<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let (mut first_array, mut second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
+    let (mut first_array, mut second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     first_array.append(&mut second_array);
 

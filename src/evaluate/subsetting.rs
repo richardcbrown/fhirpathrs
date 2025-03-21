@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    arity::Arity,
+    target::Target,
     equality::values_are_equal,
     utils::{get_arrays, get_usize_from_expression, unique_array_elements},
     CompileResult, ResourceNode,
@@ -129,7 +129,7 @@ pub fn intersect<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let (array, second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
+    let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let intersect_array: Vec<Value> = array
         .into_iter()
@@ -151,7 +151,7 @@ pub fn exclude<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<ResourceNode<'a>> {
-    let (array, second_array) = get_arrays(input, expressions, Arity::AnyAtRoot)?;
+    let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let exclude_array: Vec<Value> = array
         .into_iter()

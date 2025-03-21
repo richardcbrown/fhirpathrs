@@ -2,7 +2,11 @@ use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
-use super::{CompileResult, Evaluate, ResourceNode};
+use super::{
+    equality::values_are_equal,
+    utils::{get_array_from_expression, unique_array_elements},
+    CompileResult, Evaluate, ResourceNode,
+};
 
 fn evaluate_filter_expression(
     input: ResourceNode,
@@ -97,4 +101,88 @@ pub fn select<'a>(
         .collect();
 
     Ok(ResourceNode::from_node(input, json!(combined)))
+}
+
+fn repeat_expr<'a>(
+    input: &'a ResourceNode<'a>,
+    mut values: Vec<Value>,
+    expression: &Expression,
+) -> CompileResult<Vec<Value>> {
+    let mut items: Vec<Value> = values.iter().try_fold(vec![], |mut acc, val| {
+        let node = ResourceNode::from_node(input, val.clone());
+
+        let node_results = unique_array_elements(&get_array_from_expression(&node, &expression)?);
+
+        // unique results not currently in values
+        let mut unique_results: Vec<Value> = node_results
+            .into_iter()
+            .filter(|res| !acc.iter().any(|accu| values_are_equal(res, accu)))
+            .collect();
+
+        acc.append(&mut unique_results);
+
+        let mut repeated_results = repeat_expr(input, unique_results, expression)?;
+
+        acc.append(&mut repeated_results);
+
+        Ok(acc)
+    })?;
+
+    values.append(&mut items);
+
+    Ok(values)
+}
+
+pub fn repeat<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let expression = expressions
+        .first()
+        .ok_or_else(|| FhirpathError::CompileError {
+            msg: "repeat expects exactly 1 Expression".to_string(),
+        })?;
+
+    let initial_items = unique_array_elements(&get_array_from_expression(input, expression)?);
+
+    let accumulated = repeat_expr(input, initial_items, expression)?;
+
+    Ok(ResourceNode::from_node(input, Value::Array(accumulated)))
+}
+
+#[cfg(test)]
+mod test {
+    use serde_json::json;
+
+    use crate::evaluate::test::test::{run_tests, TestCase};
+
+    #[test]
+    fn test_repeat_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "value": {
+                "value": {
+                    "item": 'a'
+                }
+            }
+        });
+
+        let test_cases: Vec<TestCase> = vec![TestCase {
+            path: "Patient.repeat(value)".to_string(),
+            input: patient.clone(),
+            expected: json!([
+                {
+                    "value": {
+                        "item": 'a'
+                    }
+                },
+                {
+                    "item": 'a'
+                }
+            ]),
+            options: None,
+        }];
+
+        run_tests(test_cases);
+    }
 }

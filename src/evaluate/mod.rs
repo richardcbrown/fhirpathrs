@@ -1,4 +1,3 @@
-mod arity;
 mod combining;
 mod comparison;
 mod conversion;
@@ -11,6 +10,7 @@ mod logic;
 mod math;
 mod strings;
 mod subsetting;
+mod target;
 mod test;
 mod types;
 mod utils;
@@ -24,7 +24,7 @@ use invocation_table::invocation_table;
 use rust_decimal::Decimal;
 use serde_json::{json, Number, Value};
 use types::{DateTime, Quantity, Time};
-use utils::get_string;
+use utils::{get_string, try_convert_to_boolean};
 
 use crate::error::FhirpathError;
 use crate::models::ModelDetails;
@@ -40,8 +40,8 @@ use crate::parser::invocation::{
     ParamList,
 };
 use crate::parser::literal::{
-    DatetimeLiteral, Literal, LiteralTerm, NumberLiteral, QuantityLiteral, StringLiteral,
-    TimeLiteral,
+    BooleanLiteral, DatetimeLiteral, Literal, LiteralTerm, NumberLiteral, QuantityLiteral,
+    StringLiteral, TimeLiteral,
 };
 
 use lalrpop_util::lalrpop_mod;
@@ -196,6 +196,19 @@ impl Evaluate for NumberLiteral {
     }
 }
 
+impl Evaluate for BooleanLiteral {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        let bool_val =
+            try_convert_to_boolean(&Value::String(self.text.clone())).ok_or_else(|| {
+                FhirpathError::CompileError {
+                    msg: format!("Could not convert {} to Bool", self.text.clone()),
+                }
+            })?;
+
+        Ok(ResourceNode::from_node(input, Value::Bool(bool_val)))
+    }
+}
+
 impl Evaluate for DatetimeLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(
@@ -226,7 +239,7 @@ impl Evaluate for QuantityLiteral {
 impl Evaluate for Literal {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
-            Literal::BooleanLiteral(exp) => todo!(),
+            Literal::BooleanLiteral(exp) => exp.evaluate(input),
             Literal::DatetimeLiteral(exp) => exp.evaluate(input),
             Literal::NullLiteral(exp) => todo!(),
             Literal::NumberLiteral(exp) => exp.evaluate(input),

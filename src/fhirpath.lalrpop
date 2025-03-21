@@ -453,7 +453,10 @@ NullLiteral: NullLiteral = {
 }
 
 BooleanLiteral: BooleanLiteral = {
-    <b: "(true|false)"> => BooleanLiteral {
+    <b: "true"> => BooleanLiteral {
+        text: b.to_string()
+    },
+    <b: "false"> => BooleanLiteral {
         text: b.to_string()
     }
 }
