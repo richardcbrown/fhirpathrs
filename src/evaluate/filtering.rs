@@ -4,6 +4,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     equality::values_are_equal,
+    types::type_info::TypeInfo,
     utils::{get_array_from_expression, unique_array_elements},
     CompileResult, Evaluate, ResourceNode,
 };
@@ -150,11 +151,58 @@ pub fn repeat<'a>(
     Ok(ResourceNode::from_node(input, Value::Array(accumulated)))
 }
 
+pub fn of_type<'a>(
+    input: &'a ResourceNode<'a>,
+    expressions: &Vec<Box<Expression>>,
+) -> CompileResult<ResourceNode<'a>> {
+    let expression = expressions
+        .first()
+        .ok_or_else(|| FhirpathError::CompileError {
+            msg: "ofType expects exactly 1 Expression".to_string(),
+        })?;
+
+    let type_details = expression.evaluate(input)?;
+
+    dbg!(type_details.data.clone());
+
+    let type_info: TypeInfo =
+        serde_json::from_value(type_details.get_single()?).map_err(|err| {
+            FhirpathError::CompileError {
+                msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
+            }
+        })?;
+
+    let array = input.get_array()?;
+
+    let type_array = array
+        .to_owned()
+        .into_iter()
+        .filter_map(|item| {
+            let item_node = ResourceNode::from_node(input, item.clone());
+
+            let item_type = item_node.get_type_info()?;
+
+            match type_info.eq(&item_type) {
+                true => Some(item),
+                false => None,
+            }
+        })
+        .collect();
+
+    Ok(ResourceNode::from_node(input, Value::Array(type_array)))
+}
+
 #[cfg(test)]
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::{
+        evaluate::{
+            test::test::{run_tests, TestCase},
+            EvaluateOptions,
+        },
+        models::{get_model_details, ModelDetails, ModelType},
+    };
 
     #[test]
     fn test_repeat_path() {
@@ -181,6 +229,39 @@ mod test {
                 }
             ]),
             options: None,
+        }];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_of_type_path() {
+        let observation = json!({
+            "resourceType": "Observation",
+            "component": [
+                {
+                    "valueQuantity": {
+                        "value": 1,
+                        "unit": "s"
+                    }
+                },
+                {
+                    "valueString": "abc"
+                }
+            ]
+        });
+
+        let test_cases: Vec<TestCase> = vec![TestCase {
+            path: "Observation.component.value.ofType(Quantity)".to_string(),
+            input: observation.clone(),
+            expected: json!([{
+                "value": 1,
+                "unit": "s"
+            }]),
+            options: Some(EvaluateOptions {
+                model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                vars: None,
+            }),
         }];
 
         run_tests(test_cases);

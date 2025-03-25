@@ -7,7 +7,7 @@ use super::{
         all, all_false, all_true, any_false, any_true, count, distinct, empty, exists, is_distinct,
         subset_of, superset_of,
     },
-    filtering::{repeat, select, where_function},
+    filtering::{of_type, repeat, select, where_function},
     logic::{and, implies, not, or, xor},
     math::{
         abs, add, amp, ceiling, div, divide, exp, floor, ln, log, mul, power, rem, round, sqrt,
@@ -146,6 +146,8 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("select".to_string(), select);
 
     map.insert("repeat".to_string(), repeat);
+
+    map.insert("ofType".to_string(), of_type);
 
     map.insert("single".to_string(), single);
 

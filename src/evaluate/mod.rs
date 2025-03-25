@@ -23,7 +23,10 @@ use fhir_type::determine_fhir_type;
 use invocation_table::invocation_table;
 use rust_decimal::Decimal;
 use serde_json::{json, Number, Value};
-use types::{DateTime, Quantity, Time};
+use types::date_time::DateTime;
+use types::quantity::Quantity;
+use types::time::Time;
+use types::type_info::{TypeDetails, TypeInfo};
 use utils::{get_string, try_convert_to_boolean};
 
 use crate::error::FhirpathError;
@@ -32,9 +35,11 @@ use crate::parser::expression::{
     AdditiveExpression, AndExpression, EntireExpression, EqualityExpression, Expression,
     ExpressionAndInvocation, ExternalConstantTerm, IdentifierOrStringLiteral, IndexerExpression,
     InequalityExpression, InvocationExpression, MultiplicativeExpression, OrExpression,
-    PolarityExpression, Term, TermExpression, UnionExpression,
+    PolarityExpression, Term, TermExpression, TypeExpression, UnionExpression,
 };
-use crate::parser::identifier::{Identifier, LiteralContains, LiteralIdentifier};
+use crate::parser::identifier::{
+    Identifier, LiteralContains, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier,
+};
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
     ParamList,
@@ -164,6 +169,16 @@ impl<'a> ResourceNode<'a> {
     pub fn get_var(&self, var_name: &String) -> Option<Value> {
         self.context.vars.get(var_name).cloned()
     }
+
+    pub fn get_type_info(&self) -> Option<TypeInfo> {
+        let fhir_type = self.path.clone().and_then(|path| path.fhir_type);
+
+        TypeInfo::try_from(&TypeDetails {
+            fhir_type,
+            model: &self.context.model,
+        })
+        .ok()
+    }
 }
 
 pub struct CompiledPath {
@@ -250,6 +265,41 @@ impl Evaluate for Literal {
     }
 }
 
+fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> Vec<String> {
+    // if there is no model there's nothing to expand
+    let model = &input.context.model;
+
+    if model.is_none() {
+        return vec![property.clone()];
+    }
+
+    // if there's no path there's nothing to expand
+    let path = input.path.as_ref().and_then(|p| Some(p.path.clone()));
+
+    if path.is_none() {
+        return vec![property.clone()];
+    }
+
+    let choice_path = path.and_then(|p| Some(vec![p, property.clone()].join(".")));
+
+    let choice_elements = model
+        .as_ref()
+        .and_then(|model_details| model_details.choice_type_paths.get(&choice_path?).clone())
+        .and_then(|choice_items| {
+            Some(
+                choice_items
+                    .into_iter()
+                    .map(|ci| vec![property.to_string(), ci.to_string()].join("."))
+                    .collect::<Vec<String>>(),
+            )
+        });
+
+    match choice_elements {
+        Some(ce) => ce.to_vec(),
+        None => vec![property.clone()],
+    }
+}
+
 impl Evaluate for MemberInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if input.is_empty()? {
@@ -293,16 +343,26 @@ impl Evaluate for MemberInvocation {
             return Ok(node);
         }
 
-        print!("data");
-        println!("{:?}", input_data);
-        println!("{:?}", &key_value.to_string());
+        dbg!("data");
+        dbg!("{:?}", input_data);
+        dbg!("{:?}", &key_value.to_string());
+
+        // if the path leads to a choice (e.g. value[x]) expand the
+        // choice properties
+        let choice_values = expand_choice_values(input, &key_value);
 
         // Else look for a child property of the resource that matches the key
-        let values: Vec<Value> = input_data
-            .to_owned()
-            .into_iter()
-            .filter_map(|item| item.get(&key_value.to_string()).cloned())
-            .collect();
+        let values: Vec<Value> = choice_values.iter().fold(vec![], |mut acc, prop| {
+            let mut prop_vals = input_data
+                .to_owned()
+                .into_iter()
+                .filter_map(|item| item.get(&prop.to_string()).cloned())
+                .collect();
+
+            acc.append(&mut prop_vals);
+
+            acc
+        });
 
         dbg!(&values);
 
@@ -410,6 +470,45 @@ impl Evaluate for Identifier {
             Identifier::LiteralIn(exp) => todo!(),
             Identifier::LiteralIs(exp) => todo!(),
         }
+    }
+}
+
+impl Evaluate for QualifiedIdentifier {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        let identifiers: Vec<String> = self
+            .children
+            .iter()
+            .map(|child| {
+                child.evaluate(input).and_then(|node| match node.data {
+                    Value::String(string_val) => Ok(string_val),
+                    _ => Err(FhirpathError::CompileError {
+                        msg: "Invalid Identifier".to_string(),
+                    }),
+                })
+            })
+            .collect::<CompileResult<Vec<String>>>()?;
+
+        Ok(ResourceNode::from_node(
+            input,
+            Value::String(identifiers.join(".")),
+        ))
+    }
+}
+
+impl Evaluate for TypeSpecifier {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        let specifier = match self {
+            TypeSpecifier::QualifiedIdentifier(qi) => qi.evaluate(input),
+        }?;
+
+        Ok(ResourceNode::from_node(
+            input,
+            serde_json::to_value(TypeInfo::try_from(&specifier)?).map_err(|err| {
+                FhirpathError::CompileError {
+                    msg: format!("Failed to serialize TypeInfo: {}", err.to_string()),
+                }
+            })?,
+        ))
     }
 }
 
@@ -619,6 +718,18 @@ impl Evaluate for InequalityExpression {
     }
 }
 
+impl Evaluate for TypeExpression {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+        if self.children.len() != 2 {
+            return Err(FhirpathError::CompileError {
+                msg: "TypeExpression must have exactly two children".to_string(),
+            });
+        }
+
+        todo!()
+    }
+}
+
 impl Evaluate for IndexerExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -706,7 +817,7 @@ impl Evaluate for Expression {
             Expression::AdditiveExpression(exp) => exp.evaluate(input),
             Expression::UnionExpression(exp) => exp.evaluate(input),
             Expression::InequalityExpression(exp) => exp.evaluate(input),
-            Expression::TypeExpression(exp) => todo!(),
+            Expression::TypeExpression(exp) => exp.evaluate(input),
             Expression::EqualityExpression(exp) => exp.evaluate(input),
             Expression::MembershipExpression(exp) => todo!(),
             Expression::AndExpression(exp) => exp.evaluate(input),

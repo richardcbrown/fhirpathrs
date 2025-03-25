@@ -209,6 +209,16 @@ Expression: Expression = {
     // TypeExpression
     #[precedence(level="9")] #[assoc(side="left")]
     <e: Expression> "is" <t: TypeSpecifier> => Expression::TypeExpression(Box::new(TypeExpression {
+        op: "is".to_string(),
+        children: vec![
+            Box::new(ExpressionAndTypeSpecifier::Expression(Box::new(e))),
+            Box::new(ExpressionAndTypeSpecifier::TypeSpecifier(Box::new(t)))
+        ]
+    })),
+
+    #[precedence(level="9")] #[assoc(side="left")]
+    <e: Expression> "as" <t: TypeSpecifier> => Expression::TypeExpression(Box::new(TypeExpression {
+        op: "as".to_string(),
         children: vec![
             Box::new(ExpressionAndTypeSpecifier::Expression(Box::new(e))),
             Box::new(ExpressionAndTypeSpecifier::TypeSpecifier(Box::new(t)))

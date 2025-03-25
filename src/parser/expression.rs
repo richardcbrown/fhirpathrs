@@ -154,6 +154,7 @@ pub enum ExpressionAndTypeSpecifier {
 
 #[derive(Debug)]
 pub struct TypeExpression {
+    pub op: String,
     pub children: Vec<Box<ExpressionAndTypeSpecifier>>,
 }
 

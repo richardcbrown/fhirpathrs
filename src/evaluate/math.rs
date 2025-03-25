@@ -1,4 +1,3 @@
-use assert_json_diff::assert_json_eq;
 use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal, MathematicalOps,
@@ -8,7 +7,7 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    types::ArithmeticType,
+    types::arithmetic_type::ArithmeticType,
     utils::{from_decimal, get_f64_from_expression, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };
