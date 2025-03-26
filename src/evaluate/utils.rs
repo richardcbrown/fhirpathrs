@@ -244,6 +244,7 @@ pub fn evaluate_array_boolean_expression(
                 item.to_owned(),
                 input.context,
                 input.path.clone(),
+                input.fhir_types.clone(),
             );
 
             expr.evaluate(&node)

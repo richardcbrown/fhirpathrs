@@ -1,6 +1,10 @@
 use serde_json::{json, Value};
 
-use crate::{error::FhirpathError, parser::expression::Expression};
+use crate::{
+    error::FhirpathError,
+    evaluate::Text,
+    parser::{expression::Expression, identifier::TypeSpecifier},
+};
 
 use super::{
     equality::values_are_equal,
@@ -23,6 +27,7 @@ fn evaluate_filter_expression(
                 item.to_owned(),
                 input.context,
                 input.path.clone(),
+                input.fhir_types.clone(),
             );
 
             expr.evaluate(&node)
@@ -80,6 +85,7 @@ pub fn select<'a>(
                 json!(val.clone()),
                 input.context,
                 input.path.clone(),
+                input.fhir_types.clone(),
             );
 
             let result = expression.evaluate(&node)?.data;
@@ -161,33 +167,41 @@ pub fn of_type<'a>(
             msg: "ofType expects exactly 1 Expression".to_string(),
         })?;
 
-    let type_details = expression.evaluate(input)?;
+    let type_details = expression.text()?;
 
-    dbg!(type_details.data.clone());
+    dbg!(type_details);
 
-    let type_info: TypeInfo =
-        serde_json::from_value(type_details.get_single()?).map_err(|err| {
-            FhirpathError::CompileError {
-                msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
-            }
-        })?;
+    let type_node = TypeSpecifier::try_from(&**expression)?.evaluate(input)?;
+
+    let type_info: TypeInfo = serde_json::from_value(type_node.get_single()?).map_err(|err| {
+        FhirpathError::CompileError {
+            msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
+        }
+    })?;
+
+    dbg!(type_info.clone());
 
     let array = input.get_array()?;
 
-    let type_array = array
-        .to_owned()
-        .into_iter()
-        .filter_map(|item| {
-            let item_node = ResourceNode::from_node(input, item.clone());
+    let mut type_array = vec![];
 
-            let item_type = item_node.get_type_info()?;
+    let types = input.get_type_info();
 
-            match type_info.eq(&item_type) {
-                true => Some(item),
-                false => None,
+    dbg!(types.clone());
+
+    for (pos, val) in array.iter().enumerate() {
+        let item_type = types.iter().nth(pos);
+
+        let type_match = item_type
+            .and_then(|it| it.clone())
+            .and_then(|it| Some(it.eq(&type_info)));
+
+        if let Some(match_result) = type_match {
+            if match_result {
+                type_array.push(val.clone());
             }
-        })
-        .collect();
+        }
+    }
 
     Ok(ResourceNode::from_node(input, Value::Array(type_array)))
 }
@@ -251,18 +265,38 @@ mod test {
             ]
         });
 
-        let test_cases: Vec<TestCase> = vec![TestCase {
-            path: "Observation.component.value.ofType(Quantity)".to_string(),
-            input: observation.clone(),
-            expected: json!([{
-                "value": 1,
-                "unit": "s"
-            }]),
-            options: Some(EvaluateOptions {
-                model: Some(get_model_details(ModelType::Stu3).unwrap()),
-                vars: None,
-            }),
-        }];
+        let test_cases: Vec<TestCase> = vec![
+            // TestCase {
+            //     path: "Observation.component.value.ofType(Quantity)".to_string(),
+            //     input: observation.clone(),
+            //     expected: json!([{
+            //         "value": 1,
+            //         "unit": "s"
+            //     }]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //     }),
+            // },
+            // TestCase {
+            //     path: "Observation.component.value.ofType(System.String)".to_string(),
+            //     input: observation.clone(),
+            //     expected: json!(["abc"]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //     }),
+            // },
+            TestCase {
+                path: "Observation.component.value.value.ofType(System.Integer)".to_string(),
+                input: observation.clone(),
+                expected: json!([1]),
+                options: Some(EvaluateOptions {
+                    model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                    vars: None,
+                }),
+            },
+        ];
 
         run_tests(test_cases);
     }

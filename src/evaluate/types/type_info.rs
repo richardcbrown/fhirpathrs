@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::ResourceNode, models::ModelDetails};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum SystemType {
     Integer,
     Decimal,
@@ -15,7 +15,7 @@ pub enum SystemType {
     Quantity,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Fhir {
     pub name: String,
 }
@@ -44,7 +44,7 @@ impl<'a> TryFrom<&NameAndModel<'a>> for Fhir {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct System {
     pub name: SystemType,
 }
@@ -53,29 +53,29 @@ impl<'a> TryFrom<&NameAndModel<'a>> for System {
     type Error = FhirpathError;
 
     fn try_from(value: &NameAndModel) -> Result<Self, Self::Error> {
-        match value.name.as_str() {
-            "Integer" => Ok(System {
+        match value.name.to_lowercase().as_str() {
+            "integer" => Ok(System {
                 name: SystemType::Integer,
             }),
-            "Decimal" => Ok(System {
+            "decimal" => Ok(System {
                 name: SystemType::Decimal,
             }),
-            "Date" => Ok(System {
+            "date" => Ok(System {
                 name: SystemType::Date,
             }),
-            "Time" => Ok(System {
+            "time" => Ok(System {
                 name: SystemType::Time,
             }),
-            "DateTime" => Ok(System {
+            "datetime" => Ok(System {
                 name: SystemType::DateTime,
             }),
-            "Boolean" => Ok(System {
+            "boolean" => Ok(System {
                 name: SystemType::Boolean,
             }),
-            "String" => Ok(System {
+            "string" => Ok(System {
                 name: SystemType::String,
             }),
-            "Quantity" => Ok(System {
+            "quantity" => Ok(System {
                 name: SystemType::Quantity,
             }),
             _ => Err(FhirpathError::CompileError {
@@ -85,7 +85,7 @@ impl<'a> TryFrom<&NameAndModel<'a>> for System {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TypeInfo {
     Fhir(Fhir),
     System(System),
@@ -100,7 +100,7 @@ impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
     type Error = FhirpathError;
 
     fn try_from(value: &ResourceNode<'a>) -> Result<Self, Self::Error> {
-        match &value.data {
+        match &value.get_single()? {
             Value::String(string_value) => Ok(TypeInfo::try_from(&TypeDetails {
                 fhir_type: Some(string_value.to_string()),
                 model: &value.context.model,

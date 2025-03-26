@@ -1,11 +1,11 @@
 use super::{FhirContext, PathDetails};
 
 pub fn determine_fhir_type(
-    path: &PathDetails,
+    path: &String,
     child_property: &String,
     context: &FhirContext,
 ) -> PathDetails {
-    let mut child_path = format!("{}.{}", path.path.clone(), child_property);
+    let mut child_path = format!("{}.{}", path.clone(), child_property);
     let mut fhir_type: Option<String> = None;
 
     if let Some(model) = &context.model {

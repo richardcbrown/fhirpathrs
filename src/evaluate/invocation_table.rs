@@ -235,6 +235,7 @@ mod tests {
                 vars: HashMap::<String, Value>::new(),
             },
             path: None,
+            fhir_types: vec![],
         };
 
         let term_expr1 = TermExpression {

@@ -38,7 +38,7 @@ use crate::parser::expression::{
     PolarityExpression, Term, TermExpression, TypeExpression, UnionExpression,
 };
 use crate::parser::identifier::{
-    Identifier, LiteralContains, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier,
+    self, Identifier, LiteralContains, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier,
 };
 use crate::parser::invocation::{
     FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm, MemberInvocation,
@@ -72,7 +72,8 @@ pub struct ResourceNode<'a> {
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
     pub data: Value,
     pub context: &'a FhirContext,
-    pub path: Option<PathDetails>,
+    pub path: Option<String>,
+    pub fhir_types: Vec<Option<PathDetails>>,
 }
 
 impl<'a> ResourceNode<'a> {
@@ -81,21 +82,25 @@ impl<'a> ResourceNode<'a> {
         parent_node: Option<Box<&'a ResourceNode<'a>>>,
         data: Value,
         context: &'a FhirContext,
-        path: Option<PathDetails>,
+        path: Option<String>,
+        fhir_types: Vec<Option<PathDetails>>,
     ) -> Self {
+        let node_data = match data {
+            Value::Array(array) => json!(array),
+            Value::Bool(boolean) => json!([boolean]),
+            Value::Number(num) => json!([num]),
+            Value::Object(obj) => json!([obj]),
+            Value::Null => json!([]),
+            Value::String(string) => json!([string]),
+        };
+
         Self {
             data_root,
             parent_node,
-            data: match data {
-                Value::Array(array) => json!(array),
-                Value::Bool(boolean) => json!([boolean]),
-                Value::Number(num) => json!([num]),
-                Value::Object(obj) => json!([obj]),
-                Value::Null => json!([]),
-                Value::String(string) => json!([string]),
-            },
+            data: node_data,
             context,
             path,
+            fhir_types,
         }
     }
 
@@ -106,6 +111,7 @@ impl<'a> ResourceNode<'a> {
             data,
             node.context,
             node.path.clone(),
+            node.fhir_types.clone(),
         )
     }
 
@@ -170,14 +176,19 @@ impl<'a> ResourceNode<'a> {
         self.context.vars.get(var_name).cloned()
     }
 
-    pub fn get_type_info(&self) -> Option<TypeInfo> {
-        let fhir_type = self.path.clone().and_then(|path| path.fhir_type);
-
-        TypeInfo::try_from(&TypeDetails {
-            fhir_type,
-            model: &self.context.model,
-        })
-        .ok()
+    pub fn get_type_info(&self) -> Vec<Option<TypeInfo>> {
+        self.fhir_types
+            .iter()
+            .map(|pd| {
+                pd.as_ref().and_then(|path_details| {
+                    TypeInfo::try_from(&TypeDetails {
+                        fhir_type: path_details.fhir_type.clone(),
+                        model: &self.context.model,
+                    })
+                    .ok()
+                })
+            })
+            .collect()
     }
 }
 
@@ -189,9 +200,19 @@ pub trait Evaluate {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>>;
 }
 
+pub trait Text {
+    fn text(&self) -> CompileResult<String>;
+}
+
 impl Evaluate for StringLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(input, json!(self.text)))
+    }
+}
+
+impl Text for StringLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
     }
 }
 
@@ -211,6 +232,12 @@ impl Evaluate for NumberLiteral {
     }
 }
 
+impl Text for NumberLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
+    }
+}
+
 impl Evaluate for BooleanLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let bool_val =
@@ -224,12 +251,24 @@ impl Evaluate for BooleanLiteral {
     }
 }
 
+impl Text for BooleanLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
+    }
+}
+
 impl Evaluate for DatetimeLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(
             input,
             json!(DateTime::try_from(&self.text)?),
         ))
+    }
+}
+
+impl Text for DatetimeLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
     }
 }
 
@@ -242,12 +281,24 @@ impl Evaluate for TimeLiteral {
     }
 }
 
+impl Text for TimeLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
+    }
+}
+
 impl Evaluate for QuantityLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(
             input,
             json!(Quantity::try_from(self)?),
         ))
+    }
+}
+
+impl Text for QuantityLiteral {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
     }
 }
 
@@ -265,6 +316,20 @@ impl Evaluate for Literal {
     }
 }
 
+impl Text for Literal {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            Literal::BooleanLiteral(exp) => exp.text(),
+            Literal::DatetimeLiteral(exp) => exp.text(),
+            Literal::NullLiteral(exp) => todo!(),
+            Literal::NumberLiteral(exp) => exp.text(),
+            Literal::QuantityLiteral(exp) => exp.text(),
+            Literal::StringLiteral(exp) => exp.text(),
+            Literal::TimeLiteral(exp) => exp.text(),
+        }
+    }
+}
+
 fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> Vec<String> {
     // if there is no model there's nothing to expand
     let model = &input.context.model;
@@ -274,7 +339,7 @@ fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> V
     }
 
     // if there's no path there's nothing to expand
-    let path = input.path.as_ref().and_then(|p| Some(p.path.clone()));
+    let path = input.path.as_ref().and_then(|p| Some(p.clone()));
 
     if path.is_none() {
         return vec![property.clone()];
@@ -289,10 +354,12 @@ fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> V
             Some(
                 choice_items
                     .into_iter()
-                    .map(|ci| vec![property.to_string(), ci.to_string()].join("."))
+                    .map(|ci| vec![property.to_string(), ci.to_string()].join(""))
                     .collect::<Vec<String>>(),
             )
         });
+
+    dbg!(choice_elements.clone());
 
     match choice_elements {
         Some(ce) => ce.to_vec(),
@@ -335,10 +402,12 @@ impl Evaluate for MemberInvocation {
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
             let mut node = ResourceNode::from_node(input, json!(input_data));
 
-            node.path = Some(PathDetails {
+            node.path = Some(key_value.clone());
+
+            node.fhir_types = vec![Some(PathDetails {
                 path: key_value.clone(),
                 fhir_type: Some(key_value.clone()),
-            });
+            })];
 
             return Ok(node);
         }
@@ -352,37 +421,79 @@ impl Evaluate for MemberInvocation {
         let choice_values = expand_choice_values(input, &key_value);
 
         // Else look for a child property of the resource that matches the key
-        let values: Vec<Value> = choice_values.iter().fold(vec![], |mut acc, prop| {
-            let mut prop_vals = input_data
-                .to_owned()
-                .into_iter()
-                .filter_map(|item| item.get(&prop.to_string()).cloned())
-                .collect();
+        let keys_values: Vec<(String, Vec<Value>)> =
+            choice_values.iter().fold(vec![], |mut acc, prop| {
+                let prop_vals: Vec<Value> = input_data
+                    .to_owned()
+                    .into_iter()
+                    .filter_map(|item| item.get(&prop.to_string()).cloned())
+                    .collect();
 
-            acc.append(&mut prop_vals);
+                if prop_vals.len() != 0 {
+                    let flat_vals = prop_vals.into_iter().fold(vec![], |mut acc, item| {
+                        match item {
+                            Value::Array(mut arr) => acc.append(&mut arr),
+                            _ => acc.push(item.clone()),
+                        }
+                        acc
+                    });
 
+                    acc.push((prop.to_string(), flat_vals));
+                }
+
+                acc
+            });
+
+        dbg!(&keys_values);
+
+        let keys: Vec<String> = keys_values.iter().map(|kv| kv.0.clone()).collect();
+        let values: Vec<Vec<Value>> = keys_values.iter().map(|kv| kv.1.clone()).collect();
+
+        let flattened_values: Vec<Value> = values.iter().fold(vec![], |mut acc, val| {
+            acc.append(&mut val.clone());
             acc
         });
 
-        dbg!(&values);
-
-        let mut flattened_values: Vec<Value> = vec![];
-
-        values.iter().for_each(|val| match val {
-            Value::Array(array_val) => flattened_values.append(&mut array_val.clone()),
-            val => flattened_values.push(val.clone()),
-        });
-
-        println!("{:?}", flattened_values);
+        dbg!(keys.clone());
+        dbg!(flattened_values.clone());
 
         let mut node = ResourceNode::from_node(input, json!(flattened_values));
 
         node.path = match &input.path {
-            Some(path) => Some(determine_fhir_type(path, &key_value, input.context)),
+            Some(path) => Some(determine_fhir_type(path, &key_value, input.context).path),
             None => None,
         };
 
+        let type_details: Vec<Option<PathDetails>> = keys
+            .iter()
+            .map(|key| match &input.path {
+                Some(path) => Some(determine_fhir_type(path, &key, input.context)),
+                None => None,
+            })
+            .collect();
+
+        let mut fhir_types = vec![];
+
+        for (pos, detail) in type_details.into_iter().enumerate() {
+            fhir_types.append(&mut vec![detail; values[pos].len()]);
+        }
+
+        dbg!(fhir_types.clone());
+
+        node.fhir_types = fhir_types;
+
         Ok(node)
+    }
+}
+
+impl Text for MemberInvocation {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join("."))
     }
 }
 
@@ -436,11 +547,29 @@ impl Evaluate for FunctionInvocation {
     }
 }
 
+impl Text for FunctionInvocation {
+    fn text(&self) -> CompileResult<String> {
+        todo!()
+    }
+}
+
 impl Evaluate for Invocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
+            Invocation::IndexInvocation(exp) => todo!(),
+            Invocation::ThisInvocation(exp) => todo!(),
+            Invocation::TotalInvocation(exp) => todo!(),
+        }
+    }
+}
+
+impl Text for Invocation {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            Invocation::MemberInvocation(exp) => exp.text(),
+            Invocation::FunctionInvocation(exp) => exp.text(),
             Invocation::IndexInvocation(exp) => todo!(),
             Invocation::ThisInvocation(exp) => todo!(),
             Invocation::TotalInvocation(exp) => todo!(),
@@ -454,9 +583,21 @@ impl Evaluate for LiteralIdentifier {
     }
 }
 
+impl Text for LiteralIdentifier {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
+    }
+}
+
 impl Evaluate for LiteralContains {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(input, json!(self.text.clone())))
+    }
+}
+
+impl Text for LiteralContains {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self.text.clone())
     }
 }
 
@@ -473,18 +614,33 @@ impl Evaluate for Identifier {
     }
 }
 
+impl Text for Identifier {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            Identifier::LiteralIdentifier(exp) => exp.text(),
+            Identifier::LiteralAs(exp) => todo!(),
+            Identifier::LiteralContains(exp) => exp.text(),
+            Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
+            Identifier::LiteralIn(exp) => todo!(),
+            Identifier::LiteralIs(exp) => todo!(),
+        }
+    }
+}
+
 impl Evaluate for QualifiedIdentifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let identifiers: Vec<String> = self
             .children
             .iter()
             .map(|child| {
-                child.evaluate(input).and_then(|node| match node.data {
-                    Value::String(string_val) => Ok(string_val),
-                    _ => Err(FhirpathError::CompileError {
-                        msg: "Invalid Identifier".to_string(),
-                    }),
-                })
+                child
+                    .evaluate(input)
+                    .and_then(|node| match node.get_single()? {
+                        Value::String(string_val) => Ok(string_val),
+                        _ => Err(FhirpathError::CompileError {
+                            msg: "Invalid Identifier".to_string(),
+                        }),
+                    })
             })
             .collect::<CompileResult<Vec<String>>>()?;
 
@@ -492,6 +648,17 @@ impl Evaluate for QualifiedIdentifier {
             input,
             Value::String(identifiers.join(".")),
         ))
+    }
+}
+
+impl Text for QualifiedIdentifier {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join("."))
     }
 }
 
@@ -512,6 +679,38 @@ impl Evaluate for TypeSpecifier {
     }
 }
 
+impl TryFrom<&Expression> for TypeSpecifier {
+    type Error = FhirpathError;
+
+    fn try_from(value: &Expression) -> Result<Self, Self::Error> {
+        let text = value.text()?;
+
+        let text_items: Vec<&str> = text.split(".").collect();
+
+        // @todo only handles literal identifier
+        let children = text_items
+            .iter()
+            .map(|ti| {
+                Box::new(Identifier::LiteralIdentifier(Box::new(LiteralIdentifier {
+                    text: ti.to_string(),
+                })))
+            })
+            .collect();
+
+        Ok(TypeSpecifier::QualifiedIdentifier(Box::new(
+            QualifiedIdentifier { children },
+        )))
+    }
+}
+
+impl Text for TypeSpecifier {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            TypeSpecifier::QualifiedIdentifier(qi) => qi.text(),
+        }
+    }
+}
+
 impl Evaluate for InvocationTerm {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let child = self.children.first().ok_or(FhirpathError::CompileError {
@@ -519,6 +718,17 @@ impl Evaluate for InvocationTerm {
         })?;
 
         child.evaluate(input)
+    }
+}
+
+impl Text for InvocationTerm {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(""))
     }
 }
 
@@ -536,12 +746,34 @@ impl Evaluate for LiteralTerm {
     }
 }
 
+impl Text for LiteralTerm {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(""))
+    }
+}
+
 impl Evaluate for Term {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Term::InvocationTerm(exp) => exp.evaluate(input),
             Term::LiteralTerm(exp) => exp.evaluate(input),
             Term::ExternalConstantTerm(exp) => exp.evaluate(input),
+            Term::ParenthesizedTerm(exp) => todo!(),
+        }
+    }
+}
+
+impl Text for Term {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            Term::InvocationTerm(exp) => exp.text(),
+            Term::LiteralTerm(exp) => exp.text(),
+            Term::ExternalConstantTerm(exp) => exp.text(),
             Term::ParenthesizedTerm(exp) => todo!(),
         }
     }
@@ -557,11 +789,31 @@ impl Evaluate for TermExpression {
     }
 }
 
+impl Text for TermExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(""))
+    }
+}
+
 impl Evaluate for ExpressionAndInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             ExpressionAndInvocation::Expression(expr) => expr.evaluate(input),
             ExpressionAndInvocation::Invocation(invocation) => invocation.evaluate(input),
+        }
+    }
+}
+
+impl Text for ExpressionAndInvocation {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            ExpressionAndInvocation::Expression(expr) => expr.text(),
+            ExpressionAndInvocation::Invocation(invocation) => invocation.text(),
         }
     }
 }
@@ -577,6 +829,7 @@ impl Evaluate for InvocationExpression {
                         let mut node = ResourceNode::from_node(input, res.data);
 
                         node.path = res.path.clone();
+                        node.fhir_types = res.fhir_types.clone();
 
                         Ok(node)
                     }
@@ -584,6 +837,17 @@ impl Evaluate for InvocationExpression {
                 }
             })
         })
+    }
+}
+
+impl Text for InvocationExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join("."))
     }
 }
 
@@ -606,6 +870,15 @@ impl Evaluate for IdentifierOrStringLiteral {
     }
 }
 
+impl Text for IdentifierOrStringLiteral {
+    fn text(&self) -> CompileResult<String> {
+        match &self {
+            IdentifierOrStringLiteral::Identifier(identifier) => identifier.text(),
+            IdentifierOrStringLiteral::StringLiteral(literal) => literal.text(),
+        }
+    }
+}
+
 impl Evaluate for ExternalConstantTerm {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let expression = self
@@ -618,6 +891,19 @@ impl Evaluate for ExternalConstantTerm {
         let variable = expression.evaluate(input)?;
 
         Ok(variable)
+    }
+}
+
+impl Text for ExternalConstantTerm {
+    fn text(&self) -> CompileResult<String> {
+        Ok(format!(
+            "%{}",
+            self.children
+                .iter()
+                .map(|c| c.text())
+                .collect::<CompileResult<Vec<String>>>()?
+                .join("")
+        ))
     }
 }
 
@@ -646,6 +932,17 @@ impl Evaluate for EqualityExpression {
     }
 }
 
+impl Text for EqualityExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
+    }
+}
+
 impl Evaluate for AdditiveExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -655,6 +952,17 @@ impl Evaluate for AdditiveExpression {
         }
 
         invoke_operation(&self.op, input, &self.children)
+    }
+}
+
+impl Text for AdditiveExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
     }
 }
 
@@ -670,6 +978,17 @@ impl Evaluate for MultiplicativeExpression {
     }
 }
 
+impl Text for MultiplicativeExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
+    }
+}
+
 impl Evaluate for UnionExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -679,6 +998,17 @@ impl Evaluate for UnionExpression {
         }
 
         invoke_operation(&self.op, input, &self.children)
+    }
+}
+
+impl Text for UnionExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
     }
 }
 
@@ -694,6 +1024,17 @@ impl Evaluate for AndExpression {
     }
 }
 
+impl Text for AndExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
+    }
+}
+
 impl Evaluate for OrExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -703,6 +1044,17 @@ impl Evaluate for OrExpression {
         }
 
         invoke_operation(&self.op, input, &self.children)
+    }
+}
+
+impl Text for OrExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
     }
 }
 
@@ -718,6 +1070,17 @@ impl Evaluate for InequalityExpression {
     }
 }
 
+impl Text for InequalityExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(&self.op.clone()))
+    }
+}
+
 impl Evaluate for TypeExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
@@ -726,6 +1089,12 @@ impl Evaluate for TypeExpression {
             });
         }
 
+        todo!()
+    }
+}
+
+impl Text for TypeExpression {
+    fn text(&self) -> CompileResult<String> {
         todo!()
     }
 }
@@ -776,6 +1145,12 @@ impl Evaluate for IndexerExpression {
     }
 }
 
+impl Text for IndexerExpression {
+    fn text(&self) -> CompileResult<String> {
+        todo!()
+    }
+}
+
 impl Evaluate for PolarityExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let child = self.children.first();
@@ -806,6 +1181,20 @@ impl Evaluate for PolarityExpression {
     }
 }
 
+impl Text for PolarityExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(format!(
+            "{}{}",
+            self.op.clone(),
+            self.children
+                .iter()
+                .map(|c| c.text())
+                .collect::<CompileResult<Vec<String>>>()?
+                .join("")
+        ))
+    }
+}
+
 impl Evaluate for Expression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
@@ -827,6 +1216,27 @@ impl Evaluate for Expression {
     }
 }
 
+impl Text for Expression {
+    fn text(&self) -> CompileResult<String> {
+        match self {
+            Expression::TermExpression(exp) => exp.text(),
+            Expression::InvocationExpression(exp) => exp.text(),
+            Expression::IndexerExpression(exp) => exp.text(),
+            Expression::PolarityExpression(exp) => exp.text(),
+            Expression::MultiplicativeExpression(exp) => exp.text(),
+            Expression::AdditiveExpression(exp) => exp.text(),
+            Expression::UnionExpression(exp) => exp.text(),
+            Expression::InequalityExpression(exp) => exp.text(),
+            Expression::TypeExpression(exp) => exp.text(),
+            Expression::EqualityExpression(exp) => exp.text(),
+            Expression::MembershipExpression(exp) => todo!(),
+            Expression::AndExpression(exp) => exp.text(),
+            Expression::OrExpression(exp) => exp.text(),
+            Expression::ImpliesExpression(exp) => todo!(),
+        }
+    }
+}
+
 impl Evaluate for EntireExpression {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         let child = self.children.first().ok_or(FhirpathError::CompileError {
@@ -834,6 +1244,17 @@ impl Evaluate for EntireExpression {
         })?;
 
         child.evaluate(input)
+    }
+}
+
+impl Text for EntireExpression {
+    fn text(&self) -> CompileResult<String> {
+        Ok(self
+            .children
+            .iter()
+            .map(|c| c.text())
+            .collect::<CompileResult<Vec<String>>>()?
+            .join(""))
     }
 }
 
@@ -869,7 +1290,7 @@ impl CompiledPath {
             vars,
         };
 
-        let node = ResourceNode::new(&resource, None, resource.clone(), &context, None);
+        let node = ResourceNode::new(&resource, None, resource.clone(), &context, None, vec![]);
 
         let evaluate_result = self.expression.evaluate(&node)?;
 
