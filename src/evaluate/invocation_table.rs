@@ -1,4 +1,5 @@
 use super::{
+    collections::in_collection,
     combining::{combine, union},
     comparison::{gt, gte, lt, lte},
     conversion::{converts_to_boolean, iif, to_boolean},
@@ -140,6 +141,8 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("<".to_string(), lt);
 
     map.insert("<=".to_string(), lte);
+
+    map.insert("in".to_string(), in_collection);
 
     map.insert("where".to_string(), where_function);
 

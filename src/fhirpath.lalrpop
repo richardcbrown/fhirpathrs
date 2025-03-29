@@ -257,7 +257,7 @@ Expression: Expression = {
     })),
 
     // MembershipExpression
-    #[precedence(level="1")] #[assoc(side="left")]
+    #[precedence(level="11")] #[assoc(side="left")]
     <e1: Expression> "in" <e2: Expression> => Expression::MembershipExpression(Box::new(MembershipExpression {
         op: "in".to_string(),
         children: vec![
