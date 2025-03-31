@@ -7,6 +7,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     equality::values_are_equal,
+    nodes::resource_node::ResourceContext,
     target::{get_input_for_target, Target},
     CompileResult, Evaluate, ResourceNode,
 };
@@ -237,7 +238,8 @@ pub fn evaluate_array_boolean_expression(
     let results: Vec<bool> = input
         .get_array()?
         .iter()
-        .map(|item| {
+        .enumerate()
+        .map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
                 None,
@@ -245,6 +247,7 @@ pub fn evaluate_array_boolean_expression(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
+                Some(ResourceContext { index: Some(index) }),
             );
 
             expr.evaluate(&node)

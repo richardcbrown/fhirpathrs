@@ -1,5 +1,5 @@
 use super::{
-    collections::in_collection,
+    collections::{collection_contains, in_collection},
     combining::{combine, union},
     comparison::{gt, gte, lt, lte},
     conversion::{converts_to_boolean, iif, to_boolean},
@@ -144,6 +144,8 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("in".to_string(), in_collection);
 
+    map.insert("collection_contains".to_string(), collection_contains);
+
     map.insert("where".to_string(), where_function);
 
     map.insert("select".to_string(), select);
@@ -239,6 +241,7 @@ mod tests {
             },
             path: None,
             fhir_types: vec![],
+            resource_context: None,
         };
 
         let term_expr1 = TermExpression {

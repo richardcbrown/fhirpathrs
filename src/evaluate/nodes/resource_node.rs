@@ -30,6 +30,12 @@ pub struct ResourceNode<'a> {
     pub context: &'a FhirContext,
     pub path: Option<String>,
     pub fhir_types: Vec<Option<PathDetails>>,
+    pub resource_context: Option<ResourceContext>,
+}
+
+#[derive(Clone)]
+pub struct ResourceContext {
+    pub index: Option<usize>,
 }
 
 impl<'a> ResourceNode<'a> {
@@ -40,6 +46,7 @@ impl<'a> ResourceNode<'a> {
         context: &'a FhirContext,
         path: Option<String>,
         fhir_types: Vec<Option<PathDetails>>,
+        resource_context: Option<ResourceContext>,
     ) -> Self {
         let node_data = match data {
             Value::Array(array) => json!(array),
@@ -57,6 +64,7 @@ impl<'a> ResourceNode<'a> {
             context,
             path,
             fhir_types,
+            resource_context,
         }
     }
 
@@ -68,6 +76,7 @@ impl<'a> ResourceNode<'a> {
             node.context,
             node.path.clone(),
             node.fhir_types.clone(),
+            None,
         )
     }
 
@@ -145,5 +154,11 @@ impl<'a> ResourceNode<'a> {
                 })
             })
             .collect()
+    }
+
+    pub fn get_index(&self) -> Option<usize> {
+        let index = self.resource_context.as_ref().and_then(|rc| rc.index);
+
+        index.clone()
     }
 }

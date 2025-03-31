@@ -8,6 +8,7 @@ use crate::{
 
 use super::{
     equality::values_are_equal,
+    nodes::resource_node::ResourceContext,
     types::type_info::TypeInfo,
     utils::{get_array_from_expression, unique_array_elements},
     CompileResult, Evaluate, ResourceNode,
@@ -20,7 +21,8 @@ fn evaluate_filter_expression(
 ) -> Vec<Value> {
     let results: Vec<Value> = array
         .iter()
-        .filter_map(|item| {
+        .enumerate()
+        .filter_map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
                 None,
@@ -28,6 +30,7 @@ fn evaluate_filter_expression(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
+                Some(ResourceContext { index: Some(index) }),
             );
 
             expr.evaluate(&node)
@@ -78,7 +81,8 @@ pub fn select<'a>(
 
     let result = value
         .iter()
-        .map(|val| {
+        .enumerate()
+        .map(|(index, val)| {
             let node = ResourceNode::new(
                 input.data_root,
                 None,
@@ -86,6 +90,7 @@ pub fn select<'a>(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
+                Some(ResourceContext { index: Some(index) }),
             );
 
             let result = expression.evaluate(&node)?.data;

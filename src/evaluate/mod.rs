@@ -367,7 +367,6 @@ impl Text for MemberInvocation {
 
 impl Evaluate for FunctionInvocation {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        // @TODO - Child of FunctionInvocation should be "Functn" in js fhirpath
         let function_name_child = self.children[0].deref();
         let param_list_child = if self.children.len() == 2 {
             Some(self.children[1].deref())
@@ -426,8 +425,8 @@ impl Evaluate for Invocation {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
-            Invocation::IndexInvocation(exp) => todo!(),
-            Invocation::ThisInvocation(exp) => todo!(),
+            Invocation::IndexInvocation(exp) => exp.evaluate(input),
+            Invocation::ThisInvocation(exp) => exp.evaluate(input),
             Invocation::TotalInvocation(exp) => todo!(),
         }
     }
@@ -438,8 +437,8 @@ impl Text for Invocation {
         match self {
             Invocation::MemberInvocation(exp) => exp.text(),
             Invocation::FunctionInvocation(exp) => exp.text(),
-            Invocation::IndexInvocation(exp) => todo!(),
-            Invocation::ThisInvocation(exp) => todo!(),
+            Invocation::IndexInvocation(exp) => exp.text(),
+            Invocation::ThisInvocation(exp) => exp.text(),
             Invocation::TotalInvocation(exp) => todo!(),
         }
     }
@@ -1097,7 +1096,7 @@ impl Text for Expression {
             Expression::InequalityExpression(exp) => exp.text(),
             Expression::TypeExpression(exp) => exp.text(),
             Expression::EqualityExpression(exp) => exp.text(),
-            Expression::MembershipExpression(exp) => todo!(),
+            Expression::MembershipExpression(exp) => exp.text(),
             Expression::AndExpression(exp) => exp.text(),
             Expression::OrExpression(exp) => exp.text(),
             Expression::ImpliesExpression(exp) => todo!(),
@@ -1158,7 +1157,15 @@ impl CompiledPath {
             vars,
         };
 
-        let node = ResourceNode::new(&resource, None, resource.clone(), &context, None, vec![]);
+        let node = ResourceNode::new(
+            &resource,
+            None,
+            resource.clone(),
+            &context,
+            None,
+            vec![],
+            None,
+        );
 
         let evaluate_result = self.expression.evaluate(&node)?;
 

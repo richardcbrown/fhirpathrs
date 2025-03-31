@@ -14,7 +14,12 @@ impl Evaluate for MembershipExpression {
             });
         }
 
-        invoke_operation(&self.op, input, &self.children)
+        let op = match self.op.as_str() {
+            "contains" => "collection_contains",
+            _ => &self.op,
+        };
+
+        invoke_operation(&op.to_string(), input, &self.children)
     }
 }
 
