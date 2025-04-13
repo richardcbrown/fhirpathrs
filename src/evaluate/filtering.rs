@@ -30,7 +30,10 @@ fn evaluate_filter_expression(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
-                Some(ResourceContext { index: Some(index) }),
+                Some(ResourceContext {
+                    index: Some(index),
+                    total: None,
+                }),
             );
 
             expr.evaluate(&node)
@@ -90,7 +93,10 @@ pub fn select<'a>(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
-                Some(ResourceContext { index: Some(index) }),
+                Some(ResourceContext {
+                    index: Some(index),
+                    total: None,
+                }),
             );
 
             let result = expression.evaluate(&node)?.data;
@@ -126,12 +132,12 @@ fn repeat_expr<'a>(
         let node_results = unique_array_elements(&get_array_from_expression(&node, &expression)?);
 
         // unique results not currently in values
-        let mut unique_results: Vec<Value> = node_results
+        let unique_results: Vec<Value> = node_results
             .into_iter()
             .filter(|res| !acc.iter().any(|accu| values_are_equal(res, accu)))
             .collect();
 
-        acc.append(&mut unique_results);
+        acc.append(&mut unique_results.clone());
 
         let mut repeated_results = repeat_expr(input, unique_results, expression)?;
 
@@ -142,7 +148,7 @@ fn repeat_expr<'a>(
 
     values.append(&mut items);
 
-    Ok(values)
+    Ok(unique_array_elements(&values))
 }
 
 pub fn repeat<'a>(
@@ -220,7 +226,7 @@ mod test {
             test::test::{run_tests, TestCase},
             EvaluateOptions,
         },
-        models::{get_model_details, ModelDetails, ModelType},
+        models::{get_model_details, ModelType},
     };
 
     #[test]
@@ -271,31 +277,22 @@ mod test {
         });
 
         let test_cases: Vec<TestCase> = vec![
-            // TestCase {
-            //     path: "Observation.component.value.ofType(Quantity)".to_string(),
-            //     input: observation.clone(),
-            //     expected: json!([{
-            //         "value": 1,
-            //         "unit": "s"
-            //     }]),
-            //     options: Some(EvaluateOptions {
-            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
-            //         vars: None,
-            //     }),
-            // },
-            // TestCase {
-            //     path: "Observation.component.value.ofType(System.String)".to_string(),
-            //     input: observation.clone(),
-            //     expected: json!(["abc"]),
-            //     options: Some(EvaluateOptions {
-            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
-            //         vars: None,
-            //     }),
-            // },
             TestCase {
-                path: "Observation.component.value.value.ofType(System.Integer)".to_string(),
+                path: "Observation.component.value.ofType(Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([1]),
+                expected: json!([{
+                    "value": 1,
+                    "unit": "s"
+                }]),
+                options: Some(EvaluateOptions {
+                    model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                    vars: None,
+                }),
+            },
+            TestCase {
+                path: "Observation.component.value.ofType(System.String)".to_string(),
+                input: observation.clone(),
+                expected: json!(["abc"]),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,

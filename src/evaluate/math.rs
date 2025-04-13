@@ -7,30 +7,94 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    types::arithmetic_type::ArithmeticType,
+    types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     utils::{from_decimal, get_f64_from_expression, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
+    pub fn to_string(&self) -> String {
+        match self {
+            ArithmeticType::DateTime(dt) => dt.to_string(),
+            ArithmeticType::Number(num) => num.to_string(),
+            ArithmeticType::Quantity(q) => q.to_string(),
+            ArithmeticType::String(s) => s.to_string(),
+            ArithmeticType::Time(t) => t.to_string(),
+        }
+    }
+
     pub fn mul(&self, other: &ArithmeticType) -> CompileResult<Value> {
-        match (self, other) {
+        let (first, second) = implicit_convert(self, other);
+
+        match (first, second) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 * num2)),
-            _ => todo!(),
+            (ArithmeticType::Quantity(q1), ArithmeticType::Quantity(q2)) => {
+                let result = (q1 * q2)
+                    .and_then(|res| serde_json::to_value(res).ok())
+                    .unwrap_or(Value::Array(vec![]));
+
+                Ok(result)
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: format!(
+                    "Cannot multiply {} by {}",
+                    self.to_string(),
+                    other.to_string()
+                ),
+            }),
         }
     }
 
     pub fn add(&self, other: &ArithmeticType) -> CompileResult<Value> {
-        match (self, other) {
+        let (first, second) = implicit_convert(self, other);
+
+        match (first, second) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 + num2)),
-            _ => todo!(),
+            (ArithmeticType::Quantity(q1), ArithmeticType::Quantity(q2)) => {
+                let result = (q1 + q2)
+                    .and_then(|res| serde_json::to_value(res).ok())
+                    .unwrap_or(Value::Array(vec![]));
+
+                Ok(result)
+            }
+            (ArithmeticType::DateTime(dt), ArithmeticType::Quantity(q)) => {
+                let result = dt.try_add(&q)?;
+
+                Ok(Value::String(result.to_string()))
+            }
+            (ArithmeticType::String(s1), ArithmeticType::String(s2)) => {
+                Ok(Value::String(format!("{}{}", s1, s2)))
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: format!("Cannot add {} to {}", self.to_string(), other.to_string()),
+            }),
         }
     }
 
     pub fn sub(&self, other: &ArithmeticType) -> CompileResult<Value> {
-        match (self, other) {
+        let (first, second) = implicit_convert(self, other);
+
+        match (first, second) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Ok(json!(num1 - num2)),
-            _ => todo!(),
+            (ArithmeticType::Quantity(q1), ArithmeticType::Quantity(q2)) => {
+                let result = (q1 - q2)
+                    .and_then(|res| serde_json::to_value(res).ok())
+                    .unwrap_or(Value::Array(vec![]));
+
+                Ok(result)
+            }
+            (ArithmeticType::DateTime(dt), ArithmeticType::Quantity(q)) => {
+                let result = dt.try_sub(&q)?;
+
+                Ok(Value::String(result.to_string()))
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: format!(
+                    "Cannot subtract {} to {}",
+                    self.to_string(),
+                    other.to_string()
+                ),
+            }),
         }
     }
 
@@ -588,40 +652,265 @@ mod test {
     use rust_decimal_macros::dec;
     use serde_json::json;
 
-    use crate::evaluate::compile;
+    use crate::evaluate::{
+        compile,
+        test::test::{run_tests, TestCase},
+    };
 
     #[test]
     fn evaluate_add_path() {
-        let compiled = compile(&"Patient.a + Patient.b".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
             "a": 2,
             "b": 6
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a + Patient.b".to_string(),
+                input: patient.clone(),
+                expected: json!([8]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 1 'year'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2017"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 1 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2016"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 12 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2017"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 2 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-11"
+                }),
+                expected: json!(["@2017-01"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 1 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2016"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 53 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2017"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 1 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-30"
+                }),
+                expected: json!(["@2017-01-06"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 1 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2016"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 8800 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2017"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 24 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-31"
+                }),
+                expected: json!(["@2017-01-01"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 2 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-31T12"
+                }),
+                expected: json!(["@2016-12-31T14"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 2 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-31T22:00:00"
+                }),
+                expected: json!(["@2017-01-01T00:00:00"]),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([8]));
+        run_tests(test_cases);
     }
 
     #[test]
     fn evaluate_sub_path() {
-        let compiled = compile(&"Patient.a - Patient.b".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
             "a": 2,
             "b": 6
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a - Patient.b".to_string(),
+                input: patient.clone(),
+                expected: json!([-4]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 1 'year'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2015"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 1 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2015"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 12 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2015"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 2 'month'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-01"
+                }),
+                expected: json!(["@2015-11"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 1 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2015"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 53 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2014"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 1 'week'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-01-06"
+                }),
+                expected: json!(["@2015-12-30"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 1 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2015"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 8800 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016"
+                }),
+                expected: json!(["@2014"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a - 24 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-01-01"
+                }),
+                expected: json!(["@2015-12-31"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 2 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-31T12"
+                }),
+                expected: json!(["@2016-12-31T14"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a + 2 'hour'".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "a": "@2016-12-31T22:00:00"
+                }),
+                expected: json!(["@2017-01-01T00:00:00"]),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([-4]));
+        run_tests(test_cases);
     }
 
     #[test]

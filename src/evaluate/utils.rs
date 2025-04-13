@@ -247,7 +247,10 @@ pub fn evaluate_array_boolean_expression(
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
-                Some(ResourceContext { index: Some(index) }),
+                Some(ResourceContext {
+                    index: Some(index),
+                    total: None,
+                }),
             );
 
             expr.evaluate(&node)

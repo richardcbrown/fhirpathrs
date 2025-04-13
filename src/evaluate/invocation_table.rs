@@ -1,4 +1,5 @@
 use super::{
+    aggregate::aggregate,
     collections::{collection_contains, in_collection},
     combining::{combine, union},
     comparison::{gt, gte, lt, lte},
@@ -14,6 +15,7 @@ use super::{
         abs, add, amp, ceiling, div, divide, exp, floor, ln, log, mul, power, rem, round, sqrt,
         sub, truncate,
     },
+    navigation::{children, descendants},
     strings::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
@@ -134,6 +136,8 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("truncate".to_string(), truncate);
 
+    map.insert("children".to_string(), children);
+
     map.insert(">".to_string(), gt);
 
     map.insert(">=".to_string(), gte);
@@ -151,6 +155,8 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("select".to_string(), select);
 
     map.insert("repeat".to_string(), repeat);
+
+    map.insert("descendants".to_string(), descendants);
 
     map.insert("ofType".to_string(), of_type);
 
@@ -199,6 +205,8 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("xor".to_string(), xor);
 
     map.insert("implies".to_string(), implies);
+
+    map.insert("aggregate".to_string(), aggregate);
 
     map
 }

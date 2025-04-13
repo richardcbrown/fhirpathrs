@@ -11,7 +11,7 @@ use super::{
 
 impl ArithmeticType {
     pub fn gt(&self, other: &ArithmeticType) -> CompileResult<Value> {
-        let (first, second) = implicit_convert(self.clone(), other.clone());
+        let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {

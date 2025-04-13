@@ -36,6 +36,7 @@ pub struct ResourceNode<'a> {
 #[derive(Clone)]
 pub struct ResourceContext {
     pub index: Option<usize>,
+    pub total: Option<Value>,
 }
 
 impl<'a> ResourceNode<'a> {
@@ -160,5 +161,11 @@ impl<'a> ResourceNode<'a> {
         let index = self.resource_context.as_ref().and_then(|rc| rc.index);
 
         index.clone()
+    }
+
+    pub fn get_total(&self) -> Option<Value> {
+        self.resource_context
+            .as_ref()
+            .and_then(|rc| rc.total.clone())
     }
 }

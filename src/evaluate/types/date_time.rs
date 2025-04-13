@@ -1,7 +1,8 @@
 use std::{cell::LazyCell, cmp::Ordering};
 
-use chrono::{Datelike, NaiveDateTime, Utc};
+use chrono::{Datelike, Months, NaiveDateTime, TimeDelta, Utc};
 use regex::Regex;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -10,8 +11,9 @@ use crate::{error::FhirpathError, evaluate::CompileResult};
 use super::{
     date::Date,
     offset::{get_fixed_offset, Offset},
+    quantity::{Quantity, TimeUnit},
     time::Time,
-    utils::{parse_optional_f64, parse_optional_u32},
+    utils::parse_optional_u32,
 };
 
 /**
@@ -22,13 +24,14 @@ use super::{
  * 7. Hours
  * 9. Minutes
  * 11. Seconds + Millis
- * 13. Timezone
- * 14. Timezone direction
- * 15. Timezone hours
- * 16. Timezone minutes
+ * 12. Seconds
+ * 14. Millis
+ * 16. Timezone direction
+ * 17. Timezone hours
+ * 18. Timezone minutes
  */
 const DATETIME_REGEX: LazyCell<Regex> = LazyCell::new(|| {
-    Regex::new("@([0-9][0-9][0-9][0-9])(\\-([0-9][0-9])(\\-([0-9][0-9])(T([0-9][0-9])(:([0-9][0-9])(:([0-9][0-9](\\.[0-9]+)?))?)?(Z|(\\+|\\-)([0-9][0-9]):([0-9][0-9]))?)?)?)?").expect("Invalid DateTime Regex")
+    Regex::new("@([0-9][0-9][0-9][0-9])(\\-([0-9][0-9])(\\-([0-9][0-9])(T([0-9][0-9])(:([0-9][0-9])(:(([0-9][0-9])(\\.([0-9]+))?))?)?(Z|(\\+|\\-)([0-9][0-9]):([0-9][0-9]))?)?)?)?").expect("Invalid DateTime Regex")
 });
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -58,6 +61,205 @@ impl PartialOrd for DateTime {
 }
 
 impl DateTime {
+    pub fn to_datetime(&self) -> Option<chrono::DateTime<Utc>> {
+        let date = self.date.to_date()?;
+        let time = self
+            .time
+            .as_ref()
+            .and_then(|t| t.to_time())
+            .or(chrono::NaiveTime::from_hms_opt(0, 0, 0))?;
+
+        Some(chrono::NaiveDateTime::new(date, time).and_utc())
+    }
+
+    pub fn try_add(&self, q: &Quantity) -> CompileResult<DateTime> {
+        let datetime = self.to_datetime().ok_or(FhirpathError::CompileError {
+            msg: "Invalid DateTime".to_string(),
+        })?;
+
+        let unit = q.unit.as_ref().ok_or(FhirpathError::CompileError {
+            msg: "Cannot add unitless Quantity to DateTime".to_string(),
+        })?;
+
+        let time_unit = TimeUnit::try_from(unit)?;
+
+        let updated_dt = match time_unit {
+            TimeUnit::Years => {
+                let int_year =
+                    i32::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let new_year =
+                    datetime
+                        .year()
+                        .checked_add(int_year)
+                        .ok_or(FhirpathError::CompileError {
+                            msg: "Could not add years".to_string(),
+                        })?;
+
+                datetime
+                    .with_year(new_year)
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} years to {}", int_year, datetime),
+                    })
+            }
+            TimeUnit::Months => {
+                let months =
+                    i32::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let abs_months: u32 = months.unsigned_abs();
+
+                match months > 0 {
+                    true => datetime.checked_add_months(Months::new(abs_months)),
+                    false => datetime.checked_sub_months(Months::new(abs_months)),
+                }
+                .ok_or(FhirpathError::CompileError {
+                    msg: format!("Could not add {} months to {}", months, datetime),
+                })
+            }
+            TimeUnit::Weeks => {
+                let weeks =
+                    i64::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let delta = TimeDelta::try_weeks(weeks).ok_or(FhirpathError::CompileError {
+                    msg: format!("could not create TimeDelta from {} weeks", weeks),
+                })?;
+
+                datetime
+                    .checked_add_signed(delta)
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} weeks to {}", weeks, datetime),
+                    })
+            }
+            TimeUnit::Days => {
+                let days =
+                    i32::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let abs_days: u32 = days.unsigned_abs();
+
+                match days > 0 {
+                    true => datetime.checked_add_months(Months::new(abs_days)),
+                    false => datetime.checked_sub_months(Months::new(abs_days)),
+                }
+                .ok_or(FhirpathError::CompileError {
+                    msg: format!("Could not add {} days to {}", days, datetime),
+                })
+            }
+            TimeUnit::Hours => {
+                let hours =
+                    i64::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let delta = TimeDelta::try_hours(hours).ok_or(FhirpathError::CompileError {
+                    msg: format!("could not create TimeDelta from {} hours", hours),
+                })?;
+
+                datetime
+                    .checked_add_signed(delta)
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} hours to {}", hours, datetime),
+                    })
+            }
+            TimeUnit::Minutes => {
+                let minutes =
+                    i64::try_from(q.value.trunc()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let delta = TimeDelta::try_minutes(minutes).ok_or(FhirpathError::CompileError {
+                    msg: format!("could not create TimeDelta from {} minutes", minutes),
+                })?;
+
+                datetime
+                    .checked_add_signed(delta)
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} minutes to {}", minutes, datetime),
+                    })
+            }
+            TimeUnit::Seconds => {
+                let frac_seconds =
+                    Decimal::try_from(q.value).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let seconds: i64 = i64::try_from(frac_seconds.trunc()).map_err(|err| {
+                    FhirpathError::CompileError {
+                        msg: format!("Could not convert Decimal to i64: {}", err.to_string()),
+                    }
+                })?;
+
+                let millis: i64 =
+                    i64::try_from(frac_seconds.round_dp(3).fract()).map_err(|err| {
+                        FhirpathError::CompileError {
+                            msg: format!("Could not convert Decimal to i64: {}", err.to_string()),
+                        }
+                    })?;
+
+                let sec_delta =
+                    TimeDelta::try_seconds(seconds).ok_or(FhirpathError::CompileError {
+                        msg: format!("could not create TimeDelta from {} seconds", seconds),
+                    })?;
+
+                let millis_delta =
+                    TimeDelta::try_milliseconds(millis).ok_or(FhirpathError::CompileError {
+                        msg: format!("could not create TimeDelta from {} milliseconds", millis),
+                    })?;
+
+                datetime
+                    .checked_add_signed(sec_delta)
+                    .and_then(|dt| dt.checked_add_signed(millis_delta))
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} seconds to {}", seconds, datetime),
+                    })
+            }
+            TimeUnit::Millis => {
+                let millis =
+                    i64::try_from(q.value.round()).map_err(|err| FhirpathError::CompileError {
+                        msg: format!("Could not parse as Integer: {}", err.to_string()),
+                    })?;
+
+                let delta = TimeDelta::try_seconds(millis).ok_or(FhirpathError::CompileError {
+                    msg: format!("could not create TimeDelta from {} seconds", millis),
+                })?;
+
+                datetime
+                    .checked_add_signed(delta)
+                    .ok_or(FhirpathError::CompileError {
+                        msg: format!("Could not add {} seconds to {}", millis, datetime),
+                    })
+            }
+            _ => todo!(),
+        }?;
+
+        Ok(DateTime::from_datetime_precision(
+            updated_dt,
+            &self.precision,
+        ))
+    }
+
+    pub fn try_sub(&self, q: &Quantity) -> CompileResult<DateTime> {
+        let mut negative_q = q.clone();
+
+        negative_q.value = -negative_q.value;
+
+        self.try_add(&negative_q)
+    }
+
+    pub fn to_string(&self) -> String {
+        match &self.time {
+            Some(time) => format!("@{}T{}", self.date.to_string(), time.to_string()),
+            None => format!("@{}", self.date.to_string()),
+        }
+    }
+
     pub fn from_datetime_precision(
         dt: chrono::DateTime<Utc>,
         precision: &DateTimePrecision,
@@ -94,7 +296,8 @@ impl DateTime {
     }
 
     pub fn from_components(
-        seconds: Option<f64>,
+        millis: Option<u32>,
+        seconds: Option<u32>,
         minutes: Option<u32>,
         hours: Option<u32>,
         days: Option<u32>,
@@ -109,7 +312,7 @@ impl DateTime {
                 months,
                 days,
             },
-            time: Time::from_components(seconds, minutes, hours, &precision),
+            time: Time::from_components(millis, seconds, minutes, hours, &precision),
         }
     }
 }
@@ -148,22 +351,23 @@ impl TryFrom<&String> for DateTime {
 
         let hours = parse_optional_u32(captures.get(7))?;
         let minutes = parse_optional_u32(captures.get(9))?;
-        let seconds = parse_optional_f64(captures.get(11))?;
 
-        let fractional_secs = captures.get(12).is_some();
+        let seconds = parse_optional_u32(captures.get(12))?;
+        let millis = parse_optional_u32(captures.get(14))?;
 
         let tz = captures.get(13).and_then(|val| Some(val.as_str()));
-        let tz_dir = captures.get(14).and_then(|val| Some(val.as_str()));
-        let tz_hours = parse_optional_u32(captures.get(15))?;
-        let tz_minutes = parse_optional_u32(captures.get(16))?;
+        let tz_dir = captures.get(16).and_then(|val| Some(val.as_str()));
+        let tz_hours = parse_optional_u32(captures.get(17))?;
+        let tz_minutes = parse_optional_u32(captures.get(18))?;
 
-        let precision =
-            DateTimePrecision::from_components(seconds, minutes, hours, days, months, years)?;
+        let precision = DateTimePrecision::from_components(
+            millis, seconds, minutes, hours, days, months, years,
+        )?;
 
         if tz.is_some() {
             let mut date_format = "@%Y-%m-%dT%H:%M:%S".to_string();
 
-            if fractional_secs {
+            if millis.is_some() {
                 date_format.extend("%.f".chars());
             }
 
@@ -185,7 +389,7 @@ impl TryFrom<&String> for DateTime {
             Ok(Self::from_datetime_precision(adjusted_datetime, &precision))
         } else {
             Ok(Self::from_components(
-                seconds, minutes, hours, days, months, years, precision,
+                millis, seconds, minutes, hours, days, months, years, precision,
             ))
         }
     }
@@ -203,21 +407,23 @@ pub enum DateTimePrecision {
 
 impl DateTimePrecision {
     fn from_components(
-        seconds: Option<f64>,
+        millis: Option<u32>,
+        seconds: Option<u32>,
         minutes: Option<u32>,
         hours: Option<u32>,
         days: Option<u32>,
         months: Option<u32>,
         years: Option<u32>,
     ) -> CompileResult<DateTimePrecision> {
-        match (seconds, minutes, hours, days, months, years) {
-            (Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
-            (None, Some(_min), _, _, _, _) => Ok(DateTimePrecision::Minutes),
-            (None, None, Some(_h), _, _, _) => Ok(DateTimePrecision::Hours),
-            (None, None, None, Some(_day), _, _) => Ok(DateTimePrecision::Days),
-            (None, None, None, None, Some(_mon), _) => Ok(DateTimePrecision::Months),
-            (None, None, None, None, None, Some(_yr)) => Ok(DateTimePrecision::Years),
-            (None, None, None, None, None, None) => Err(FhirpathError::CompileError {
+        match (millis, seconds, minutes, hours, days, months, years) {
+            (Some(_millis), Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
+            (None, Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
+            (None, None, Some(_min), _, _, _, _) => Ok(DateTimePrecision::Minutes),
+            (None, None, None, Some(_h), _, _, _) => Ok(DateTimePrecision::Hours),
+            (None, None, None, None, Some(_day), _, _) => Ok(DateTimePrecision::Days),
+            (None, None, None, None, None, Some(_mon), _) => Ok(DateTimePrecision::Months),
+            (None, None, None, None, None, None, Some(_yr)) => Ok(DateTimePrecision::Years),
+            _ => Err(FhirpathError::CompileError {
                 msg: "Invalid DateTime precision".to_string(),
             }),
         }

@@ -26,7 +26,8 @@ mod test {
             Time {
                 hours: Some(10),
                 minutes: Some(11),
-                seconds: Some(12.0),
+                seconds: Some(12),
+                millis: None,
                 precision: TimePrecision::Seconds
             }
         )
@@ -49,7 +50,8 @@ mod test {
                 time: Some(Time {
                     hours: Some(8),
                     minutes: Some(11),
-                    seconds: Some(12.123),
+                    seconds: Some(12),
+                    millis: Some(123),
                     precision: TimePrecision::Seconds
                 }),
                 precision: DateTimePrecision::Seconds

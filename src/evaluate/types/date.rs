@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -7,6 +8,25 @@ pub struct Date {
     pub years: Option<u32>,
     pub months: Option<u32>,
     pub days: Option<u32>,
+}
+
+impl Date {
+    pub fn to_string(&self) -> String {
+        match (&self.days, &self.months, &self.years) {
+            (Some(d), Some(m), Some(y)) => format!("{}-{:0>2}-{:0>2}", y, m, d),
+            (None, Some(m), Some(y)) => format!("{}-{:0>2}", y, m),
+            (None, None, Some(y)) => y.to_string(),
+            _ => "".to_string(),
+        }
+    }
+
+    pub fn to_date(&self) -> Option<NaiveDate> {
+        let year = i32::try_from(self.years?).ok()?;
+        let month = self.months.unwrap_or(1);
+        let day = self.days.unwrap_or(1);
+
+        chrono::NaiveDate::from_ymd_opt(year, month, day)
+    }
 }
 
 impl PartialOrd for Date {

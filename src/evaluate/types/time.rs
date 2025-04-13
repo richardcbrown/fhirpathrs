@@ -1,7 +1,8 @@
 use std::{cell::LazyCell, cmp::Ordering};
 
-use chrono::{Timelike, Utc};
+use chrono::{NaiveTime, Timelike, Utc};
 use regex::Regex;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -17,9 +18,11 @@ use super::{
  * 1. Hours
  * 3. Minutes
  * 5. Seconds + Millis
+ * 6. Seconds
+ * 8. Millis
  */
 const TIME_REGEX: LazyCell<Regex> = LazyCell::new(|| {
-    Regex::new("@T([0-9][0-9])(:([0-9][0-9])(:([0-9][0-9](\\.([0-9]+))?)?)?)?")
+    Regex::new("@T([0-9][0-9])(:([0-9][0-9])(:(([0-9][0-9])(\\.([0-9]+))?)?)?)?")
         .expect("Invalid Time Regex")
 });
 
@@ -27,8 +30,32 @@ const TIME_REGEX: LazyCell<Regex> = LazyCell::new(|| {
 pub struct Time {
     pub hours: Option<u32>,
     pub minutes: Option<u32>,
-    pub seconds: Option<f64>,
+    pub seconds: Option<u32>,
+    pub millis: Option<u32>,
     pub precision: TimePrecision,
+}
+
+impl Time {
+    pub fn to_string(&self) -> String {
+        match (&self.seconds, &self.minutes, &self.hours) {
+            (Some(s), Some(m), Some(h)) => format!("{:0>2}:{:0>2}:{:0>2}", h, m, s),
+            (None, Some(m), Some(h)) => format!("{:0>2}:{:0>2}", h, m),
+            (None, None, Some(h)) => h.to_string(),
+            _ => "".to_string(),
+        }
+    }
+
+    pub fn to_time(&self) -> Option<NaiveTime> {
+        let sec: u32 = self.seconds.unwrap_or(0);
+
+        let nano: u32 = self.millis.unwrap_or(0) * 1000 * 1000;
+
+        let min = self.minutes.unwrap_or(0);
+
+        let hour = self.hours.unwrap_or(0);
+
+        NaiveTime::from_hms_nano_opt(hour, min, sec, nano)
+    }
 }
 
 impl PartialOrd for Time {
@@ -96,31 +123,29 @@ impl Time {
                 hours: Some(dt.hour()),
                 minutes: None,
                 seconds: None,
+                millis: None,
                 precision: TimePrecision::Hours,
             }),
             DateTimePrecision::Minutes => Some(Time {
                 hours: Some(dt.hour()),
                 minutes: Some(dt.minute()),
                 seconds: None,
+                millis: None,
                 precision: TimePrecision::Minutes,
             }),
-            DateTimePrecision::Seconds => {
-                let secs = format!("{}.{}", dt.second(), dt.nanosecond())
-                    .parse::<f64>()
-                    .ok()?;
-
-                Some(Time {
-                    hours: Some(dt.hour()),
-                    minutes: Some(dt.minute()),
-                    seconds: Some(secs),
-                    precision: TimePrecision::Seconds,
-                })
-            }
+            DateTimePrecision::Seconds => Some(Time {
+                hours: Some(dt.hour()),
+                minutes: Some(dt.minute()),
+                seconds: Some(dt.second()),
+                millis: Some(dt.nanosecond() / (1000 * 1000)),
+                precision: TimePrecision::Seconds,
+            }),
         }
     }
 
     pub fn from_components(
-        seconds: Option<f64>,
+        millis: Option<u32>,
+        seconds: Option<u32>,
         minutes: Option<u32>,
         hours: Option<u32>,
         precision: &DateTimePrecision,
@@ -134,18 +159,21 @@ impl Time {
                 hours,
                 minutes: None,
                 seconds: None,
+                millis: None,
             }),
             DateTimePrecision::Minutes => Some(Time {
                 precision: TimePrecision::Minutes,
                 hours,
                 minutes,
                 seconds: None,
+                millis: None,
             }),
             DateTimePrecision::Seconds => Some(Time {
                 precision: TimePrecision::Seconds,
                 hours,
                 minutes,
                 seconds,
+                millis,
             }),
         }
     }
@@ -175,14 +203,16 @@ impl TryFrom<&String> for Time {
 
         let hours = parse_optional_u32(captures.get(1))?;
         let minutes = parse_optional_u32(captures.get(3))?;
-        let seconds = parse_optional_f64(captures.get(5))?;
+        let seconds = parse_optional_u32(captures.get(6))?;
+        let millis = parse_optional_u32(captures.get(8))?;
 
-        let precision = TimePrecision::from_components(seconds, minutes, hours)?;
+        let precision = TimePrecision::from_components(millis, seconds, minutes, hours)?;
 
         Ok(Self {
             hours,
             minutes,
             seconds,
+            millis,
             precision,
         })
     }
@@ -197,15 +227,17 @@ pub enum TimePrecision {
 
 impl TimePrecision {
     fn from_components(
-        seconds: Option<f64>,
+        millis: Option<u32>,
+        seconds: Option<u32>,
         minutes: Option<u32>,
         hours: Option<u32>,
     ) -> CompileResult<Self> {
-        match (seconds, minutes, hours) {
-            (Some(_sec), _, _) => Ok(TimePrecision::Seconds),
-            (None, Some(_min), _) => Ok(TimePrecision::Minutes),
-            (None, None, Some(_hr)) => Ok(TimePrecision::Hours),
-            (None, None, None) => Err(FhirpathError::CompileError {
+        match (millis, seconds, minutes, hours) {
+            (Some(_millis), Some(_sec), _, _) => Ok(TimePrecision::Seconds),
+            (None, Some(_sec), _, _) => Ok(TimePrecision::Seconds),
+            (None, None, Some(_min), _) => Ok(TimePrecision::Minutes),
+            (None, None, None, Some(_hr)) => Ok(TimePrecision::Hours),
+            _ => Err(FhirpathError::CompileError {
                 msg: "Invalid Time precision".to_string(),
             }),
         }

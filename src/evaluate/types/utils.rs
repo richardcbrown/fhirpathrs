@@ -37,10 +37,10 @@ pub fn parse_optional_f64(capture: Option<Match>) -> CompileResult<Option<f64>> 
 }
 
 pub fn implicit_convert(
-    first: ArithmeticType,
-    second: ArithmeticType,
+    first: &ArithmeticType,
+    second: &ArithmeticType,
 ) -> (ArithmeticType, ArithmeticType) {
-    match (&first, &second) {
+    match (first, second) {
         // can implicitly convert num to Quantity
         (ArithmeticType::Number(num), ArithmeticType::Quantity(_)) => (
             ArithmeticType::Quantity(Quantity {
@@ -56,6 +56,6 @@ pub fn implicit_convert(
                 unit: None,
             }),
         ),
-        _ => (first, second),
+        _ => (first.clone(), second.clone()),
     }
 }
