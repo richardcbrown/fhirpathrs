@@ -62,7 +62,9 @@ impl TryFrom<&Value> for ArithmeticType {
                     msg: "Could not convert object to ArithmeticType".to_string(),
                 })
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "Could not convert value to ArithmeticType".to_string(),
+            }),
         }
     }
 }

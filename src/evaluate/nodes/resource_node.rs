@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 
 use crate::{
@@ -14,6 +15,7 @@ use crate::{
 pub struct FhirContext {
     pub model: Option<ModelDetails>,
     pub vars: HashMap<String, Value>,
+    pub now: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug)]

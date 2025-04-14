@@ -355,7 +355,7 @@ impl TryFrom<&String> for DateTime {
         let seconds = parse_optional_u32(captures.get(12))?;
         let millis = parse_optional_u32(captures.get(14))?;
 
-        let tz = captures.get(13).and_then(|val| Some(val.as_str()));
+        let tz = captures.get(15).and_then(|val| Some(val.as_str()));
         let tz_dir = captures.get(16).and_then(|val| Some(val.as_str()));
         let tz_hours = parse_optional_u32(captures.get(17))?;
         let tz_minutes = parse_optional_u32(captures.get(18))?;

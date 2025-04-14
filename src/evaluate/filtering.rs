@@ -219,6 +219,7 @@ pub fn of_type<'a>(
 
 #[cfg(test)]
 mod test {
+    use chrono::Utc;
     use serde_json::json;
 
     use crate::{
@@ -287,6 +288,7 @@ mod test {
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
+                    now: None,
                 }),
             },
             TestCase {
@@ -296,6 +298,7 @@ mod test {
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
+                    now: None,
                 }),
             },
         ];

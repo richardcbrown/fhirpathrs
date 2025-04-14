@@ -22,6 +22,7 @@ use super::{
     },
     subsetting::{exclude, first, intersect, last, single, skip, tail, take},
     target::Target,
+    utility_functions::{now, time_of_day, today},
     CompileResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
@@ -138,6 +139,12 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("children".to_string(), children);
 
+    map.insert("now".to_string(), now);
+
+    map.insert("today".to_string(), today);
+
+    map.insert("timeOfDay".to_string(), time_of_day);
+
     map.insert(">".to_string(), gt);
 
     map.insert(">=".to_string(), gte);
@@ -215,6 +222,7 @@ pub fn invocation_table<'a>() -> HashMap<
 mod tests {
     use std::collections::HashMap;
 
+    use chrono::Utc;
     use serde_json::{json, Value};
 
     use crate::{
@@ -246,6 +254,7 @@ mod tests {
             context: &FhirContext {
                 model: None,
                 vars: HashMap::<String, Value>::new(),
+                now: Utc::now(),
             },
             path: None,
             fhir_types: vec![],

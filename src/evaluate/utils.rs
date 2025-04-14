@@ -317,19 +317,6 @@ pub fn get_f64_from_expression(
     }
 }
 
-pub fn get_number(num: &Number) -> CompileResult<Decimal> {
-    Decimal::from_str(num.as_str()).map_err(|err| FhirpathError::CompileError {
-        msg: format!("Could not convert to Decimal: {}", err.to_string()),
-    })
-}
-
-pub fn get_numbers(num1: &Number, num2: &Number) -> CompileResult<(Decimal, Decimal)> {
-    let f1 = get_number(num1)?;
-    let f2 = get_number(num2)?;
-
-    Ok((f1, f2))
-}
-
 pub fn from_decimal(dec: Decimal) -> CompileResult<f64> {
     dec.try_into().map_err(|_| FhirpathError::CompileError {
         msg: format!("Could not convert from Decimal"),

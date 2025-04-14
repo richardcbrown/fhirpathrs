@@ -17,10 +17,12 @@ mod subsetting;
 mod target;
 mod test;
 mod types;
+mod utility_functions;
 mod utils;
 
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use nodes::resource_node::{FhirContext, PathDetails, ResourceNode};
 use serde_json::Value;
 
@@ -50,6 +52,7 @@ pub trait Text {
 pub struct EvaluateOptions {
     model: Option<ModelDetails>,
     vars: Option<HashMap<String, Value>>,
+    now: Option<DateTime<Utc>>,
 }
 
 impl CompiledPath {
@@ -57,6 +60,7 @@ impl CompiledPath {
         let opts = options.unwrap_or(EvaluateOptions {
             model: None,
             vars: None,
+            now: None,
         });
 
         let mut vars = HashMap::<String, Value>::new();
@@ -76,6 +80,7 @@ impl CompiledPath {
         let context = FhirContext {
             model: opts.model,
             vars,
+            now: opts.now.unwrap_or(Utc::now()),
         };
 
         let node = ResourceNode::new(
@@ -151,6 +156,7 @@ mod tests {
                 Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
+                    now: None,
                 }),
             )
             .unwrap();
