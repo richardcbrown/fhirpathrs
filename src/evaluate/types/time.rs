@@ -37,12 +37,21 @@ pub struct Time {
 
 impl Time {
     pub fn to_string(&self) -> String {
-        match (&self.seconds, &self.minutes, &self.hours) {
-            (Some(s), Some(m), Some(h)) => format!("{:0>2}:{:0>2}:{:0>2}", h, m, s),
-            (None, Some(m), Some(h)) => format!("{:0>2}:{:0>2}", h, m),
-            (None, None, Some(h)) => h.to_string(),
+        match (&self.millis, &self.seconds, &self.minutes, &self.hours) {
+            (Some(mil), Some(s), Some(m), Some(h)) => {
+                format!("{:0>2}:{:0>2}:{:0>2}.{mil}", h, m, s)
+            }
+            (None, Some(s), Some(m), Some(h)) => {
+                format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
+            }
+            (None, None, Some(m), Some(h)) => format!("{:0>2}:{:0>2}", h, m),
+            (None, None, None, Some(h)) => h.to_string(),
             _ => "".to_string(),
         }
+    }
+
+    pub fn to_time_string(&self) -> String {
+        format!("@T{}", self.to_string())
     }
 
     pub fn to_time(&self) -> Option<NaiveTime> {
@@ -196,10 +205,16 @@ impl TryFrom<&String> for Time {
     type Error = FhirpathError;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        let captures =
-            Regex::captures(&TIME_REGEX, value).ok_or_else(|| FhirpathError::CompileError {
+        let time_string = match value.starts_with("@") {
+            true => value.clone(),
+            false => format!("@T{}", value),
+        };
+
+        let captures = Regex::captures(&TIME_REGEX, &time_string).ok_or_else(|| {
+            FhirpathError::CompileError {
                 msg: format!("{} is not a Time", value),
-            })?;
+            }
+        })?;
 
         let hours = parse_optional_u32(captures.get(1))?;
         let minutes = parse_optional_u32(captures.get(3))?;

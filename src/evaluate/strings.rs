@@ -1,5 +1,7 @@
 // http://hl7.org/fhirpath/N1/#string-manipulation
 
+use std::cell::LazyCell;
+
 use regex::Regex;
 use serde_json::{json, Number, Value};
 
@@ -9,6 +11,14 @@ use super::{
     utils::{get_string, get_string_from_expression, get_string_vec, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };
+
+const WHITESPACE_REGEX: LazyCell<Regex> = LazyCell::new(|| Regex::new(r"[\s\n\r\t]+").unwrap());
+
+pub fn normalise(string_val: &String) -> String {
+    WHITESPACE_REGEX
+        .replace_all(string_val.to_lowercase().as_str(), " ")
+        .to_string()
+}
 
 pub fn index_of<'a>(
     input: &'a ResourceNode<'a>,

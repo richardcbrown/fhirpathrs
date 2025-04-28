@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde_json::{Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
@@ -297,6 +297,18 @@ pub fn try_convert_to_boolean(value: &Value) -> Option<bool> {
             Some(val) => Some(val),
             None => None,
         },
+        _ => None,
+    }
+}
+
+pub fn try_convert_to_decimal(value: &Value) -> Option<Decimal> {
+    match value {
+        Value::Bool(val) => match val {
+            true => Decimal::from_u32(1),
+            false => Decimal::from_u32(0),
+        },
+        Value::Number(val) => Decimal::from_f64(val.as_f64()?),
+        Value::String(val) => Decimal::from_str(val).ok(),
         _ => None,
     }
 }

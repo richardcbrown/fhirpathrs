@@ -3,8 +3,12 @@ use super::{
     collections::{collection_contains, in_collection},
     combining::{combine, union},
     comparison::{gt, gte, lt, lte},
-    conversion::{converts_to_boolean, iif, to_boolean},
-    equality::{equal, not_equal},
+    conversion::{
+        converts_to_boolean, converts_to_date, converts_to_datetime, converts_to_decimal,
+        converts_to_integer, converts_to_string, converts_to_time, iif, to_boolean, to_date,
+        to_datetime, to_decimal, to_integer, to_string, to_time,
+    },
+    equality::{equal, equivalent, not_equal, not_equivalent},
     existence::{
         all, all_false, all_true, any_false, any_true, count, distinct, empty, exists, is_distinct,
         subset_of, superset_of,
@@ -102,6 +106,10 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("!=".to_string(), not_equal);
 
     map.insert("=".to_string(), equal);
+
+    map.insert("!~".to_string(), not_equivalent);
+
+    map.insert("~".to_string(), equivalent);
 
     map.insert("+".to_string(), add);
 
@@ -202,6 +210,30 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("toBoolean".to_string(), to_boolean);
 
     map.insert("convertsToBoolean".to_string(), converts_to_boolean);
+
+    map.insert("toInteger".to_string(), to_integer);
+
+    map.insert("convertsToInteger".to_string(), converts_to_integer);
+
+    map.insert("toDate".to_string(), to_date);
+
+    map.insert("convertsToDate".to_string(), converts_to_date);
+
+    map.insert("toDateTime".to_string(), to_datetime);
+
+    map.insert("convertsToDateTime".to_string(), converts_to_datetime);
+
+    map.insert("toDecimal".to_string(), to_decimal);
+
+    map.insert("convertsToDecimal".to_string(), converts_to_decimal);
+
+    map.insert("toString".to_string(), to_string);
+
+    map.insert("convertsToString".to_string(), converts_to_string);
+
+    map.insert("toTime".to_string(), to_time);
+
+    map.insert("convertsToTime".to_string(), converts_to_time);
 
     map.insert("and".to_string(), and);
 

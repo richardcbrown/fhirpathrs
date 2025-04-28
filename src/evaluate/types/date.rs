@@ -20,6 +20,10 @@ impl Date {
         }
     }
 
+    pub fn to_date_string(&self) -> String {
+        format!("@{}", self.to_string())
+    }
+
     pub fn to_date(&self) -> Option<NaiveDate> {
         let year = i32::try_from(self.years?).ok()?;
         let month = self.months.unwrap_or(1);

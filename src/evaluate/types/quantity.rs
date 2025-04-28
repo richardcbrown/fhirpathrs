@@ -4,8 +4,9 @@ use std::{
     str::FromStr,
 };
 
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::CompileResult, parser::literal::QuantityLiteral};
 
@@ -95,10 +96,54 @@ impl TryFrom<&QuantityLiteral> for Quantity {
     }
 }
 
+impl TryFrom<&Value> for Quantity {
+    type Error = FhirpathError;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Object(obj) => {
+                let q_value = obj
+                    .get("value")
+                    .and_then(|val| match val {
+                        Value::Number(num) => Decimal::from_f64(num.as_f64()?),
+                        Value::String(string_num) => Decimal::from_str_exact(&string_num).ok(),
+                        _ => None,
+                    })
+                    .ok_or(FhirpathError::CompileError {
+                        msg: "Could not parse Quantity.value".to_string(),
+                    })?;
+
+                let unit_prop = obj.get("unit");
+
+                match unit_prop {
+                    None => {
+                        return Ok(Quantity {
+                            value: q_value,
+                            unit: None,
+                        })
+                    }
+                    Some(unit) => match unit {
+                        Value::String(string_unit) => Ok(Quantity {
+                            value: q_value,
+                            unit: Some(string_unit.to_string()),
+                        }),
+                        _ => Err(FhirpathError::CompileError {
+                            msg: "Invalid Qunatity.unit".to_string(),
+                        }),
+                    },
+                }
+            }
+            _ => Err(FhirpathError::CompileError {
+                msg: "Cannot convert value to Quantity".to_string(),
+            }),
+        }
+    }
+}
+
 impl Quantity {
     pub fn to_string(&self) -> String {
         match &self.unit {
-            Some(u) => format!("{} {}", self.value, u),
+            Some(u) => format!("{} '{}'", self.value, u),
             None => self.value.to_string(),
         }
     }
