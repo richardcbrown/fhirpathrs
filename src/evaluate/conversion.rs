@@ -3,7 +3,7 @@ use serde_json::{json, Number, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    types::{date::Date, date_time::DateTime, quantity::Quantity, time::Time},
+    data_types::{date::Date, date_time::DateTime, quantity::Quantity, time::Time},
     utils::{
         get_array_from_expression, get_boolean_from_expression, try_convert_to_boolean,
         try_convert_to_decimal,

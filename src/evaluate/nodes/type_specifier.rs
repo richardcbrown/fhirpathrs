@@ -1,6 +1,6 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{types::type_info::TypeInfo, CompileResult, Evaluate, Text},
+    evaluate::{data_types::type_info::TypeInfo, CompileResult, Evaluate, Text},
     parser::{
         expression::Expression,
         identifier::{Identifier, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier},

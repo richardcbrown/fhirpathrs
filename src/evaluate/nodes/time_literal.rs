@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use crate::{
-    evaluate::{types::time::Time, CompileResult, Evaluate, Text},
+    evaluate::{data_types::time::Time, CompileResult, Evaluate, Text},
     parser::literal::TimeLiteral,
 };
 

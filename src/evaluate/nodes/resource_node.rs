@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use crate::{
     error::FhirpathError,
     evaluate::{
-        types::type_info::{TypeDetails, TypeInfo},
+        data_types::type_info::{TypeDetails, TypeInfo},
         CompileResult,
     },
     models::ModelDetails,

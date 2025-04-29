@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
+    data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     utils::{from_decimal, get_f64_from_expression, get_usize_from_expression},
     CompileResult, Evaluate, ResourceNode,
 };

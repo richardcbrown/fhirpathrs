@@ -11,7 +11,7 @@ pub mod utils;
 mod test {
     use serde_json::Value;
 
-    use crate::evaluate::types::{
+    use crate::evaluate::data_types::{
         date::Date,
         date_time::{DateTime, DateTimePrecision},
         time::{Time, TimePrecision},

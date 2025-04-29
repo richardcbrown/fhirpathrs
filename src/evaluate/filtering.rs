@@ -7,9 +7,9 @@ use crate::{
 };
 
 use super::{
+    data_types::type_info::TypeInfo,
     equality::values_are_equal,
     nodes::resource_node::ResourceContext,
-    types::type_info::TypeInfo,
     utils::{get_array_from_expression, unique_array_elements},
     CompileResult, Evaluate, ResourceNode,
 };

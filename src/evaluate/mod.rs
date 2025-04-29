@@ -3,6 +3,7 @@ mod collections;
 mod combining;
 mod comparison;
 mod conversion;
+mod data_types;
 mod equality;
 mod existence;
 mod fhir_type;
@@ -16,7 +17,6 @@ mod strings;
 mod subsetting;
 mod target;
 mod test;
-mod types;
 mod utility_functions;
 mod utils;
 

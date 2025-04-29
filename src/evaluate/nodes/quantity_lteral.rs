@@ -1,6 +1,6 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{types::quantity::Quantity, CompileResult, Evaluate, Text},
+    evaluate::{data_types::quantity::Quantity, CompileResult, Evaluate, Text},
     parser::literal::QuantityLiteral,
 };
 

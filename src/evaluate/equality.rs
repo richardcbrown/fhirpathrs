@@ -5,8 +5,8 @@ use serde_json::Value;
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
+    data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     strings::normalise,
-    types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     CompileResult, Evaluate, ResourceNode,
 };
 
