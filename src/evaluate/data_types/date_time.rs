@@ -403,6 +403,7 @@ pub enum DateTimePrecision {
     Hours,
     Minutes,
     Seconds,
+    Millis,
 }
 
 impl DateTimePrecision {
@@ -416,7 +417,7 @@ impl DateTimePrecision {
         years: Option<u32>,
     ) -> CompileResult<DateTimePrecision> {
         match (millis, seconds, minutes, hours, days, months, years) {
-            (Some(_millis), Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
+            (Some(_millis), _, _, _, _, _, _) => Ok(DateTimePrecision::Millis),
             (None, Some(_sec), _, _, _, _, _) => Ok(DateTimePrecision::Seconds),
             (None, None, Some(_min), _, _, _, _) => Ok(DateTimePrecision::Minutes),
             (None, None, None, Some(_h), _, _, _) => Ok(DateTimePrecision::Hours),

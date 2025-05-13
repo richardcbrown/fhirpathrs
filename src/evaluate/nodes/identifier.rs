@@ -9,11 +9,11 @@ impl Evaluate for Identifier {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
-            Identifier::LiteralAs(exp) => todo!(),
+            Identifier::LiteralAs(exp) => exp.evaluate(input),
             Identifier::LiteralContains(exp) => exp.evaluate(input),
             Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
             Identifier::LiteralIn(exp) => todo!(),
-            Identifier::LiteralIs(exp) => todo!(),
+            Identifier::LiteralIs(exp) => exp.evaluate(input),
         }
     }
 }
@@ -26,7 +26,7 @@ impl Text for Identifier {
             Identifier::LiteralContains(exp) => exp.text(),
             Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
             Identifier::LiteralIn(exp) => todo!(),
-            Identifier::LiteralIs(exp) => todo!(),
+            Identifier::LiteralIs(exp) => exp.text(),
         }
     }
 }

@@ -26,6 +26,7 @@ use super::{
     },
     subsetting::{exclude, first, intersect, last, single, skip, tail, take},
     target::Target,
+    types::{as_fn, is},
     utility_functions::{now, time_of_day, today},
     CompileResult, ResourceNode,
 };
@@ -160,6 +161,10 @@ pub fn invocation_table<'a>() -> HashMap<
     map.insert("<".to_string(), lt);
 
     map.insert("<=".to_string(), lte);
+
+    map.insert("is".to_string(), is);
+
+    map.insert("as".to_string(), as_fn);
 
     map.insert("in".to_string(), in_collection);
 

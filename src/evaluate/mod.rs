@@ -17,6 +17,7 @@ mod strings;
 mod subsetting;
 mod target;
 mod test;
+mod types;
 mod utility_functions;
 mod utils;
 

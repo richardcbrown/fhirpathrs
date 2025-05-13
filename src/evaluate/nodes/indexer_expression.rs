@@ -40,17 +40,19 @@ impl Evaluate for IndexerExpression {
             }),
         }?;
 
-        let array_data = array_node.data;
+        let array_data = array_node.get_array()?;
 
-        match array_data {
-            Value::Array(array) => Ok(ResourceNode::from_node(
-                input,
-                array[index as usize].clone(),
-            )),
-            _ => Err(FhirpathError::ParserError {
-                msg: "Element is not an array".to_string(),
-            }),
-        }
+        dbg!(array_data.clone());
+        dbg!(array_node.fhir_types.clone());
+        dbg!(input.path.clone());
+        dbg!(input.fhir_types.clone());
+
+        let mut node = ResourceNode::from_node(input, array_data[index as usize].clone());
+
+        node.fhir_types = array_node.fhir_types;
+        node.path = array_node.path;
+
+        Ok(node)
     }
 }
 

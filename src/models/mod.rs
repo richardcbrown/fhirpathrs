@@ -1,17 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use stu3::type_to_parent;
-
 mod stu3;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ModelType {
     Stu3,
     R4,
     R5,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ModelDetails {
     pub model_type: ModelType,
     pub choice_type_paths: HashMap<String, Vec<String>>,

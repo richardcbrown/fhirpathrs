@@ -13,7 +13,10 @@ pub fn determine_fhir_type(
             child_path = def_path.to_string();
         }
 
-        fhir_type = model.path_to_type.get(&child_path).cloned();
+        fhir_type = model
+            .path_to_type
+            .get(&child_path)
+            .and_then(|t| Some(format!("FHIR.{}", t)));
     };
 
     PathDetails {

@@ -12,6 +12,7 @@ use crate::{
     models::ModelDetails,
 };
 
+#[derive(Clone, Debug)]
 pub struct FhirContext {
     pub model: Option<ModelDetails>,
     pub vars: HashMap<String, Value>,
@@ -24,7 +25,7 @@ pub struct PathDetails {
     pub fhir_type: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ResourceNode<'a> {
     pub data_root: &'a Value,
     pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
@@ -35,7 +36,7 @@ pub struct ResourceNode<'a> {
     pub resource_context: Option<ResourceContext>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ResourceContext {
     pub index: Option<usize>,
     pub total: Option<Value>,

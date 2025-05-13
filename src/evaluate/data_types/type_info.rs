@@ -15,80 +15,72 @@ pub enum SystemType {
     Quantity,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct Fhir {
-    pub name: String,
-}
-
-impl<'a> TryFrom<&NameAndModel<'a>> for Fhir {
-    type Error = FhirpathError;
-
-    fn try_from(value: &NameAndModel) -> Result<Self, Self::Error> {
-        let model: &ModelDetails =
-            value
-                .model
-                .as_ref()
-                .ok_or_else(|| FhirpathError::CompileError {
-                    msg: "Cannot infer FHIR TypeInfo without Model".to_string(),
-                })?;
-
-        if !model.available_types.contains(&value.name) {
-            return Err(FhirpathError::CompileError {
-                msg: format!("No FHIR type named {} in model", value.name),
-            });
-        }
-
-        Ok(Fhir {
-            name: value.name.clone(),
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct System {
-    pub name: SystemType,
-}
-
-impl<'a> TryFrom<&NameAndModel<'a>> for System {
-    type Error = FhirpathError;
-
-    fn try_from(value: &NameAndModel) -> Result<Self, Self::Error> {
-        match value.name.to_lowercase().as_str() {
-            "integer" => Ok(System {
-                name: SystemType::Integer,
-            }),
-            "decimal" => Ok(System {
-                name: SystemType::Decimal,
-            }),
-            "date" => Ok(System {
-                name: SystemType::Date,
-            }),
-            "time" => Ok(System {
-                name: SystemType::Time,
-            }),
-            "datetime" => Ok(System {
-                name: SystemType::DateTime,
-            }),
-            "boolean" => Ok(System {
-                name: SystemType::Boolean,
-            }),
-            "string" => Ok(System {
-                name: SystemType::String,
-            }),
-            "quantity" => Ok(System {
-                name: SystemType::Quantity,
-            }),
-            _ => Err(FhirpathError::CompileError {
-                msg: format!("Invalid System Type {}", value.name),
-            }),
+impl SystemType {
+    fn to_string(&self) -> String {
+        match self {
+            SystemType::Integer => "Integer".to_string(),
+            SystemType::Decimal => "Decimal".to_string(),
+            SystemType::Date => "Date".to_string(),
+            SystemType::Time => "Time".to_string(),
+            SystemType::DateTime => "DateTime".to_string(),
+            SystemType::Boolean => "Boolean".to_string(),
+            SystemType::String => "String".to_string(),
+            SystemType::Quantity => "Quantity".to_string(),
         }
     }
 }
 
+fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
+    let model: &ModelDetails = value
+        .model
+        .as_ref()
+        .ok_or_else(|| FhirpathError::CompileError {
+            msg: "Cannot infer FHIR TypeInfo without Model".to_string(),
+        })?;
+
+    if !model.available_types.contains(&value.name) {
+        return Err(FhirpathError::CompileError {
+            msg: format!("No FHIR type named {} in model", value.name),
+        });
+    }
+
+    Ok(TypeInfo {
+        type_name: value.name.clone(),
+        namespace: Some(Namespace::Fhir),
+    })
+}
+
+fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
+    let result = match value.name.to_lowercase().as_str() {
+        "integer" => Ok(SystemType::Integer),
+        "decimal" => Ok(SystemType::Decimal),
+        "date" => Ok(SystemType::Date),
+        "time" => Ok(SystemType::Time),
+        "datetime" => Ok(SystemType::DateTime),
+        "boolean" => Ok(SystemType::Boolean),
+        "string" => Ok(SystemType::String),
+        "quantity" => Ok(SystemType::Quantity),
+        _ => Err(FhirpathError::CompileError {
+            msg: format!("Invalid System Type {}", value.name),
+        }),
+    }?;
+
+    Ok(TypeInfo {
+        namespace: Some(Namespace::System),
+        type_name: result.to_string(),
+    })
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub enum TypeInfo {
-    Fhir(Fhir),
-    System(System),
+pub enum Namespace {
+    Fhir,
+    System,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TypeInfo {
+    namespace: Option<Namespace>,
+    type_name: String,
 }
 
 struct NameAndModel<'a> {
@@ -139,12 +131,18 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                     model: &value.model,
                 };
 
-                if let Ok(system) = System::try_from(&name_model) {
-                    return Ok(TypeInfo::System(system));
+                if let Ok(system) = system_try_from(&name_model) {
+                    return Ok(TypeInfo {
+                        namespace: None,
+                        type_name: system.type_name,
+                    });
                 }
 
-                if let Ok(fhir) = Fhir::try_from(&name_model) {
-                    return Ok(TypeInfo::Fhir(fhir));
+                if let Ok(fhir) = fhir_try_from(&name_model) {
+                    return Ok(TypeInfo {
+                        namespace: None,
+                        type_name: fhir.type_name,
+                    });
                 }
 
                 Err(FhirpathError::CompileError {
@@ -167,14 +165,14 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                         })?;
 
                 match *namespace {
-                    "FHIR" => Ok(TypeInfo::Fhir(Fhir::try_from(&NameAndModel {
+                    "FHIR" => Ok(fhir_try_from(&NameAndModel {
                         name: type_name.to_string(),
                         model: &value.model,
-                    })?)),
-                    "System" => Ok(TypeInfo::System(System::try_from(&NameAndModel {
+                    })?),
+                    "System" => Ok(system_try_from(&NameAndModel {
                         name: type_name.to_string(),
                         model: &value.model,
-                    })?)),
+                    })?),
                     _ => Err(FhirpathError::CompileError {
                         msg: format!("Invalid namespace {}", namespace),
                     }),
@@ -184,6 +182,24 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                 msg: format!("Invalid TypeInfo {}", type_specifier),
             }),
         }
+    }
+}
+
+impl PartialEq for TypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        if self.namespace.is_none() || other.namespace.is_none() {
+            return self.type_name.to_lowercase() == other.type_name.to_lowercase();
+        }
+
+        // if this is a FHIR type and the other is a System type
+        // they are implicitly equal if the type names are the same
+        if let Some(self_ns) = &self.namespace {
+            if self_ns.eq(&Namespace::Fhir) {
+                return self.type_name.to_lowercase() == other.type_name.to_lowercase();
+            }
+        }
+
+        self.namespace == other.namespace && self.type_name == other.type_name
     }
 }
 

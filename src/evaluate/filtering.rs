@@ -219,7 +219,6 @@ pub fn of_type<'a>(
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
     use serde_json::json;
 
     use crate::{
@@ -292,7 +291,7 @@ mod test {
                 }),
             },
             TestCase {
-                path: "Observation.component.value.ofType(System.String)".to_string(),
+                path: "Observation.component.value.ofType(FHIR.string)".to_string(),
                 input: observation.clone(),
                 expected: json!(["abc"]),
                 options: Some(EvaluateOptions {

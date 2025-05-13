@@ -146,8 +146,15 @@ impl Time {
                 hours: Some(dt.hour()),
                 minutes: Some(dt.minute()),
                 seconds: Some(dt.second()),
-                millis: Some(dt.nanosecond() / (1000 * 1000)),
+                millis: None,
                 precision: TimePrecision::Seconds,
+            }),
+            DateTimePrecision::Millis => Some(Time {
+                hours: Some(dt.hour()),
+                minutes: Some(dt.minute()),
+                seconds: Some(dt.second()),
+                millis: Some(dt.nanosecond() / (1000 * 1000)),
+                precision: TimePrecision::Millis,
             }),
         }
     }
@@ -179,6 +186,13 @@ impl Time {
             }),
             DateTimePrecision::Seconds => Some(Time {
                 precision: TimePrecision::Seconds,
+                hours,
+                minutes,
+                seconds,
+                millis: None,
+            }),
+            DateTimePrecision::Millis => Some(Time {
+                precision: TimePrecision::Millis,
                 hours,
                 minutes,
                 seconds,
@@ -238,6 +252,7 @@ pub enum TimePrecision {
     Hours,
     Minutes,
     Seconds,
+    Millis,
 }
 
 impl TimePrecision {
@@ -248,7 +263,7 @@ impl TimePrecision {
         hours: Option<u32>,
     ) -> CompileResult<Self> {
         match (millis, seconds, minutes, hours) {
-            (Some(_millis), Some(_sec), _, _) => Ok(TimePrecision::Seconds),
+            (Some(_millis), _, _, _) => Ok(TimePrecision::Millis),
             (None, Some(_sec), _, _) => Ok(TimePrecision::Seconds),
             (None, None, Some(_min), _) => Ok(TimePrecision::Minutes),
             (None, None, None, Some(_hr)) => Ok(TimePrecision::Hours),

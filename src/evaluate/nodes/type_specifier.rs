@@ -2,8 +2,9 @@ use crate::{
     error::FhirpathError,
     evaluate::{data_types::type_info::TypeInfo, CompileResult, Evaluate, Text},
     parser::{
-        expression::Expression,
+        expression::{Expression, Term, TermExpression},
         identifier::{Identifier, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier},
+        literal::{Literal, LiteralTerm, StringLiteral},
     },
 };
 
@@ -47,6 +48,20 @@ impl TryFrom<&Expression> for TypeSpecifier {
         Ok(TypeSpecifier::QualifiedIdentifier(Box::new(
             QualifiedIdentifier { children },
         )))
+    }
+}
+
+impl TryInto<Expression> for String {
+    type Error = FhirpathError;
+
+    fn try_into(self) -> Result<Expression, Self::Error> {
+        Ok(Expression::TermExpression(Box::new(TermExpression {
+            children: vec![Box::new(Term::LiteralTerm(Box::new(LiteralTerm {
+                children: vec![Box::new(Literal::StringLiteral(Box::new(StringLiteral {
+                    text: self.clone(),
+                })))],
+            })))],
+        })))
     }
 }
 

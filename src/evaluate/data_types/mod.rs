@@ -52,9 +52,9 @@ mod test {
                     minutes: Some(11),
                     seconds: Some(12),
                     millis: Some(123),
-                    precision: TimePrecision::Seconds
+                    precision: TimePrecision::Millis
                 }),
-                precision: DateTimePrecision::Seconds
+                precision: DateTimePrecision::Millis
             }
         )
     }
