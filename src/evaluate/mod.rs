@@ -13,6 +13,7 @@ mod logic;
 mod math;
 mod navigation;
 mod nodes;
+mod reflection;
 mod strings;
 mod subsetting;
 mod target;
@@ -92,6 +93,7 @@ impl CompiledPath {
             None,
             vec![],
             None,
+            vec![],
         );
 
         let evaluate_result = self.expression.evaluate(&node)?;

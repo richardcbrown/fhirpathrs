@@ -251,6 +251,7 @@ pub fn evaluate_array_boolean_expression(
                     index: Some(index),
                     total: None,
                 }),
+                input.reflection_types.clone(),
             );
 
             expr.evaluate(&node)

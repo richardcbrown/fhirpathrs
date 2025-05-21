@@ -7,6 +7,7 @@ use crate::{
     error::FhirpathError,
     evaluate::{
         data_types::type_info::{TypeDetails, TypeInfo},
+        reflection::{get_reflection_type, ReflectionType},
         CompileResult,
     },
     models::ModelDetails,
@@ -33,6 +34,7 @@ pub struct ResourceNode<'a> {
     pub context: &'a FhirContext,
     pub path: Option<String>,
     pub fhir_types: Vec<Option<PathDetails>>,
+    pub reflection_types: Vec<Option<ReflectionType>>,
     pub resource_context: Option<ResourceContext>,
 }
 
@@ -51,6 +53,7 @@ impl<'a> ResourceNode<'a> {
         path: Option<String>,
         fhir_types: Vec<Option<PathDetails>>,
         resource_context: Option<ResourceContext>,
+        reflection_types: Vec<Option<ReflectionType>>,
     ) -> Self {
         let node_data = match data {
             Value::Array(array) => json!(array),
@@ -69,6 +72,7 @@ impl<'a> ResourceNode<'a> {
             path,
             fhir_types,
             resource_context,
+            reflection_types,
         }
     }
 
@@ -81,6 +85,7 @@ impl<'a> ResourceNode<'a> {
             node.path.clone(),
             node.fhir_types.clone(),
             None,
+            node.reflection_types.clone(),
         )
     }
 
@@ -156,6 +161,19 @@ impl<'a> ResourceNode<'a> {
                     })
                     .ok()
                 })
+            })
+            .collect()
+    }
+
+    pub fn get_reflection_types(&self) -> Vec<Option<ReflectionType>> {
+        self.get_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                let pd = &self.fhir_types.iter().nth(index).unwrap_or(&None);
+
+                get_reflection_type(*pd, value, &self.context.model)
             })
             .collect()
     }

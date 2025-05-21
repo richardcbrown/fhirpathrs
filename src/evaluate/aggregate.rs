@@ -41,6 +41,7 @@ pub fn aggregate<'a>(
                     index: Some(index),
                     total: Some(acc),
                 }),
+                input.reflection_types.clone(),
             );
 
             first.evaluate(&node).and_then(|n| Ok(n.data))

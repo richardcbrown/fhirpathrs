@@ -20,6 +20,7 @@ use super::{
         sub, truncate,
     },
     navigation::{children, descendants},
+    reflection::reflection_type,
     strings::{
         contains, ends_with, index_of, length, lower, matches, replace, replace_matches,
         starts_with, substring, to_chars, upper,
@@ -252,6 +253,8 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("aggregate".to_string(), aggregate);
 
+    map.insert("type".to_string(), reflection_type);
+
     map
 }
 
@@ -296,6 +299,7 @@ mod tests {
             path: None,
             fhir_types: vec![],
             resource_context: None,
+            reflection_types: vec![],
         };
 
         let term_expr1 = TermExpression {

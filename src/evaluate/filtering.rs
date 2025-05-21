@@ -34,6 +34,7 @@ fn evaluate_filter_expression(
                     index: Some(index),
                     total: None,
                 }),
+                input.reflection_types.clone(),
             );
 
             expr.evaluate(&node)
@@ -97,6 +98,7 @@ pub fn select<'a>(
                     index: Some(index),
                     total: None,
                 }),
+                input.reflection_types.clone(),
             );
 
             let result = expression.evaluate(&node)?.data;

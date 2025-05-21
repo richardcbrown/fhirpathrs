@@ -3,6 +3,8 @@ use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::ResourceNode, models::ModelDetails};
 
+use super::{date::Date, date_time::DateTime, time::Time};
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum SystemType {
     Integer,
@@ -79,8 +81,8 @@ pub enum Namespace {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TypeInfo {
-    namespace: Option<Namespace>,
-    type_name: String,
+    pub namespace: Option<Namespace>,
+    pub type_name: String,
 }
 
 struct NameAndModel<'a> {
@@ -101,6 +103,35 @@ impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
                 msg: "ResourceNode data was not a String".to_string(),
             }),
         }
+    }
+}
+
+impl<'a> TryFrom<&Value> for TypeInfo {
+    type Error = FhirpathError;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(_) => Ok(TypeInfo {
+                namespace: Some(Namespace::System),
+                type_name: SystemType::String.to_string(),
+            }),
+            _ => todo!(),
+        }
+        // if let Ok(_) = DateTime::try_from(value) {
+        //     return Ok(TypeInfo {
+        //         namespace: Some(Namespace::System),
+        //         type_name: SystemType::DateTime.to_string(),
+        //     });
+        // }
+
+        // if let Ok(_) = Date::try_from(value) {
+        //     return Ok(TypeInfo {
+        //         namespace: Some(Namespace::System),
+        //         type_name: SystemType::Date.to_string(),
+        //     });
+        // }
+
+        // if let Ok(_) = Time::try_from(value) {}
     }
 }
 
