@@ -1,9 +1,8 @@
+use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::ResourceNode, models::ModelDetails};
-
-use super::{date::Date, date_time::DateTime, time::Time};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum SystemType {
@@ -75,8 +74,27 @@ fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum Namespace {
+    #[serde(rename = "FHIR")]
     Fhir,
     System,
+}
+
+impl Display for Namespace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Namespace::Fhir => write!(f, "FHIR"),
+            Namespace::System => write!(f, "System"),
+        }
+    }
+}
+
+impl Namespace {
+    pub fn to_string(&self) -> String {
+        match self {
+            Namespace::Fhir => "FHIR".to_string(),
+            Namespace::System => "System".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

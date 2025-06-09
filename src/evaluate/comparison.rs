@@ -46,15 +46,17 @@ impl ArithmeticType {
                 let cmp = q1.partial_cmp(&q2);
 
                 if let Some(order) = cmp {
-                    match order {
-                        Ordering::Greater => return Ok(Value::Bool(true)),
-                        _ => return Ok(Value::Bool(false)),
+                    return match order {
+                        Ordering::Greater => Ok(Value::Bool(true)),
+                        _ => Ok(Value::Bool(false)),
                     }
                 }
 
                 Ok(Value::Array(vec![]))
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "> operation not supported for types".to_string(),
+            })
         }
     }
 
@@ -100,7 +102,9 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "< operation not supported for types".to_string(),
+            })
         }
     }
 
@@ -146,7 +150,9 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: ">= operation not supported for types".to_string(),
+            })
         }
     }
 
@@ -192,7 +198,9 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "<= operation not supported for types".to_string(),
+            })
         }
     }
 }

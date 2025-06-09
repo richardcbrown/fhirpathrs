@@ -120,7 +120,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "div operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -142,7 +144,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "rem operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -159,7 +163,9 @@ impl ArithmeticType {
                     }
                 })?)
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "divide operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -179,7 +185,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "exp operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -192,7 +200,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "abs operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -207,7 +217,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "ceiling operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -220,7 +232,9 @@ impl ArithmeticType {
                     }
                 })?)
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "floor operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -233,7 +247,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "ln operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -253,7 +269,9 @@ impl ArithmeticType {
                     })?,
                 )
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "log operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -266,7 +284,9 @@ impl ArithmeticType {
                     }
                 })?)
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "pow operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -298,7 +318,9 @@ impl ArithmeticType {
 
                 Ok(rounded)
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "round operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -315,9 +337,11 @@ impl ArithmeticType {
                     });
                 }
 
-                return Ok(Value::Array(vec![]));
+                Ok(Value::Array(vec![]))
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "sqrt operation not supported for type".to_string(),
+            })
         }
     }
 
@@ -330,7 +354,9 @@ impl ArithmeticType {
                     }
                 })?)
             }
-            _ => todo!(),
+            _ => Err(FhirpathError::CompileError {
+                msg: "truncate operation not supported for type".to_string(),
+            })
         }
     }
 }
