@@ -5,10 +5,16 @@ use crate::evaluate::nodes::resource_node::{FhirContext, ResourceNode};
 use crate::evaluate::utils::get_string;
 use crate::parser::expression::Expression;
 
-fn call_trace(ctx: &FhirContext, name: String, value: Value) {
-    let mut func = ctx.trace_function.lock().unwrap();
+fn call_trace(ctx: &FhirContext, name: String, value: Value) -> CompileResult<()> {
+    let mut func = ctx.trace_function.lock().map_err(|e| {
+        FhirpathError::CompileError {
+            msg: format!("Could not obtain lock on trace function: {}", e),
+        }
+    })?;
 
-    func(name, value)
+    func(name, value);
+    
+    Ok(())
 }
 
 pub fn trace<'a, 'b>(
