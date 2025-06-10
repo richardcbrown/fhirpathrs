@@ -50,15 +50,15 @@ pub fn get_string_vec(value: &Value) -> CompileResult<Vec<String>> {
     }
 }
 
-pub fn get_value_from_expression(
-    input: &ResourceNode,
+pub fn get_value_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<Value> {
     expression.evaluate(input).and_then(|res| Ok(res.data))
 }
 
-pub fn get_number_from_expression(
-    input: &ResourceNode,
+pub fn get_number_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<Number> {
     let expr_result = expression
@@ -73,8 +73,8 @@ pub fn get_number_from_expression(
     }
 }
 
-pub fn get_usize_from_expression(
-    input: &ResourceNode,
+pub fn get_usize_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<usize> {
     let json_num = get_number_from_expression(input, expression)?;
@@ -92,8 +92,8 @@ pub fn get_usize_from_expression(
         })
 }
 
-pub fn get_string_from_expression(
-    input: &ResourceNode,
+pub fn get_string_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<String> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;
@@ -106,8 +106,8 @@ pub fn get_string_from_expression(
     }
 }
 
-pub fn get_boolean_from_expression(
-    input: &ResourceNode,
+pub fn get_boolean_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<bool> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;
@@ -140,8 +140,8 @@ pub fn get_single_value(value: Value) -> CompileResult<Value> {
     }
 }
 
-pub fn get_array_from_expression(
-    input: &ResourceNode,
+pub fn get_array_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<Vec<Value>> {
     let value = get_value_from_expression(input, expression)?;
@@ -156,8 +156,8 @@ pub fn get_array_from_expression(
     }
 }
 
-pub fn get_arrays<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn get_arrays<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
     arity: Target,
 ) -> CompileResult<(Vec<Value>, Vec<Value>)> {
@@ -242,7 +242,6 @@ pub fn evaluate_array_boolean_expression(
         .map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 item.to_owned(),
                 input.context,
                 input.path.clone(),
@@ -314,8 +313,8 @@ pub fn try_convert_to_decimal(value: &Value) -> Option<Decimal> {
     }
 }
 
-pub fn get_f64_from_expression(
-    input: &ResourceNode,
+pub fn get_f64_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
 ) -> CompileResult<f64> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;

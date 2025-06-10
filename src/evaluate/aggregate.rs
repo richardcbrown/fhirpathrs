@@ -7,10 +7,10 @@ use super::{
     CompileResult, Evaluate,
 };
 
-pub fn aggregate<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn aggregate<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let first = expressions
         .first()
         .ok_or_else(|| FhirpathError::CompileError {
@@ -32,7 +32,6 @@ pub fn aggregate<'a>(
         .try_fold(init, |acc, (index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 item.to_owned(),
                 input.context,
                 input.path.clone(),

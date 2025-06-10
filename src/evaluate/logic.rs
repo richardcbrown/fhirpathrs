@@ -4,10 +4,10 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{utils::try_convert_to_boolean, CompileResult, Evaluate, ResourceNode};
 
-pub fn and<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn and<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "and expects exactly two expressions".to_string(),
@@ -51,10 +51,10 @@ pub fn and<'a>(
     Ok(ResourceNode::from_node(input, output))
 }
 
-pub fn or<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn or<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "or expects exactly two expressions".to_string(),
@@ -98,10 +98,10 @@ pub fn or<'a>(
     Ok(ResourceNode::from_node(input, output))
 }
 
-pub fn not<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn not<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = input
         .get_single_or_empty()?
         .and_then(|val| try_convert_to_boolean(&val));
@@ -119,10 +119,10 @@ pub fn not<'a>(
     Ok(ResourceNode::from_node(input, output))
 }
 
-pub fn xor<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn xor<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "xor expects exactly two expressions".to_string(),
@@ -154,10 +154,10 @@ pub fn xor<'a>(
     Ok(ResourceNode::from_node(input, output))
 }
 
-pub fn implies<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn implies<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "xor expects exactly two expressions".to_string(),

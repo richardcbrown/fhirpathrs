@@ -6,7 +6,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Term {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         match self {
             Term::InvocationTerm(exp) => exp.evaluate(input),
             Term::LiteralTerm(exp) => exp.evaluate(input),

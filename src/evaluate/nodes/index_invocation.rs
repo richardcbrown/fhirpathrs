@@ -8,7 +8,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for IndexInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         let index = input
             .get_index()
             .and_then(|index| Some(Value::Number(index.into())))

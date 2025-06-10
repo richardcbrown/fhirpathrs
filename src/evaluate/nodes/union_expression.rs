@@ -7,7 +7,7 @@ use crate::{
 use super::{resource_node::ResourceNode, utils::invoke_operation};
 
 impl Evaluate for UnionExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 2 {
             return Err(FhirpathError::CompileError {
                 msg: "UnionExpression must have exactly two children".to_string(),

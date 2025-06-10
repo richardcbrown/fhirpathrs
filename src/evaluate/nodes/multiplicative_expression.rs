@@ -7,7 +7,7 @@ use crate::{
 use super::{resource_node::ResourceNode, utils::invoke_operation};
 
 impl Evaluate for MultiplicativeExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 2 {
             return Err(FhirpathError::CompileError {
                 msg: "MultiplicativeExpression must have exactly two children".to_string(),

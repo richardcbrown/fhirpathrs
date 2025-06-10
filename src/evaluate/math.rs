@@ -361,10 +361,10 @@ impl ArithmeticType {
     }
 }
 
-pub fn add<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn add<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "add expects exactly two expressions".to_string(),
@@ -389,10 +389,10 @@ pub fn add<'a>(
     })
 }
 
-pub fn mul<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn mul<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "mul expects exactly two expressions".to_string(),
@@ -406,10 +406,10 @@ pub fn mul<'a>(
     Ok(ResourceNode::from_node(input, first.mul(&second)?))
 }
 
-pub fn sub<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn sub<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "sub expects exactly two expressions".to_string(),
@@ -423,10 +423,10 @@ pub fn sub<'a>(
     Ok(ResourceNode::from_node(input, first.sub(&second)?))
 }
 
-pub fn div<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn div<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "sub expects exactly two expressions".to_string(),
@@ -440,10 +440,10 @@ pub fn div<'a>(
     Ok(ResourceNode::from_node(input, first.div(&second)?))
 }
 
-pub fn rem<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn rem<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "sub expects exactly two expressions".to_string(),
@@ -457,10 +457,10 @@ pub fn rem<'a>(
     Ok(ResourceNode::from_node(input, first.rem(&second)?))
 }
 
-pub fn divide<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn divide<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "sub expects exactly two expressions".to_string(),
@@ -474,10 +474,10 @@ pub fn divide<'a>(
     Ok(ResourceNode::from_node(input, first.divide(&second)?))
 }
 
-pub fn amp<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn amp<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::CompileError {
             msg: "sub expects exactly two expressions".to_string(),
@@ -505,10 +505,10 @@ pub fn amp<'a>(
     })
 }
 
-pub fn abs<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn abs<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -519,10 +519,10 @@ pub fn abs<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn ceiling<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn ceiling<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -533,10 +533,10 @@ pub fn ceiling<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn exp<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn exp<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -547,10 +547,10 @@ pub fn exp<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn floor<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn floor<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -561,10 +561,10 @@ pub fn floor<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn ln<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn ln<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -575,10 +575,10 @@ pub fn ln<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn log<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn log<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 1 {
         return Err(FhirpathError::CompileError {
             msg: "log expects exactly one expression".to_string(),
@@ -597,10 +597,10 @@ pub fn log<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn power<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn power<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 1 {
         return Err(FhirpathError::CompileError {
             msg: "log expects exactly one expression".to_string(),
@@ -619,10 +619,10 @@ pub fn power<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn round<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn round<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() > 1 {
         return Err(FhirpathError::CompileError {
             msg: "log expects zero or one expression".to_string(),
@@ -644,10 +644,10 @@ pub fn round<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn sqrt<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn sqrt<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -658,10 +658,10 @@ pub fn sqrt<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn truncate<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn truncate<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {

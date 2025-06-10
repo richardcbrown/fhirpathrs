@@ -33,20 +33,21 @@ use super::{
 };
 use crate::parser::expression::Expression;
 use std::collections::HashMap;
+use crate::evaluate::trace::trace;
 
-pub fn invocation_table<'a>() -> HashMap<
+pub fn invocation_table<'a, 'b>() -> HashMap<
     String,
     fn(
-        input: &'a ResourceNode<'a>,
+        input: &'a ResourceNode<'a, 'b>,
         expressions: &Vec<Box<Expression>>,
-    ) -> CompileResult<ResourceNode<'a>>,
+    ) -> CompileResult<ResourceNode<'a, 'b>>,
 > {
     let mut map = HashMap::<
         String,
         fn(
-            input: &'a ResourceNode<'a>,
+            input: &'a ResourceNode<'a, 'b>,
             expressions: &Vec<Box<Expression>>,
-        ) -> CompileResult<ResourceNode<'a>>,
+        ) -> CompileResult<ResourceNode<'a, 'b>>,
     >::new();
 
     map.insert("empty".to_string(), empty);
@@ -63,13 +64,13 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("anyFalse".to_string(), any_false);
 
-    let subset_of_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+    let subset_of_root = |input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>| {
         subset_of(input, expressions, Target::AnyAtRoot)
     };
 
     map.insert("subsetOf".to_string(), subset_of_root);
 
-    let superset_of_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+    let superset_of_root = |input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>| {
         superset_of(input, expressions, Target::AnyAtRoot)
     };
 
@@ -197,13 +198,13 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("exclude".to_string(), exclude);
 
-    let union_root = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+    let union_root = |input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>| {
         union(input, expressions, Target::AnyAtRoot)
     };
 
     map.insert("union".to_string(), union_root);
 
-    let union_expr = |input: &'a ResourceNode<'a>, expressions: &Vec<Box<Expression>>| {
+    let union_expr = |input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>| {
         union(input, expressions, Target::Expr)
     };
 
@@ -255,13 +256,15 @@ pub fn invocation_table<'a>() -> HashMap<
 
     map.insert("type".to_string(), reflection_type);
 
+    map.insert("trace".to_string(), trace);
+
     map
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-
+    use std::sync::{Arc, Mutex};
     use chrono::Utc;
     use serde_json::{json, Value};
 
@@ -279,6 +282,8 @@ mod tests {
 
     #[test]
     fn test_where_function() {
+        let mut dummy = &mut |_, _| {};
+
         let node = ResourceNode {
             data_root: &json!([
               { "use": "a" },
@@ -290,11 +295,11 @@ mod tests {
               { "use": "b" },
               { "use": "c" }
             ]),
-            parent_node: None,
             context: &FhirContext {
                 model: None,
                 vars: HashMap::<String, Value>::new(),
                 now: Utc::now(),
+                trace_function: Arc::new(Mutex::new(&mut dummy))
             },
             path: None,
             fhir_types: vec![],

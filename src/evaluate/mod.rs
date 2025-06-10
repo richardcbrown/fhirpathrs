@@ -21,9 +21,10 @@ mod test;
 mod types;
 mod utility_functions;
 mod utils;
+mod trace;
 
 use std::collections::HashMap;
-
+use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use nodes::resource_node::{FhirContext, PathDetails, ResourceNode};
 use serde_json::Value;
@@ -43,18 +44,18 @@ pub struct CompiledPath {
 }
 
 pub trait Evaluate {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>>;
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>>;
 }
 
 pub trait Text {
     fn text(&self) -> CompileResult<String>;
 }
 
-#[derive(Clone)]
-pub struct EvaluateOptions {
+pub struct EvaluateOptions<'a> {
     model: Option<ModelDetails>,
     vars: Option<HashMap<String, Value>>,
     now: Option<DateTime<Utc>>,
+    trace_function: Option<&'a mut dyn FnMut(String, Value) -> ()>
 }
 
 impl CompiledPath {
@@ -63,6 +64,7 @@ impl CompiledPath {
             model: None,
             vars: None,
             now: None,
+            trace_function: None,
         });
 
         let mut vars = HashMap::<String, Value>::new();
@@ -79,15 +81,20 @@ impl CompiledPath {
             vars.extend(custom_vars);
         }
 
+        let mut default_trace = |name: String, output_result: Value|  println!("TRACE:[{}] {}", name.clone(), output_result.clone());
+
         let context = FhirContext {
             model: opts.model,
             vars,
             now: opts.now.unwrap_or(Utc::now()),
+            trace_function: Arc::new(Mutex::new(match opts.trace_function {
+                Some(trace_function) => trace_function,
+                None => &mut default_trace,
+            }))
         };
 
         let node = ResourceNode::new(
             &resource,
-            None,
             resource.clone(),
             &context,
             None,
@@ -160,6 +167,7 @@ mod tests {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             )
             .unwrap();

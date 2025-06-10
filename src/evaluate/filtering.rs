@@ -25,7 +25,6 @@ fn evaluate_filter_expression(
         .filter_map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 item.to_owned(),
                 input.context,
                 input.path.clone(),
@@ -55,10 +54,10 @@ fn evaluate_filter_expression(
     results
 }
 
-pub fn where_function<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn where_function<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     expressions
         .first()
         .ok_or(FhirpathError::CompileError {
@@ -73,10 +72,10 @@ pub fn where_function<'a>(
         })
 }
 
-pub fn select<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn select<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let expression = expressions.first().ok_or(FhirpathError::CompileError {
         msg: "select function requires single expression argument".to_string(),
     })?;
@@ -89,7 +88,6 @@ pub fn select<'a>(
         .map(|(index, val)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 json!(val.clone()),
                 input.context,
                 input.path.clone(),
@@ -123,8 +121,8 @@ pub fn select<'a>(
     Ok(ResourceNode::from_node(input, json!(combined)))
 }
 
-fn repeat_expr<'a>(
-    input: &'a ResourceNode<'a>,
+fn repeat_expr<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     mut values: Vec<Value>,
     expression: &Expression,
 ) -> CompileResult<Vec<Value>> {
@@ -153,10 +151,10 @@ fn repeat_expr<'a>(
     Ok(unique_array_elements(&values))
 }
 
-pub fn repeat<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn repeat<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
         .ok_or_else(|| FhirpathError::CompileError {
@@ -170,10 +168,10 @@ pub fn repeat<'a>(
     Ok(ResourceNode::from_node(input, Value::Array(accumulated)))
 }
 
-pub fn of_type<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn of_type<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
         .ok_or_else(|| FhirpathError::CompileError {
@@ -290,6 +288,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -300,6 +299,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
         ];

@@ -8,7 +8,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for LiteralContains {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         Ok(ResourceNode::from_node(input, json!(self.text.clone())))
     }
 }

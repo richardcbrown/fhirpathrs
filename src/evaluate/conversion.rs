@@ -11,10 +11,10 @@ use super::{
     CompileResult, ResourceNode,
 };
 
-pub fn iif<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn iif<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if expressions.len() < 2 || expressions.len() > 3 {
         return Err(FhirpathError::CompileError {
             msg: "iif expects 2-3 Expressions".to_string(),
@@ -46,10 +46,10 @@ pub fn iif<'a>(
     Ok(ResourceNode::from_node(input, json!(output)))
 }
 
-pub fn to_boolean<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_boolean<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let result = input.get_single()?;
 
     let bool_result: Vec<Value> = match try_convert_to_boolean(&result) {
@@ -60,10 +60,10 @@ pub fn to_boolean<'a>(
     Ok(ResourceNode::from_node(input, json!(bool_result)))
 }
 
-pub fn converts_to_boolean<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_boolean<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let result = input.get_single()?;
 
     let converts_bool: bool = match try_convert_to_boolean(&result) {
@@ -74,10 +74,10 @@ pub fn converts_to_boolean<'a>(
     Ok(ResourceNode::from_node(input, json!(converts_bool)))
 }
 
-pub fn to_integer<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_integer<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -100,10 +100,10 @@ pub fn to_integer<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn converts_to_integer<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_integer<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -127,10 +127,10 @@ pub fn converts_to_integer<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn to_date<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_date<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -145,10 +145,10 @@ pub fn to_date<'a>(
     Ok(ResourceNode::from_node(input, date_result))
 }
 
-pub fn converts_to_date<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_date<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -163,10 +163,10 @@ pub fn converts_to_date<'a>(
     Ok(ResourceNode::from_node(input, date_result))
 }
 
-pub fn to_datetime<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_datetime<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -181,10 +181,10 @@ pub fn to_datetime<'a>(
     Ok(ResourceNode::from_node(input, datetime_result))
 }
 
-pub fn converts_to_datetime<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_datetime<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -199,10 +199,10 @@ pub fn converts_to_datetime<'a>(
     Ok(ResourceNode::from_node(input, datetime_result))
 }
 
-pub fn to_decimal<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_decimal<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -218,10 +218,10 @@ pub fn to_decimal<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn converts_to_decimal<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_decimal<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -238,10 +238,10 @@ pub fn converts_to_decimal<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn to_string<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_string<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -261,10 +261,10 @@ pub fn to_string<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn converts_to_string<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_string<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -284,10 +284,10 @@ pub fn converts_to_string<'a>(
     Ok(ResourceNode::from_node(input, value))
 }
 
-pub fn to_time<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_time<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -302,10 +302,10 @@ pub fn to_time<'a>(
     Ok(ResourceNode::from_node(input, date_result))
 }
 
-pub fn converts_to_time<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn converts_to_time<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }

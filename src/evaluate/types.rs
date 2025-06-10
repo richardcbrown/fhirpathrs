@@ -8,8 +8,8 @@ use crate::{
 
 use super::{data_types::type_info::TypeInfo, nodes::resource_node::ResourceNode, CompileResult};
 
-fn is_type<'a>(
-    input: &'a ResourceNode<'a>,
+fn is_type<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
 ) -> CompileResult<Option<bool>> {
     let expression = expressions
@@ -45,10 +45,10 @@ fn is_type<'a>(
         .and_then(|type_details| Some(type_details.eq(&type_info))))
 }
 
-pub fn is<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn is<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let type_match = is_type(input, expressions)?;
 
     let result = type_match
@@ -58,10 +58,10 @@ pub fn is<'a>(
     Ok(ResourceNode::from_node(input, result))
 }
 
-pub fn as_fn<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn as_fn<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let type_match = is_type(input, expressions)?;
 
     let result: Value = match type_match {
@@ -120,6 +120,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -130,6 +131,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -140,6 +142,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -150,6 +153,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
         ];
@@ -187,6 +191,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -197,6 +202,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -207,6 +213,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -217,6 +224,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
         ];
@@ -257,6 +265,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -270,6 +279,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -283,6 +293,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -293,6 +304,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -303,6 +315,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
         ];
@@ -343,6 +356,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -356,6 +370,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -369,6 +384,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -379,6 +395,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -389,6 +406,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
         ];

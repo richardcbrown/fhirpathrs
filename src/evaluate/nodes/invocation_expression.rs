@@ -6,10 +6,12 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for InvocationExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         self.children.iter().fold(Ok(input.clone()), |acc, child| {
             acc.and_then(|val| {
-                let result = child.evaluate(&val);
+                let node = ResourceNode::from_node(&val, val.data.clone());
+
+                let result = child.evaluate(&node);
 
                 match result {
                     Ok(res) => {

@@ -221,10 +221,10 @@ pub fn get_reflection_type(
     }
 }
 
-pub fn reflection_type<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn reflection_type<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let reflection_types = input.get_reflection_types();
 
     Ok(ResourceNode::from_node(
@@ -261,6 +261,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -283,6 +284,7 @@ mod test {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -303,6 +305,7 @@ mod test {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -319,6 +322,7 @@ mod test {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             }
         ];

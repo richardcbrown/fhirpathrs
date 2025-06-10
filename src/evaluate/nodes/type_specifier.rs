@@ -11,7 +11,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for TypeSpecifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         let specifier = match self {
             TypeSpecifier::QualifiedIdentifier(qi) => qi.evaluate(input),
         }?;

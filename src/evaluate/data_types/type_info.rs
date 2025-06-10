@@ -108,10 +108,10 @@ struct NameAndModel<'a> {
     pub model: &'a Option<ModelDetails>,
 }
 
-impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
+impl<'a, 'b> TryFrom<&ResourceNode<'a, 'b>> for TypeInfo {
     type Error = FhirpathError;
 
-    fn try_from(value: &ResourceNode<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: &ResourceNode<'a, 'b>) -> Result<Self, Self::Error> {
         match &value.get_single()? {
             Value::String(string_value) => Ok(TypeInfo::try_from(&TypeDetails {
                 fhir_type: Some(string_value.to_string()),
@@ -124,7 +124,7 @@ impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
     }
 }
 
-impl<'a> TryFrom<&Value> for TypeInfo {
+impl<'a, 'b> TryFrom<&Value> for TypeInfo {
     type Error = FhirpathError;
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
@@ -153,7 +153,7 @@ impl<'a> TryFrom<&Value> for TypeInfo {
     }
 }
 
-impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
+impl<'a, 'b> TryFrom<&TypeDetails<'a>> for TypeInfo {
     type Error = FhirpathError;
 
     fn try_from(value: &TypeDetails) -> Result<Self, Self::Error> {

@@ -10,7 +10,7 @@ use crate::{
     parser::invocation::MemberInvocation,
 };
 
-fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> Vec<String> {
+fn expand_choice_values<'a, 'b>(input: &'a ResourceNode<'a, 'b>, property: &String) -> Vec<String> {
     // if there is no model there's nothing to expand
     let model = &input.context.model;
 
@@ -48,7 +48,7 @@ fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> V
 }
 
 impl Evaluate for MemberInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         if input.is_empty()? {
             return Ok(ResourceNode::from_node(input, json!([])));
         }

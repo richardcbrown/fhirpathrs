@@ -5,10 +5,10 @@ pub mod test {
 
     use crate::evaluate::{compile, EvaluateOptions};
 
-    pub struct TestCase {
+    pub struct TestCase<'a> {
         pub path: String,
         pub input: Value,
-        pub options: Option<EvaluateOptions>,
+        pub options: Option<EvaluateOptions<'a>>,
         pub expected: Value,
     }
 

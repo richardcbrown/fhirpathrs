@@ -9,10 +9,10 @@ use super::{
     CompileResult, ResourceNode,
 };
 
-pub fn single<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn single<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     if array.len() != 1 {
@@ -28,10 +28,10 @@ pub fn single<'a>(
     Ok(ResourceNode::from_node(input, single_value.clone()))
 }
 
-pub fn first<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn first<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     let first_value = array.first();
@@ -45,10 +45,10 @@ pub fn first<'a>(
     ))
 }
 
-pub fn last<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn last<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     let last_value = array.last();
@@ -62,10 +62,10 @@ pub fn last<'a>(
     ))
 }
 
-pub fn tail<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn tail<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     let tail_values: Vec<&Value> = array.iter().skip(1).collect();
@@ -73,10 +73,10 @@ pub fn tail<'a>(
     Ok(ResourceNode::from_node(input, json!(tail_values)))
 }
 
-pub fn skip<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn skip<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     if expressions.len() > 1 {
@@ -99,10 +99,10 @@ pub fn skip<'a>(
     ))
 }
 
-pub fn take<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn take<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     if expressions.len() > 1 {
@@ -125,10 +125,10 @@ pub fn take<'a>(
     ))
 }
 
-pub fn intersect<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn intersect<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let intersect_array: Vec<Value> = array
@@ -147,10 +147,10 @@ pub fn intersect<'a>(
     ))
 }
 
-pub fn exclude<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn exclude<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let exclude_array: Vec<Value> = array

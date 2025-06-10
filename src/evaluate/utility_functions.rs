@@ -4,10 +4,10 @@ use crate::parser::expression::Expression;
 
 use super::{nodes::resource_node::ResourceNode, CompileResult};
 
-pub fn now<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn now<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(
@@ -20,20 +20,20 @@ pub fn now<'a>(
     ))
 }
 
-pub fn today<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn today<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(input.context.now.format("@%Y-%m-%d").to_string()),
     ))
 }
 
-pub fn time_of_day<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn time_of_day<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> CompileResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(input.context.now.format("@%H:%M:%S.%3f").to_string()),
@@ -77,6 +77,7 @@ mod test {
                     now: Some(test_datetime),
                     model: None,
                     vars: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -87,6 +88,7 @@ mod test {
                     now: Some(test_datetime),
                     model: None,
                     vars: None,
+                    trace_function: None,
                 }),
             },
         ];

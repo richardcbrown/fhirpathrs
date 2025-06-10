@@ -6,7 +6,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Invocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
