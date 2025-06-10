@@ -10,7 +10,7 @@ impl Evaluate for Literal {
         match self {
             Literal::BooleanLiteral(exp) => exp.evaluate(input),
             Literal::DatetimeLiteral(exp) => exp.evaluate(input),
-            Literal::NullLiteral(exp) => todo!(),
+            Literal::NullLiteral(exp) => exp.evaluate(input),
             Literal::NumberLiteral(exp) => exp.evaluate(input),
             Literal::QuantityLiteral(exp) => exp.evaluate(input),
             Literal::StringLiteral(exp) => exp.evaluate(input),
@@ -24,7 +24,7 @@ impl Text for Literal {
         match self {
             Literal::BooleanLiteral(exp) => exp.text(),
             Literal::DatetimeLiteral(exp) => exp.text(),
-            Literal::NullLiteral(exp) => todo!(),
+            Literal::NullLiteral(exp) => exp.text(),
             Literal::NumberLiteral(exp) => exp.text(),
             Literal::QuantityLiteral(exp) => exp.text(),
             Literal::StringLiteral(exp) => exp.text(),
