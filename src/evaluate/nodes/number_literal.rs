@@ -13,12 +13,12 @@ use super::resource_node::ResourceNode;
 impl Evaluate for NumberLiteral {
     fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         let value =
-            Decimal::from_str(self.text.as_str()).map_err(|_| FhirpathError::ParserError {
+            Decimal::from_str(self.text.as_str()).map_err(|_| FhirpathError::EvaluateError {
                 msg: "NumberLiteral is not a Number".to_string(),
             })?;
 
         let decimal_value =
-            serde_json::to_value(value).map_err(|err| FhirpathError::ParserError {
+            serde_json::to_value(value).map_err(|err| FhirpathError::EvaluateError {
                 msg: format!("Failed to serialize Decimal: {}", err.to_string()),
             })?;
 

@@ -23,7 +23,7 @@ impl Evaluate for IndexerExpression {
 
         let index: i64 = match index_value {
             Value::Number(num) => {
-                let fpn: f64 = num.as_f64().ok_or(FhirpathError::ParserError {
+                let fpn: f64 = num.as_f64().ok_or(FhirpathError::EvaluateError {
                     msg: "IndexerExpression index is not a Number".to_string(),
                 })?;
 
@@ -31,11 +31,11 @@ impl Evaluate for IndexerExpression {
                 Ok(fpn as i64)
             }
             Value::String(num_string) => {
-                num_string.parse().map_err(|_| FhirpathError::ParserError {
+                num_string.parse().map_err(|_| FhirpathError::EvaluateError {
                     msg: "IndexerExpression index is not a Number".to_string(),
                 })
             }
-            _ => Err(FhirpathError::ParserError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "IndexerExpression index is not a Number".to_string(),
             }),
         }?;
