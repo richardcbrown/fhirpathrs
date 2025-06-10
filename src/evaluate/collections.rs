@@ -134,6 +134,15 @@ mod test {
                 expected: json!([false]),
                 options: None,
             },
+            TestCase {
+                path: "Patient.name.where('test1' in given)".to_string(),
+                input: patient.clone(),
+                expected: json!([{
+                    "use": "usual",
+                    "given": ["test1", "test2"]
+                }]),
+                options: None,
+            },
         ];
 
         run_tests(test_cases);

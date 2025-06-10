@@ -34,10 +34,11 @@ use crate::parser::literal::{
     DatetimeLiteral,
     NumberLiteral,
     BooleanLiteral,
-    NullLiteral
+    NullLiteral,
 };
 
 use crate::parser::identifier::{
+    LiteralDelimitedIdentifier,
     LiteralIdentifier,
     Identifier,
     QualifiedIdentifier,
@@ -402,12 +403,26 @@ MemberInvocation: MemberInvocation = {
 }
 
 Identifier: Identifier = {
+    <ldi: LiteralDelimitedIdentifier> => Identifier::LiteralDelimitedIdentifier(Box::new(ldi)),
     <li: LiteralIdentifier> => Identifier::LiteralIdentifier(Box::new(li)),
-    //<ldi: LiteralDelimitedIdentifier> => Identifier::LiteralDelimitedIdentifier(Box::new(ldi)),
     <las: LiteralAs> => Identifier::LiteralAs(Box::new(las)),
     <lis: LiteralIs> => Identifier::LiteralIs(Box::new(lis)),
     <lc: LiteralContains> => Identifier::LiteralContains(Box::new(lc)),
     <lin: LiteralIn> => Identifier::LiteralIn(Box::new(lin))
+}
+
+LiteralDelimitedIdentifier: LiteralDelimitedIdentifier = {
+    <li: r"`([^`]*)`"> => {
+        let capture_regex = r"`([^`]*)`";
+
+        let captures = Regex::captures(&Regex::new(capture_regex).unwrap(), li).unwrap();
+
+        let capture_text = captures[1].to_string();
+
+        LiteralDelimitedIdentifier {
+            text: capture_text.to_string()
+        }
+    }
 }
 
 LiteralIdentifier: LiteralIdentifier = {
