@@ -7,7 +7,7 @@ use crate::{error::FhirpathError, models::ModelDetails, parser::expression::Expr
 use super::{
     data_types::type_info::{Namespace, TypeInfo},
     nodes::resource_node::{PathDetails, ResourceNode},
-    CompileResult,
+    EvaluateResult,
 };
 
 #[derive(Clone, Debug)]
@@ -23,7 +23,7 @@ impl TryFrom<&str> for Cardinality {
         match value {
             "1" => Ok(Cardinality::Single),
             "*" => Ok(Cardinality::Multiple),
-            _ => Err(FhirpathError::CompileError { msg: format!("unknown cardinality: {}", value) })
+            _ => Err(FhirpathError::EvaluateError { msg: format!("unknown cardinality: {}", value) })
         }
     }
 }
@@ -118,7 +118,7 @@ impl TryFrom<&Value> for SimpleTypeInfo {
                 }),
             })
         } else {
-            Err(FhirpathError::CompileError {
+            Err(FhirpathError::EvaluateError {
                 msg: "No namespace for type".to_string(),
             })
         }
@@ -224,12 +224,12 @@ pub fn get_reflection_type(
 pub fn reflection_type<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let reflection_types = input.get_reflection_types();
 
     Ok(ResourceNode::from_node(
         input,
-        serde_json::to_value(reflection_types).map_err(|err| FhirpathError::CompileError {
+        serde_json::to_value(reflection_types).map_err(|err| FhirpathError::EvaluateError {
             msg: format!("Failed to Serialize TypeInfo: {}", err.to_string()),
         })?,
     ))

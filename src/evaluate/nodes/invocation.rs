@@ -1,12 +1,12 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::invocation::Invocation,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Invocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         match self {
             Invocation::MemberInvocation(exp) => exp.evaluate(input),
             Invocation::FunctionInvocation(exp) => exp.evaluate(input),
@@ -18,7 +18,7 @@ impl Evaluate for Invocation {
 }
 
 impl Text for Invocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Invocation::MemberInvocation(exp) => exp.text(),
             Invocation::FunctionInvocation(exp) => exp.text(),

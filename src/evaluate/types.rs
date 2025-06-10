@@ -6,15 +6,15 @@ use crate::{
     parser::{expression::Expression, identifier::TypeSpecifier},
 };
 
-use super::{data_types::type_info::TypeInfo, nodes::resource_node::ResourceNode, CompileResult};
+use super::{data_types::type_info::TypeInfo, nodes::resource_node::ResourceNode, EvaluateResult};
 
 fn is_type<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<Option<bool>> {
+) -> EvaluateResult<Option<bool>> {
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "expected exactly 1 Expression".to_string(),
         })?;
 
@@ -25,13 +25,13 @@ fn is_type<'a>(
     let type_node = TypeSpecifier::try_from(&**expression)?.evaluate(input)?;
 
     let type_info: TypeInfo = serde_json::from_value(type_node.get_single()?).map_err(|err| {
-        FhirpathError::CompileError {
+        FhirpathError::EvaluateError {
             msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
         }
     })?;
 
     if !input.is_single()? {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "expected expects a single input".to_string(),
         });
     }
@@ -48,7 +48,7 @@ fn is_type<'a>(
 pub fn is<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let type_match = is_type(input, expressions)?;
 
     let result = type_match
@@ -61,7 +61,7 @@ pub fn is<'a>(
 pub fn as_fn<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let type_match = is_type(input, expressions)?;
 
     let result: Value = match type_match {

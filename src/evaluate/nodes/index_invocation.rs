@@ -1,14 +1,14 @@
 use serde_json::Value;
 
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::invocation::IndexInvocation,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for IndexInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         let index = input
             .get_index()
             .and_then(|index| Some(Value::Number(index.into())))
@@ -19,7 +19,7 @@ impl Evaluate for IndexInvocation {
 }
 
 impl Text for IndexInvocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self.text.clone())
     }
 }

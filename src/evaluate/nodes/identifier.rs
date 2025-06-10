@@ -1,12 +1,12 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::identifier::Identifier,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Identifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
             Identifier::LiteralAs(exp) => exp.evaluate(input),
@@ -19,7 +19,7 @@ impl Evaluate for Identifier {
 }
 
 impl Text for Identifier {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.text(),
             Identifier::LiteralAs(exp) => todo!(),

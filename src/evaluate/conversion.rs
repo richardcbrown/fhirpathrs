@@ -8,26 +8,26 @@ use super::{
         get_array_from_expression, get_boolean_from_expression, try_convert_to_boolean,
         try_convert_to_decimal,
     },
-    CompileResult, ResourceNode,
+    EvaluateResult, ResourceNode,
 };
 
 pub fn iif<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() < 2 || expressions.len() > 3 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "iif expects 2-3 Expressions".to_string(),
         });
     }
 
     let mut exp_iter = expressions.iter();
 
-    let first = exp_iter.next().ok_or_else(|| FhirpathError::CompileError {
+    let first = exp_iter.next().ok_or_else(|| FhirpathError::EvaluateError {
         msg: "Missing iif condition".to_string(),
     })?;
 
-    let second = exp_iter.next().ok_or_else(|| FhirpathError::CompileError {
+    let second = exp_iter.next().ok_or_else(|| FhirpathError::EvaluateError {
         msg: "Missing iif true result".to_string(),
     })?;
 
@@ -49,7 +49,7 @@ pub fn iif<'a>(
 pub fn to_boolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let result = input.get_single()?;
 
     let bool_result: Vec<Value> = match try_convert_to_boolean(&result) {
@@ -63,7 +63,7 @@ pub fn to_boolean<'a>(
 pub fn converts_to_boolean<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let result = input.get_single()?;
 
     let converts_bool: bool = match try_convert_to_boolean(&result) {
@@ -77,7 +77,7 @@ pub fn converts_to_boolean<'a>(
 pub fn to_integer<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -103,7 +103,7 @@ pub fn to_integer<'a>(
 pub fn converts_to_integer<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -130,7 +130,7 @@ pub fn converts_to_integer<'a>(
 pub fn to_date<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -148,7 +148,7 @@ pub fn to_date<'a>(
 pub fn converts_to_date<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -166,7 +166,7 @@ pub fn converts_to_date<'a>(
 pub fn to_datetime<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -184,7 +184,7 @@ pub fn to_datetime<'a>(
 pub fn converts_to_datetime<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -202,7 +202,7 @@ pub fn converts_to_datetime<'a>(
 pub fn to_decimal<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -221,7 +221,7 @@ pub fn to_decimal<'a>(
 pub fn converts_to_decimal<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }
@@ -241,7 +241,7 @@ pub fn converts_to_decimal<'a>(
 pub fn to_string<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -264,7 +264,7 @@ pub fn to_string<'a>(
 pub fn converts_to_string<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -287,7 +287,7 @@ pub fn converts_to_string<'a>(
 pub fn to_time<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
     }
@@ -305,7 +305,7 @@ pub fn to_time<'a>(
 pub fn converts_to_time<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Bool(false)));
     }

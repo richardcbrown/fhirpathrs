@@ -2,16 +2,16 @@ use serde_json::Value;
 
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::IndexerExpression,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for IndexerExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         if self.children.len() != 2 {
-            return Err(FhirpathError::CompileError {
+            return Err(FhirpathError::EvaluateError {
                 msg: "IndexerExpression must have exactly two children".to_string(),
             });
         }
@@ -57,7 +57,7 @@ impl Evaluate for IndexerExpression {
 }
 
 impl Text for IndexerExpression {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         todo!()
     }
 }

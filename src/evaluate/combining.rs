@@ -6,14 +6,14 @@ use super::{
     equality::values_are_equal,
     target::Target,
     utils::{get_arrays, unique_array_elements},
-    CompileResult, ResourceNode,
+    EvaluateResult, ResourceNode,
 };
 
 pub fn union<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
     arity: Target,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (array, mut second_array) = get_arrays(input, expressions, arity)?;
 
     let mut union_array: Vec<Value> = array
@@ -37,7 +37,7 @@ pub fn union<'a>(
 pub fn combine<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (mut first_array, mut second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     first_array.append(&mut second_array);

@@ -1,6 +1,6 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{data_types::type_info::TypeInfo, CompileResult, Evaluate, Text},
+    evaluate::{data_types::type_info::TypeInfo, EvaluateResult, Evaluate, Text},
     parser::{
         expression::{Expression, Term, TermExpression},
         identifier::{Identifier, LiteralIdentifier, QualifiedIdentifier, TypeSpecifier},
@@ -11,7 +11,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for TypeSpecifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         let specifier = match self {
             TypeSpecifier::QualifiedIdentifier(qi) => qi.evaluate(input),
         }?;
@@ -19,7 +19,7 @@ impl Evaluate for TypeSpecifier {
         Ok(ResourceNode::from_node(
             input,
             serde_json::to_value(TypeInfo::try_from(&specifier)?).map_err(|err| {
-                FhirpathError::CompileError {
+                FhirpathError::EvaluateError {
                     msg: format!("Failed to serialize TypeInfo: {}", err.to_string()),
                 }
             })?,
@@ -66,7 +66,7 @@ impl TryInto<Expression> for String {
 }
 
 impl Text for TypeSpecifier {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             TypeSpecifier::QualifiedIdentifier(qi) => qi.text(),
         }

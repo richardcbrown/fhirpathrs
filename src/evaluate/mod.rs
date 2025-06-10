@@ -36,18 +36,18 @@ use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(pub fhirpath);
 
-pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
+pub type EvaluateResult<T> = std::result::Result<T, FhirpathError>;
 
 pub struct CompiledPath {
     expression: Box<EntireExpression>,
 }
 
 pub trait Evaluate {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>>;
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>>;
 }
 
 pub trait Text {
-    fn text(&self) -> CompileResult<String>;
+    fn text(&self) -> EvaluateResult<String>;
 }
 
 #[derive(Clone)]
@@ -58,7 +58,7 @@ pub struct EvaluateOptions {
 }
 
 impl CompiledPath {
-    fn evaluate(&self, resource: Value, options: Option<EvaluateOptions>) -> CompileResult<Value> {
+    fn evaluate(&self, resource: Value, options: Option<EvaluateOptions>) -> EvaluateResult<Value> {
         let opts = options.unwrap_or(EvaluateOptions {
             model: None,
             vars: None,
@@ -104,7 +104,7 @@ impl CompiledPath {
     }
 }
 
-pub fn compile(path: &String) -> CompileResult<CompiledPath> {
+pub fn compile(path: &String) -> EvaluateResult<CompiledPath> {
     Ok(CompiledPath {
         expression: Box::new(fhirpath::EntireExpressionParser::new().parse(path).unwrap()),
     })
@@ -765,7 +765,7 @@ mod tests {
 
         assert_eq!(
             evaluate_result,
-            Err(FhirpathError::CompileError {
+            Err(FhirpathError::EvaluateError {
                 msg: "Expected array with single element but had 0".to_string()
             })
         )
@@ -797,7 +797,7 @@ mod tests {
 
         assert_eq!(
             evaluate_result,
-            Err(FhirpathError::CompileError {
+            Err(FhirpathError::EvaluateError {
                 msg: "Expected array with single element but had 2".to_string()
             })
         )

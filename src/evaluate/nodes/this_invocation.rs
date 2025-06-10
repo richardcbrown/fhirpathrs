@@ -1,18 +1,18 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::invocation::ThisInvocation,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for ThisInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(input, input.data.clone()))
     }
 }
 
 impl Text for ThisInvocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self.text.clone())
     }
 }

@@ -1,13 +1,13 @@
 use regex::Match;
 
-use crate::{error::FhirpathError, evaluate::CompileResult};
+use crate::{error::FhirpathError, evaluate::EvaluateResult};
 
 use super::{arithmetic_type::ArithmeticType, quantity::Quantity};
 
-pub fn parse_optional_u32(capture: Option<Match>) -> CompileResult<Option<u32>> {
+pub fn parse_optional_u32(capture: Option<Match>) -> EvaluateResult<Option<u32>> {
     Ok(capture.and_then(|val| Some(val.as_str()))).and_then(|hour| match hour {
         Some(h) => {
-            let parse_result = h.parse::<u32>().map_err(|_| FhirpathError::CompileError {
+            let parse_result = h.parse::<u32>().map_err(|_| FhirpathError::EvaluateError {
                 msg: "Could not parse value to number".to_string(),
             });
 
@@ -20,10 +20,10 @@ pub fn parse_optional_u32(capture: Option<Match>) -> CompileResult<Option<u32>> 
     })
 }
 
-pub fn parse_optional_f64(capture: Option<Match>) -> CompileResult<Option<f64>> {
+pub fn parse_optional_f64(capture: Option<Match>) -> EvaluateResult<Option<f64>> {
     Ok(capture.and_then(|val| Some(val.as_str()))).and_then(|hour| match hour {
         Some(h) => {
-            let parse_result = h.parse::<f64>().map_err(|_| FhirpathError::CompileError {
+            let parse_result = h.parse::<f64>().map_err(|_| FhirpathError::EvaluateError {
                 msg: "Could not parse value to number".to_string(),
             });
 

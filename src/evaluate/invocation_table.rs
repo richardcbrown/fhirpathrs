@@ -29,7 +29,7 @@ use super::{
     target::Target,
     types::{as_fn, is},
     utility_functions::{now, time_of_day, today},
-    CompileResult, ResourceNode,
+    EvaluateResult, ResourceNode,
 };
 use crate::parser::expression::Expression;
 use std::collections::HashMap;
@@ -39,14 +39,14 @@ pub fn invocation_table<'a>() -> HashMap<
     fn(
         input: &'a ResourceNode<'a>,
         expressions: &Vec<Box<Expression>>,
-    ) -> CompileResult<ResourceNode<'a>>,
+    ) -> EvaluateResult<ResourceNode<'a>>,
 > {
     let mut map = HashMap::<
         String,
         fn(
             input: &'a ResourceNode<'a>,
             expressions: &Vec<Box<Expression>>,
-        ) -> CompileResult<ResourceNode<'a>>,
+        ) -> EvaluateResult<ResourceNode<'a>>,
     >::new();
 
     map.insert("empty".to_string(), empty);

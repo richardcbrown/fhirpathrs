@@ -1,17 +1,17 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{data_types::quantity::Quantity, CompileResult, Evaluate, Text},
+    evaluate::{data_types::quantity::Quantity, EvaluateResult, Evaluate, Text},
     parser::literal::QuantityLiteral,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for QuantityLiteral {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         Ok(ResourceNode::from_node(
             input,
             serde_json::to_value(Quantity::try_from(self)?).map_err(|err| {
-                FhirpathError::CompileError {
+                FhirpathError::EvaluateError {
                     msg: format!("Could not serialize Quantity: {}", err.to_string()),
                 }
             })?,
@@ -20,7 +20,7 @@ impl Evaluate for QuantityLiteral {
 }
 
 impl Text for QuantityLiteral {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self.text.clone())
     }
 }

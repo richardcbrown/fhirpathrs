@@ -11,7 +11,7 @@ use super::{
     equality::values_are_equal,
     nodes::resource_node::ResourceContext,
     utils::{get_array_from_expression, unique_array_elements},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 fn evaluate_filter_expression(
@@ -58,10 +58,10 @@ fn evaluate_filter_expression(
 pub fn where_function<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     expressions
         .first()
-        .ok_or(FhirpathError::CompileError {
+        .ok_or(FhirpathError::EvaluateError {
             msg: "Missing first expression".to_string(),
         })
         .and_then(|expr| {
@@ -76,8 +76,8 @@ pub fn where_function<'a>(
 pub fn select<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
-    let expression = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a>> {
+    let expression = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "select function requires single expression argument".to_string(),
     })?;
 
@@ -105,17 +105,17 @@ pub fn select<'a>(
 
             Ok(result)
         })
-        .collect::<CompileResult<Vec<Value>>>()?;
+        .collect::<EvaluateResult<Vec<Value>>>()?;
 
     let combined: Vec<Value> = result
         .iter()
         .map(|item| match item {
             Value::Array(array) => Ok(array.to_owned()),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Result was not an array".to_string(),
             }),
         })
-        .collect::<CompileResult<Vec<Vec<Value>>>>()?
+        .collect::<EvaluateResult<Vec<Vec<Value>>>>()?
         .into_iter()
         .flatten()
         .collect();
@@ -127,7 +127,7 @@ fn repeat_expr<'a>(
     input: &'a ResourceNode<'a>,
     mut values: Vec<Value>,
     expression: &Expression,
-) -> CompileResult<Vec<Value>> {
+) -> EvaluateResult<Vec<Value>> {
     let mut items: Vec<Value> = values.iter().try_fold(vec![], |mut acc, val| {
         let node = ResourceNode::from_node(input, val.clone());
 
@@ -156,10 +156,10 @@ fn repeat_expr<'a>(
 pub fn repeat<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "repeat expects exactly 1 Expression".to_string(),
         })?;
 
@@ -173,10 +173,10 @@ pub fn repeat<'a>(
 pub fn of_type<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "ofType expects exactly 1 Expression".to_string(),
         })?;
 
@@ -187,7 +187,7 @@ pub fn of_type<'a>(
     let type_node = TypeSpecifier::try_from(&**expression)?.evaluate(input)?;
 
     let type_info: TypeInfo = serde_json::from_value(type_node.get_single()?).map_err(|err| {
-        FhirpathError::CompileError {
+        FhirpathError::EvaluateError {
             msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
         }
     })?;

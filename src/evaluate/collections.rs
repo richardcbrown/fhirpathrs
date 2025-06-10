@@ -3,14 +3,14 @@ use serde_json::Value;
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    equality::values_are_equal, nodes::resource_node::ResourceNode, CompileResult, Evaluate,
+    equality::values_are_equal, nodes::resource_node::ResourceNode, EvaluateResult, Evaluate,
 };
 
 fn collection_contains_item<'a>(
     input: &'a ResourceNode<'a>,
     collection_exp: &Expression,
     item_expr: &Expression,
-) -> CompileResult<Value> {
+) -> EvaluateResult<Value> {
     let item_node = item_expr.evaluate(input)?;
 
     if item_node.is_empty()? {
@@ -38,23 +38,23 @@ fn collection_contains_item<'a>(
 pub fn in_collection<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
         });
     }
 
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
     let second = expressions
         .iter()
         .nth(1)
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
@@ -67,23 +67,23 @@ pub fn in_collection<'a>(
 pub fn collection_contains<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
         });
     }
 
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
     let second = expressions
         .iter()
         .nth(1)
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 

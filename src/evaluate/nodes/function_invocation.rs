@@ -4,14 +4,14 @@ use serde_json::Value;
 
 use crate::{
     error::FhirpathError,
-    evaluate::{invocation_table::invocation_table, CompileResult, Evaluate, Text},
+    evaluate::{invocation_table::invocation_table, EvaluateResult, Evaluate, Text},
     parser::invocation::{FunctionInvocation, IdentifierAndParamList, ParamList},
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for FunctionInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         let function_name_child = self.children[0].deref();
         let param_list_child = if self.children.len() == 2 {
             Some(self.children[1].deref())
@@ -21,7 +21,7 @@ impl Evaluate for FunctionInvocation {
 
         let identifier = match function_name_child {
             IdentifierAndParamList::Identifier(identifier) => Ok(identifier),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "First child of FunctionInvocation should be function name".to_string(),
             }),
         }?;
@@ -33,7 +33,7 @@ impl Evaluate for FunctionInvocation {
 
         let parameters = match param_list {
             IdentifierAndParamList::ParamList(param_list) => Ok(&param_list.children),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Second child of FunctionInvocation should be function params".to_string(),
             }),
         }?;
@@ -43,14 +43,14 @@ impl Evaluate for FunctionInvocation {
             .get_single()
             .and_then(|val| match val {
                 Value::String(string) => Ok(string),
-                _ => Err(FhirpathError::CompileError {
+                _ => Err(FhirpathError::EvaluateError {
                     msg: "First child of FunctionInvocation should be function name".to_string(),
                 }),
             })?;
 
         let invocation = invocation_table()
             .get(&function_name)
-            .ok_or(FhirpathError::CompileError {
+            .ok_or(FhirpathError::EvaluateError {
                 msg: "No method in invocation table".to_string(),
             })?
             .clone();
@@ -60,7 +60,7 @@ impl Evaluate for FunctionInvocation {
 }
 
 impl Text for FunctionInvocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         todo!()
     }
 }

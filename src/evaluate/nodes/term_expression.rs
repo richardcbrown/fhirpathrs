@@ -1,14 +1,14 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::TermExpression,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for TermExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
-        let child = self.children.first().ok_or(FhirpathError::CompileError {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+        let child = self.children.first().ok_or(FhirpathError::EvaluateError {
             msg: "Missing TermExpression child element".to_string(),
         })?;
 
@@ -17,12 +17,12 @@ impl Evaluate for TermExpression {
 }
 
 impl Text for TermExpression {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self
             .children
             .iter()
             .map(|c| c.text())
-            .collect::<CompileResult<Vec<String>>>()?
+            .collect::<EvaluateResult<Vec<String>>>()?
             .join(""))
     }
 }

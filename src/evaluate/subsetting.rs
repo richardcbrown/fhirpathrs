@@ -6,22 +6,22 @@ use super::{
     target::Target,
     equality::values_are_equal,
     utils::{get_arrays, get_usize_from_expression, unique_array_elements},
-    CompileResult, ResourceNode,
+    EvaluateResult, ResourceNode,
 };
 
 pub fn single<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     if array.len() != 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: format!("Expected array with single element but had {}", array.len()),
         });
     }
 
-    let single_value = array.first().ok_or_else(|| FhirpathError::CompileError {
+    let single_value = array.first().ok_or_else(|| FhirpathError::EvaluateError {
         msg: "Failed to get single item from array".to_string(),
     })?;
 
@@ -31,7 +31,7 @@ pub fn single<'a>(
 pub fn first<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     let first_value = array.first();
@@ -48,7 +48,7 @@ pub fn first<'a>(
 pub fn last<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     let last_value = array.last();
@@ -65,7 +65,7 @@ pub fn last<'a>(
 pub fn tail<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     let tail_values: Vec<&Value> = array.iter().skip(1).collect();
@@ -76,18 +76,18 @@ pub fn tail<'a>(
 pub fn skip<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     if expressions.len() > 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Skip expects exactly one expression".to_string(),
         });
     }
 
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "Skip expects exactly one expression".to_string(),
         })?;
 
@@ -102,18 +102,18 @@ pub fn skip<'a>(
 pub fn take<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     if expressions.len() > 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Skip expects exactly one expression".to_string(),
         });
     }
 
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "Skip expects exactly one expression".to_string(),
         })?;
 
@@ -128,7 +128,7 @@ pub fn take<'a>(
 pub fn intersect<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let intersect_array: Vec<Value> = array
@@ -150,7 +150,7 @@ pub fn intersect<'a>(
 pub fn exclude<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     let exclude_array: Vec<Value> = array

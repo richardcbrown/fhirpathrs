@@ -6,12 +6,12 @@ use crate::parser::{
     invocation::{FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm},
 };
 
-use super::{filtering::repeat, nodes::resource_node::ResourceNode, CompileResult};
+use super::{filtering::repeat, nodes::resource_node::ResourceNode, EvaluateResult};
 
 pub fn children<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let children = input
         .get_array()?
         .iter()
@@ -34,7 +34,7 @@ pub fn children<'a>(
 pub fn descendants<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let children_expression = Expression::TermExpression(Box::new(TermExpression {
         children: vec![Box::new(Term::InvocationTerm(Box::new(InvocationTerm {
             children: vec![Box::new(Invocation::FunctionInvocation(Box::new(

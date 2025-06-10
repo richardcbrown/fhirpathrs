@@ -2,12 +2,12 @@ use serde_json::Value;
 
 use crate::parser::expression::Expression;
 
-use super::{nodes::resource_node::ResourceNode, CompileResult};
+use super::{nodes::resource_node::ResourceNode, EvaluateResult};
 
 pub fn now<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(
@@ -23,7 +23,7 @@ pub fn now<'a>(
 pub fn today<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(input.context.now.format("@%Y-%m-%d").to_string()),
@@ -33,7 +33,7 @@ pub fn today<'a>(
 pub fn time_of_day<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     Ok(ResourceNode::from_node(
         input,
         Value::String(input.context.now.format("@%H:%M:%S.%3f").to_string()),

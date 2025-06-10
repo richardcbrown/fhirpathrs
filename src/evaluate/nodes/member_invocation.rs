@@ -5,7 +5,7 @@ use crate::{
     evaluate::{
         fhir_type::determine_fhir_type,
         nodes::resource_node::{PathDetails, ResourceNode},
-        CompileResult, Evaluate, Text,
+        EvaluateResult, Evaluate, Text,
     },
     parser::invocation::MemberInvocation,
 };
@@ -48,7 +48,7 @@ fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> V
 }
 
 impl Evaluate for MemberInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         if input.is_empty()? {
             return Ok(ResourceNode::from_node(input, json!([])));
         }
@@ -56,13 +56,13 @@ impl Evaluate for MemberInvocation {
         let key_node = self
             .children
             .first()
-            .ok_or(FhirpathError::CompileError {
+            .ok_or(FhirpathError::EvaluateError {
                 msg: "MemberInvocation has no child node".to_string(),
             })?
             .evaluate(input)?;
 
         if !key_node.is_single()? {
-            return Err(FhirpathError::CompileError {
+            return Err(FhirpathError::EvaluateError {
                 msg: "Could not determine property to invoke".to_string(),
             });
         }
@@ -169,12 +169,12 @@ impl Evaluate for MemberInvocation {
 }
 
 impl Text for MemberInvocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self
             .children
             .iter()
             .map(|c| c.text())
-            .collect::<CompileResult<Vec<String>>>()?
+            .collect::<EvaluateResult<Vec<String>>>()?
             .join("."))
     }
 }

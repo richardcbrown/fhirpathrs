@@ -7,7 +7,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 use super::{
     data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     strings::normalise,
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
@@ -137,9 +137,9 @@ fn value_arrays_are_equal(first: &Vec<Value>, second: &Vec<Value>) -> Option<boo
     Some(true)
 }
 
-fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> CompileResult<Value> {
+fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Equal function takes exactly 2 expressions".to_string(),
         });
     }
@@ -169,7 +169,7 @@ fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> Compil
 pub fn equal<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
     Ok(ResourceNode::from_node(input, result))
@@ -178,12 +178,12 @@ pub fn equal<'a>(
 pub fn not_equal<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let result = are_equal(input, expressions)?;
 
     let inverse = match result {
         Value::Bool(val) => Ok(Value::Bool(!val)),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Invalid Boolean value".to_string(),
         }),
     }?;
@@ -338,9 +338,9 @@ fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Optio
 fn are_equivalent(
     input: &ResourceNode,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<Value> {
+) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Equivalent function takes exactly 2 expressions".to_string(),
         });
     }
@@ -377,7 +377,7 @@ fn are_equivalent(
 pub fn equivalent<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     Ok(ResourceNode::from_node(
         input,
         are_equivalent(input, expressions)?,
@@ -387,7 +387,7 @@ pub fn equivalent<'a>(
 pub fn not_equivalent<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let equivalent = are_equivalent(input, expressions)?;
 
     let are_not_equivalent = match equivalent {

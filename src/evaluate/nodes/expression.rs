@@ -1,12 +1,12 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::Expression,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Expression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         match self {
             Expression::TermExpression(exp) => exp.evaluate(input),
             Expression::InvocationExpression(exp) => exp.evaluate(input),
@@ -27,7 +27,7 @@ impl Evaluate for Expression {
 }
 
 impl Text for Expression {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Expression::TermExpression(exp) => exp.text(),
             Expression::InvocationExpression(exp) => exp.text(),

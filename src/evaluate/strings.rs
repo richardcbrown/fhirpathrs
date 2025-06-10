@@ -9,7 +9,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     utils::{get_string, get_string_from_expression, get_string_vec, get_usize_from_expression},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 const WHITESPACE_REGEX: LazyCell<Regex> = LazyCell::new(|| Regex::new(r"[\s\n\r\t]+").unwrap());
@@ -23,7 +23,7 @@ pub fn normalise(string_val: &String) -> String {
 pub fn index_of<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let second = &expressions[0];
 
     let first_val = input.get_single()?;
@@ -44,8 +44,8 @@ pub fn index_of<'a>(
 pub fn substring<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
-    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "Substring expects at least one expression".to_string(),
     })?;
 
@@ -61,7 +61,7 @@ pub fn substring<'a>(
     let sub_string =
         string_value
             .get(first_index..second_index)
-            .ok_or(FhirpathError::CompileError {
+            .ok_or(FhirpathError::EvaluateError {
                 msg: format!(
                     "Could not slice {} from {} to {}",
                     string_value, first_index, second_index
@@ -77,8 +77,8 @@ pub fn substring<'a>(
 pub fn starts_with<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
-    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
@@ -93,8 +93,8 @@ pub fn starts_with<'a>(
 pub fn ends_with<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
-    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
@@ -109,8 +109,8 @@ pub fn ends_with<'a>(
 pub fn contains<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
-    let first_expr = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a>> {
+    let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
 
@@ -125,7 +125,7 @@ pub fn contains<'a>(
 pub fn upper<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
 
     let replaced: Vec<Value> = string_values
@@ -140,7 +140,7 @@ pub fn upper<'a>(
 pub fn lower<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
 
     let replaced: Vec<Value> = string_values
@@ -155,7 +155,7 @@ pub fn lower<'a>(
 pub fn replace<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
     let replacement = get_string_from_expression(input, &expressions[1])?;
@@ -172,10 +172,10 @@ pub fn replace<'a>(
 pub fn matches<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_value = get_string(&input.get_single()?)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
-    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
+    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::EvaluateError {
         msg: "Failed to parse Regex".to_string(),
     })?;
 
@@ -187,11 +187,11 @@ pub fn matches<'a>(
 pub fn replace_matches<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
     let pattern = get_string_from_expression(input, &expressions[0])?;
     let replacement = get_string_from_expression(input, &expressions[1])?;
-    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::CompileError {
+    let regex = Regex::new(&pattern).map_err(|_| FhirpathError::EvaluateError {
         msg: "Failed to parse Regex".to_string(),
     })?;
 
@@ -208,7 +208,7 @@ pub fn replace_matches<'a>(
 pub fn length<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
 
     let lengths: Vec<Value> = string_values
@@ -226,7 +226,7 @@ pub fn length<'a>(
 pub fn to_chars<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let string_values = get_string_vec(&input.data)?;
 
     let char_sets = string_values

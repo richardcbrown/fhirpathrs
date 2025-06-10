@@ -10,20 +10,20 @@ use super::{
         evaluate_array_boolean_expression, get_array_from_expression, get_arrays,
         try_convert_to_boolean, unique_array_elements,
     },
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 pub fn empty<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     Ok(ResourceNode::from_node(input, json!(input.is_empty()?)))
 }
 
 pub fn exists<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() == 0 {
         return Ok(ResourceNode::from_node(input, json!(!input.is_empty()?)));
     }
@@ -36,16 +36,16 @@ pub fn exists<'a>(
 pub fn all<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Expected single expression".to_string(),
         });
     }
 
     let expr = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "Expected single expression".to_string(),
         })?;
 
@@ -57,7 +57,7 @@ pub fn all<'a>(
     ))
 }
 
-fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> CompileResult<Vec<bool>> {
+fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> EvaluateResult<Vec<bool>> {
     let array = input.get_array()?;
 
     array
@@ -67,18 +67,18 @@ fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> CompileResult<Vec<boo
 
             match bool_result {
                 Some(bool) => Ok(bool),
-                None => Err(FhirpathError::CompileError {
+                None => Err(FhirpathError::EvaluateError {
                     msg: "Value was not a boolean".to_string(),
                 }),
             }
         })
-        .collect::<CompileResult<Vec<bool>>>()
+        .collect::<EvaluateResult<Vec<bool>>>()
 }
 
 pub fn all_true<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input_to_bool_array(input)?;
 
     let all_true = array.iter().all(|item| *item);
@@ -89,7 +89,7 @@ pub fn all_true<'a>(
 pub fn any_true<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input_to_bool_array(input)?;
 
     let any_true = array.iter().any(|item| *item);
@@ -100,7 +100,7 @@ pub fn any_true<'a>(
 pub fn all_false<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input_to_bool_array(input)?;
 
     let all_false = array.iter().all(|item| !*item);
@@ -111,7 +111,7 @@ pub fn all_false<'a>(
 pub fn any_false<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input_to_bool_array(input)?;
 
     let any_false = array.iter().any(|item| !*item);
@@ -123,7 +123,7 @@ pub fn subset_of<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
     target: Target,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (first_array, second_array) = get_arrays(input, expressions, target)?;
 
     let is_subset = first_array.iter().all(|self_item| {
@@ -139,7 +139,7 @@ pub fn superset_of<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
     target: Target,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let (first_array, second_array) = get_arrays(input, expressions, target)?;
 
     let is_superset = second_array.iter().all(|self_item| {
@@ -154,7 +154,7 @@ pub fn superset_of<'a>(
 pub fn count<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = input.get_array()?;
 
     Ok(ResourceNode::from_node(input, json!(array.len())))
@@ -163,7 +163,7 @@ pub fn count<'a>(
 pub fn distinct<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let array = unique_array_elements(input.get_array()?);
 
     Ok(ResourceNode::from_node(input, Value::Array(array)))
@@ -172,7 +172,7 @@ pub fn distinct<'a>(
 pub fn is_distinct<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let total_array = input.get_array()?;
 
     let array = unique_array_elements(total_array);

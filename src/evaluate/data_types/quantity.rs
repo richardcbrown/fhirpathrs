@@ -8,7 +8,7 @@ use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{error::FhirpathError, evaluate::CompileResult, parser::literal::QuantityLiteral};
+use crate::{error::FhirpathError, evaluate::EvaluateResult, parser::literal::QuantityLiteral};
 
 pub enum TimeUnit {
     Years,
@@ -67,7 +67,7 @@ impl TryFrom<&String> for TimeUnit {
             "min" | "minute" | "minutes" => Ok(TimeUnit::Minutes),
             "s" | "second" | "seconds" => Ok(TimeUnit::Seconds),
             "ms" | "millisecond" | "milliseconds" => Ok(TimeUnit::Millis),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!("{} is not a Time Unit", value),
             }),
         }
@@ -85,7 +85,7 @@ impl TryFrom<&QuantityLiteral> for Quantity {
 
     fn try_from(value: &QuantityLiteral) -> Result<Self, Self::Error> {
         let quant_value =
-            Decimal::from_str(value.text.as_str()).map_err(|err| FhirpathError::CompileError {
+            Decimal::from_str(value.text.as_str()).map_err(|err| FhirpathError::EvaluateError {
                 msg: format!("Failed to parse Quantity.value: {}", err.to_string()),
             })?;
 
@@ -109,7 +109,7 @@ impl TryFrom<&Value> for Quantity {
                         Value::String(string_num) => Decimal::from_str_exact(&string_num).ok(),
                         _ => None,
                     })
-                    .ok_or(FhirpathError::CompileError {
+                    .ok_or(FhirpathError::EvaluateError {
                         msg: "Could not parse Quantity.value".to_string(),
                     })?;
 
@@ -127,13 +127,13 @@ impl TryFrom<&Value> for Quantity {
                             value: q_value,
                             unit: Some(string_unit.to_string()),
                         }),
-                        _ => Err(FhirpathError::CompileError {
+                        _ => Err(FhirpathError::EvaluateError {
                             msg: "Invalid Qunatity.unit".to_string(),
                         }),
                     },
                 }
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Cannot convert value to Quantity".to_string(),
             }),
         }
@@ -148,7 +148,7 @@ impl Quantity {
         }
     }
 
-    pub fn try_convert_unit(&self, unit: &Option<String>) -> CompileResult<Quantity> {
+    pub fn try_convert_unit(&self, unit: &Option<String>) -> EvaluateResult<Quantity> {
         match (&self.unit, unit) {
             (None, None) => Ok(self.clone()),
             (Some(u1), Some(u2)) => {
@@ -163,11 +163,11 @@ impl Quantity {
                 //     let factor = time1.get_conversion_factor(time2);
                 // }
 
-                Err(FhirpathError::CompileError {
+                Err(FhirpathError::EvaluateError {
                     msg: format!("Converting between {u1} and {u2} not supported."),
                 })
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!("Cannot convert Quantities with mismatched units."),
             }),
         }

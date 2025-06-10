@@ -9,7 +9,7 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 use super::{
     data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     utils::{from_decimal, get_f64_from_expression, get_usize_from_expression},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
@@ -23,7 +23,7 @@ impl ArithmeticType {
         }
     }
 
-    pub fn mul(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn mul(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
@@ -35,7 +35,7 @@ impl ArithmeticType {
 
                 Ok(result)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!(
                     "Cannot multiply {} by {}",
                     self.to_string(),
@@ -45,7 +45,7 @@ impl ArithmeticType {
         }
     }
 
-    pub fn add(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn add(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
@@ -65,13 +65,13 @@ impl ArithmeticType {
             (ArithmeticType::String(s1), ArithmeticType::String(s2)) => {
                 Ok(Value::String(format!("{}{}", s1, s2)))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!("Cannot add {} to {}", self.to_string(), other.to_string()),
             }),
         }
     }
 
-    pub fn sub(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn sub(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
@@ -88,7 +88,7 @@ impl ArithmeticType {
 
                 Ok(Value::String(result.to_string()))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!(
                     "Cannot subtract {} to {}",
                     self.to_string(),
@@ -98,7 +98,7 @@ impl ArithmeticType {
         }
     }
 
-    pub fn div(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn div(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 if num2.is_zero() {
@@ -109,48 +109,48 @@ impl ArithmeticType {
                 let f2: f64 = from_decimal(num2.to_owned())?;
 
                 let result = Decimal::from_f64(f1.div_euclid(f2)).ok_or_else(|| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: "Failed to convert to Decimal".to_string(),
                     }
                 })?;
 
                 Ok(
-                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(result).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "div operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn rem(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn rem(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 let f1: f64 = from_decimal(num1.to_owned())?;
                 let f2: f64 = from_decimal(num2.to_owned())?;
 
                 let result = Decimal::from_f64(f1.rem_euclid(f2)).ok_or_else(|| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: "Failed to convert to Decimal".to_string(),
                     }
                 })?;
 
                 Ok(
-                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(result).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "rem operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn divide(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn divide(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 if num2.is_zero() {
@@ -158,156 +158,156 @@ impl ArithmeticType {
                 }
 
                 Ok(serde_json::to_value(num1 / num2).map_err(|err| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     }
                 })?)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "divide operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn exp(&self) -> CompileResult<Value> {
+    pub fn exp(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 let f1 = from_decimal(num.to_owned())?;
 
                 let result =
-                    Decimal::from_f64(f1.exp()).ok_or_else(|| FhirpathError::CompileError {
+                    Decimal::from_f64(f1.exp()).ok_or_else(|| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal"),
                     })?;
 
                 Ok(
-                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(result).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "exp operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn abs(&self) -> CompileResult<Value> {
+    pub fn abs(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(
-                    serde_json::to_value(num.abs()).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(num.abs()).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "abs operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn ceiling(&self) -> CompileResult<Value> {
+    pub fn ceiling(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(
                     serde_json::to_value(num.ceil()).map_err(|err| {
-                        FhirpathError::CompileError {
+                        FhirpathError::EvaluateError {
                             msg: format!("Could not convert from Decimal: {}", err.to_string()),
                         }
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "ceiling operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn floor(&self) -> CompileResult<Value> {
+    pub fn floor(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(serde_json::to_value(num.floor()).map_err(|err| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     }
                 })?)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "floor operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn ln(&self) -> CompileResult<Value> {
+    pub fn ln(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(
-                    serde_json::to_value(num.ln()).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(num.ln()).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "ln operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn log(&self, base: f64) -> CompileResult<Value> {
+    pub fn log(&self, base: f64) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 let f1 = from_decimal(num.to_owned())?;
 
                 let result =
-                    Decimal::from_f64(f1.log(base)).ok_or_else(|| FhirpathError::CompileError {
+                    Decimal::from_f64(f1.log(base)).ok_or_else(|| FhirpathError::EvaluateError {
                         msg: "Failed to convert to Decimal".to_string(),
                     })?;
 
                 Ok(
-                    serde_json::to_value(result).map_err(|err| FhirpathError::CompileError {
+                    serde_json::to_value(result).map_err(|err| FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "log operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn power(&self, exponent: f64) -> CompileResult<Value> {
+    pub fn power(&self, exponent: f64) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(serde_json::to_value(num.powf(exponent)).map_err(|err| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     }
                 })?)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "pow operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn round(&self, precision: usize) -> CompileResult<Value> {
+    pub fn round(&self, precision: usize) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 let rounded = match precision {
                     0 => Ok(serde_json::to_value(num.round()).map_err(|err| {
-                        FhirpathError::CompileError {
+                        FhirpathError::EvaluateError {
                             msg: format!("Could not convert from Decimal: {}", err.to_string()),
                         }
                     })?),
                     _ => {
                         let dp = precision
                             .to_u32()
-                            .ok_or_else(|| FhirpathError::CompileError {
+                            .ok_or_else(|| FhirpathError::EvaluateError {
                                 msg: format!("Could not convert to u32"),
                             })?;
 
                         let val = serde_json::to_value(num.round_dp(dp)).map_err(|err| {
-                            FhirpathError::CompileError {
+                            FhirpathError::EvaluateError {
                                 msg: format!("Could not convert from Decimal: {}", err.to_string()),
                             }
                         })?;
@@ -318,20 +318,20 @@ impl ArithmeticType {
 
                 Ok(rounded)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "round operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn sqrt(&self) -> CompileResult<Value> {
+    pub fn sqrt(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 let root = num.sqrt();
 
                 if let Some(root_val) = root {
                     return serde_json::to_value(root_val).map_err(|err| {
-                        FhirpathError::CompileError {
+                        FhirpathError::EvaluateError {
                             msg: format!("Could not convert from Decimal: {}", err.to_string()),
                         }
                     });
@@ -339,22 +339,22 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "sqrt operation not supported for type".to_string(),
             })
         }
     }
 
-    pub fn truncate(&self) -> CompileResult<Value> {
+    pub fn truncate(&self) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
                 Ok(serde_json::to_value(num.trunc()).map_err(|err| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     }
                 })?)
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "truncate operation not supported for type".to_string(),
             })
         }
@@ -364,9 +364,9 @@ impl ArithmeticType {
 pub fn add<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "add expects exactly two expressions".to_string(),
         });
     }
@@ -384,7 +384,7 @@ pub fn add<'a>(
         return Ok(ResourceNode::from_node(input, json!(first_string)));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: "add operator not supported for types".to_string(),
     })
 }
@@ -392,9 +392,9 @@ pub fn add<'a>(
 pub fn mul<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "mul expects exactly two expressions".to_string(),
         });
     }
@@ -409,9 +409,9 @@ pub fn mul<'a>(
 pub fn sub<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "sub expects exactly two expressions".to_string(),
         });
     }
@@ -426,9 +426,9 @@ pub fn sub<'a>(
 pub fn div<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "sub expects exactly two expressions".to_string(),
         });
     }
@@ -443,9 +443,9 @@ pub fn div<'a>(
 pub fn rem<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "sub expects exactly two expressions".to_string(),
         });
     }
@@ -460,9 +460,9 @@ pub fn rem<'a>(
 pub fn divide<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "sub expects exactly two expressions".to_string(),
         });
     }
@@ -477,9 +477,9 @@ pub fn divide<'a>(
 pub fn amp<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "sub expects exactly two expressions".to_string(),
         });
     }
@@ -500,7 +500,7 @@ pub fn amp<'a>(
         return Ok(ResourceNode::from_node(input, json!(first_string)));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: "add operator not supported for types".to_string(),
     })
 }
@@ -508,7 +508,7 @@ pub fn amp<'a>(
 pub fn abs<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -522,7 +522,7 @@ pub fn abs<'a>(
 pub fn ceiling<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -536,7 +536,7 @@ pub fn ceiling<'a>(
 pub fn exp<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -550,7 +550,7 @@ pub fn exp<'a>(
 pub fn floor<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -564,7 +564,7 @@ pub fn floor<'a>(
 pub fn ln<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -578,9 +578,9 @@ pub fn ln<'a>(
 pub fn log<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "log expects exactly one expression".to_string(),
         });
     }
@@ -600,9 +600,9 @@ pub fn log<'a>(
 pub fn power<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "log expects exactly one expression".to_string(),
         });
     }
@@ -622,9 +622,9 @@ pub fn power<'a>(
 pub fn round<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() > 1 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "log expects zero or one expression".to_string(),
         });
     }
@@ -647,7 +647,7 @@ pub fn round<'a>(
 pub fn sqrt<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {
@@ -661,7 +661,7 @@ pub fn sqrt<'a>(
 pub fn truncate<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = &input.get_single_or_empty()?;
 
     let value = match data {

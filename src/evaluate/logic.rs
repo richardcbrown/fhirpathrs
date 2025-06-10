@@ -2,14 +2,14 @@ use serde_json::Value;
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
-use super::{utils::try_convert_to_boolean, CompileResult, Evaluate, ResourceNode};
+use super::{utils::try_convert_to_boolean, EvaluateResult, Evaluate, ResourceNode};
 
 pub fn and<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "and expects exactly two expressions".to_string(),
         });
     }
@@ -54,9 +54,9 @@ pub fn and<'a>(
 pub fn or<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "or expects exactly two expressions".to_string(),
         });
     }
@@ -101,7 +101,7 @@ pub fn or<'a>(
 pub fn not<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let data = input
         .get_single_or_empty()?
         .and_then(|val| try_convert_to_boolean(&val));
@@ -122,9 +122,9 @@ pub fn not<'a>(
 pub fn xor<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "xor expects exactly two expressions".to_string(),
         });
     }
@@ -157,9 +157,9 @@ pub fn xor<'a>(
 pub fn implies<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "xor expects exactly two expressions".to_string(),
         });
     }

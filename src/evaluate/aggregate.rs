@@ -4,16 +4,16 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     nodes::resource_node::{ResourceContext, ResourceNode},
-    CompileResult, Evaluate,
+    EvaluateResult, Evaluate,
 };
 
 pub fn aggregate<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "aggregate expects at least one expression".to_string(),
         })?;
 

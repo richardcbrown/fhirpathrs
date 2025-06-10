@@ -22,7 +22,7 @@ impl TryFrom<&Value> for ArithmeticType {
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(num) => Ok(ArithmeticType::Number(
-                Decimal::from_str(num.as_str()).map_err(|_| FhirpathError::CompileError {
+                Decimal::from_str(num.as_str()).map_err(|_| FhirpathError::EvaluateError {
                     msg: "Failed to convert Number to Decimal".to_string(),
                 })?,
             )),
@@ -58,11 +58,11 @@ impl TryFrom<&Value> for ArithmeticType {
                     return Ok(ArithmeticType::Quantity(quantity_value));
                 }
 
-                Err(FhirpathError::CompileError {
+                Err(FhirpathError::EvaluateError {
                     msg: "Could not convert object to ArithmeticType".to_string(),
                 })
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Could not convert value to ArithmeticType".to_string(),
             }),
         }

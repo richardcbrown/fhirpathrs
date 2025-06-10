@@ -6,11 +6,11 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
-    pub fn gt(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn gt(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
@@ -54,13 +54,13 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "> operation not supported for types".to_string(),
             })
         }
     }
 
-    pub fn lt(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn lt(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 Ok(Value::Bool(num1 < num2))
@@ -102,13 +102,13 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "< operation not supported for types".to_string(),
             })
         }
     }
 
-    pub fn gte(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn gte(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 Ok(Value::Bool(num1 >= num2))
@@ -150,13 +150,13 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: ">= operation not supported for types".to_string(),
             })
         }
     }
 
-    pub fn lte(&self, other: &ArithmeticType) -> CompileResult<Value> {
+    pub fn lte(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
                 Ok(Value::Bool(num1 <= num2))
@@ -198,7 +198,7 @@ impl ArithmeticType {
 
                 Ok(Value::Array(vec![]))
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "<= operation not supported for types".to_string(),
             })
         }
@@ -208,9 +208,9 @@ impl ArithmeticType {
 pub fn gt<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "> expects exactly two expressions".to_string(),
         });
     }
@@ -222,7 +222,7 @@ pub fn gt<'a>(
         return Ok(ResourceNode::from_node(input, result));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: "> operator not supported for types".to_string(),
     })
 }
@@ -230,9 +230,9 @@ pub fn gt<'a>(
 pub fn gte<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: ">= expects exactly two expressions".to_string(),
         });
     }
@@ -244,7 +244,7 @@ pub fn gte<'a>(
         return Ok(ResourceNode::from_node(input, result));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: ">= operator not supported for types".to_string(),
     })
 }
@@ -252,9 +252,9 @@ pub fn gte<'a>(
 pub fn lt<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "< expects exactly two expressions".to_string(),
         });
     }
@@ -266,7 +266,7 @@ pub fn lt<'a>(
         return Ok(ResourceNode::from_node(input, result));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: "< operator not supported for types".to_string(),
     })
 }
@@ -274,9 +274,9 @@ pub fn lt<'a>(
 pub fn lte<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "< expects exactly two expressions".to_string(),
         });
     }
@@ -288,7 +288,7 @@ pub fn lte<'a>(
         return Ok(ResourceNode::from_node(input, result));
     }
 
-    Err(FhirpathError::CompileError {
+    Err(FhirpathError::EvaluateError {
         msg: "< operator not supported for types".to_string(),
     })
 }

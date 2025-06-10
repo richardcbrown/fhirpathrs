@@ -8,7 +8,7 @@ use crate::{
     evaluate::{
         data_types::type_info::{TypeDetails, TypeInfo},
         reflection::{get_reflection_type, ReflectionType},
-        CompileResult,
+        EvaluateResult,
     },
     models::ModelDetails,
 };
@@ -89,58 +89,58 @@ impl<'a> ResourceNode<'a> {
         )
     }
 
-    pub fn is_empty(&self) -> CompileResult<bool> {
+    pub fn is_empty(&self) -> EvaluateResult<bool> {
         match &self.data {
             Value::Array(array) => Ok(array.len() == 0),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
         }
     }
 
-    pub fn is_single(&self) -> CompileResult<bool> {
+    pub fn is_single(&self) -> EvaluateResult<bool> {
         match &self.data {
             Value::Array(array) => Ok(array.len() == 1),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
         }
     }
 
-    pub fn get_single(&self) -> CompileResult<Value> {
+    pub fn get_single(&self) -> EvaluateResult<Value> {
         if !self.is_single()? {
-            return Err(FhirpathError::CompileError {
+            return Err(FhirpathError::EvaluateError {
                 msg: "Expected single value for node".to_string(),
             });
         }
 
         match &self.data {
             Value::Array(array) => {
-                let first = array.first().ok_or_else(|| FhirpathError::CompileError {
+                let first = array.first().ok_or_else(|| FhirpathError::EvaluateError {
                     msg: "Expected single value for node".to_string(),
                 })?;
 
                 Ok(first.clone())
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
         }
     }
 
-    pub fn get_single_or_empty(&self) -> CompileResult<Option<Value>> {
+    pub fn get_single_or_empty(&self) -> EvaluateResult<Option<Value>> {
         match &self.data {
             Value::Array(array) => Ok(array.first().cloned()),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
         }
     }
 
-    pub fn get_array(&self) -> CompileResult<&Vec<Value>> {
+    pub fn get_array(&self) -> EvaluateResult<&Vec<Value>> {
         match &self.data {
             Value::Array(array) => Ok(array),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),
         }

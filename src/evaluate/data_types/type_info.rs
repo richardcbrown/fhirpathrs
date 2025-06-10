@@ -35,12 +35,12 @@ fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
     let model: &ModelDetails = value
         .model
         .as_ref()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "Cannot infer FHIR TypeInfo without Model".to_string(),
         })?;
 
     if !model.available_types.contains(&value.name) {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: format!("No FHIR type named {} in model", value.name),
         });
     }
@@ -61,7 +61,7 @@ fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
         "boolean" => Ok(SystemType::Boolean),
         "string" => Ok(SystemType::String),
         "quantity" => Ok(SystemType::Quantity),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: format!("Invalid System Type {}", value.name),
         }),
     }?;
@@ -117,7 +117,7 @@ impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
                 fhir_type: Some(string_value.to_string()),
                 model: &value.context.model,
             })?),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "ResourceNode data was not a String".to_string(),
             }),
         }
@@ -161,7 +161,7 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
             value
                 .fhir_type
                 .clone()
-                .ok_or_else(|| FhirpathError::CompileError {
+                .ok_or_else(|| FhirpathError::EvaluateError {
                     msg: "No type information".to_string(),
                 })?;
 
@@ -171,7 +171,7 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
             1 => {
                 let type_name = components
                     .first()
-                    .ok_or_else(|| FhirpathError::CompileError {
+                    .ok_or_else(|| FhirpathError::EvaluateError {
                         msg: format!("Invalid TypeInfo {}", type_specifier),
                     })?;
 
@@ -194,14 +194,14 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                     });
                 }
 
-                Err(FhirpathError::CompileError {
+                Err(FhirpathError::EvaluateError {
                     msg: format!("Invalid TypeInfo {}", type_specifier),
                 })
             }
             2 => {
                 let namespace = components
                     .first()
-                    .ok_or_else(|| FhirpathError::CompileError {
+                    .ok_or_else(|| FhirpathError::EvaluateError {
                         msg: format!("Invalid TypeInfo {}", type_specifier),
                     })?;
 
@@ -209,7 +209,7 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                     components
                         .iter()
                         .nth(1)
-                        .ok_or_else(|| FhirpathError::CompileError {
+                        .ok_or_else(|| FhirpathError::EvaluateError {
                             msg: format!("Invalid TypeInfo {}", type_specifier),
                         })?;
 
@@ -222,12 +222,12 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
                         name: type_name.to_string(),
                         model: &value.model,
                     })?),
-                    _ => Err(FhirpathError::CompileError {
+                    _ => Err(FhirpathError::EvaluateError {
                         msg: format!("Invalid namespace {}", namespace),
                     }),
                 }
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!("Invalid TypeInfo {}", type_specifier),
             }),
         }

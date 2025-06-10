@@ -1,17 +1,17 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::ParenthesizedTerm,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for ParenthesizedTerm {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> CompileResult<ResourceNode<'a>> {
+    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
         let expression = self
             .children
             .first()
-            .ok_or_else(|| FhirpathError::CompileError {
+            .ok_or_else(|| FhirpathError::EvaluateError {
                 msg: "ParenthesizedTerm must have exactly one child".to_string(),
             })?;
 
@@ -20,13 +20,13 @@ impl Evaluate for ParenthesizedTerm {
 }
 
 impl Text for ParenthesizedTerm {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(format!(
             "({})",
             self.children
                 .iter()
                 .map(|c| c.text())
-                .collect::<CompileResult<Vec<String>>>()?
+                .collect::<EvaluateResult<Vec<String>>>()?
                 .join(""),
         ))
     }
