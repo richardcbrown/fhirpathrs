@@ -21,7 +21,7 @@ impl Evaluate for Expression {
             Expression::MembershipExpression(exp) => exp.evaluate(input),
             Expression::AndExpression(exp) => exp.evaluate(input),
             Expression::OrExpression(exp) => exp.evaluate(input),
-            Expression::ImpliesExpression(exp) => todo!(),
+            Expression::ImpliesExpression(exp) => exp.evaluate(input),
         }
     }
 }
@@ -42,7 +42,7 @@ impl Text for Expression {
             Expression::MembershipExpression(exp) => exp.text(),
             Expression::AndExpression(exp) => exp.text(),
             Expression::OrExpression(exp) => exp.text(),
-            Expression::ImpliesExpression(exp) => todo!(),
+            Expression::ImpliesExpression(exp) => exp.text(),
         }
     }
 }

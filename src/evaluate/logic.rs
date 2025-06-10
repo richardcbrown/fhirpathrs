@@ -212,7 +212,9 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
-    use crate::evaluate::compile;
+    use crate::evaluate::{compile, EvaluateOptions};
+    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::models::{get_model_details, ModelType};
 
     #[test]
     fn evaluate_and_true_path() {
@@ -415,5 +417,90 @@ mod test {
         assert_json_eq!(evaluate_result, json!([]));
     }
 
-    // @todo - implies tests
+    #[test]
+    fn test_implies_path() {
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "given": ["test"],
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "given": ["test"]
+                        }
+                    ]
+                }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "use": "usual"
+                        }
+                    ]
+                }),
+                expected: json!([]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "use": "usual"
+                        }
+                    ]
+                }),
+                expected: json!([]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 }

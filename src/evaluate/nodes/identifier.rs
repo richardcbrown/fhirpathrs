@@ -22,7 +22,7 @@ impl Text for Identifier {
     fn text(&self) -> EvaluateResult<String> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.text(),
-            Identifier::LiteralAs(exp) => todo!(),
+            Identifier::LiteralAs(exp) => exp.text(),
             Identifier::LiteralContains(exp) => exp.text(),
             Identifier::LiteralDelimitedIdentifier(exp) => todo!(),
             Identifier::LiteralIn(exp) => todo!(),
