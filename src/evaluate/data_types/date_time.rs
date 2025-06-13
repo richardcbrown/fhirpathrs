@@ -236,7 +236,6 @@ impl DateTime {
                         msg: format!("Could not add {} seconds to {}", millis, datetime),
                     })
             }
-            _ => todo!(),
         }?;
 
         Ok(DateTime::from_datetime_precision(

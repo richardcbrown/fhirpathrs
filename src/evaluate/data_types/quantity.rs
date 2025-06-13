@@ -34,24 +34,6 @@ impl TimeUnit {
             TimeUnit::Millis => "ms",
         }
     }
-
-    // pub fn to_seconds(&self) -> Option<Decimal> {
-    //     match self {
-    //         TimeUnit::Years => Decimal::from_u32(356 * 60 * 60 * 60),
-    //         TimeUnit::Months => Decimal::from_u32()
-    //     }
-    // }
-
-    // pub fn get_conversion_factor(&self, other: &TimeUnit) -> Option<Decimal> {
-    //     match self {
-    //         TimeUnit::Years => match other {
-    //             TimeUnit::Years => Decimal::from_i8(1),
-    //             TimeUnit::Months => Decimal::from_i8(12),
-    //             TimeUnit::Weeks => Decimal::from_i8(52),
-    //             TimeUnit::Days => Decimal::from_i8(365),
-    //         },
-    //     }
-    // }
 }
 
 impl TryFrom<&String> for TimeUnit {
@@ -155,13 +137,6 @@ impl Quantity {
                 if u1.eq(u2) {
                     return Ok(self.clone());
                 }
-
-                // let t1 = TimeUnit::try_from(u1);
-                // let t2 = TimeUnit::try_from(u2);
-
-                // if let (Ok(time1), Ok(time2)) = (t1, t2) {
-                //     let factor = time1.get_conversion_factor(time2);
-                // }
 
                 Err(FhirpathError::EvaluateError {
                     msg: format!("Converting between {u1} and {u2} not supported."),

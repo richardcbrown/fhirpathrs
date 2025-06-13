@@ -133,23 +133,10 @@ impl<'a> TryFrom<&Value> for TypeInfo {
                 namespace: Some(Namespace::System),
                 type_name: SystemType::String.to_string(),
             }),
-            _ => todo!(),
+            _ => Err(FhirpathError::EvaluateError {
+                msg: "Cannot convert Value to TypeInfo".to_string(),
+            }),
         }
-        // if let Ok(_) = DateTime::try_from(value) {
-        //     return Ok(TypeInfo {
-        //         namespace: Some(Namespace::System),
-        //         type_name: SystemType::DateTime.to_string(),
-        //     });
-        // }
-
-        // if let Ok(_) = Date::try_from(value) {
-        //     return Ok(TypeInfo {
-        //         namespace: Some(Namespace::System),
-        //         type_name: SystemType::Date.to_string(),
-        //     });
-        // }
-
-        // if let Ok(_) = Time::try_from(value) {}
     }
 }
 

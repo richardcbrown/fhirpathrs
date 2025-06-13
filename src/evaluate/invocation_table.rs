@@ -290,7 +290,6 @@ mod tests {
               { "use": "b" },
               { "use": "c" }
             ]),
-            parent_node: None,
             context: &FhirContext {
                 model: None,
                 vars: HashMap::<String, Value>::new(),

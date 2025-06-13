@@ -12,7 +12,7 @@ impl Evaluate for Identifier {
             Identifier::LiteralAs(exp) => exp.evaluate(input),
             Identifier::LiteralContains(exp) => exp.evaluate(input),
             Identifier::LiteralDelimitedIdentifier(exp) => exp.evaluate(input),
-            Identifier::LiteralIn(exp) => todo!(),
+            Identifier::LiteralIn(exp) => exp.evaluate(input),
             Identifier::LiteralIs(exp) => exp.evaluate(input),
         }
     }
@@ -25,7 +25,7 @@ impl Text for Identifier {
             Identifier::LiteralAs(exp) => exp.text(),
             Identifier::LiteralContains(exp) => exp.text(),
             Identifier::LiteralDelimitedIdentifier(exp) => exp.text(),
-            Identifier::LiteralIn(exp) => todo!(),
+            Identifier::LiteralIn(exp) => exp.text(),
             Identifier::LiteralIs(exp) => exp.text(),
         }
     }

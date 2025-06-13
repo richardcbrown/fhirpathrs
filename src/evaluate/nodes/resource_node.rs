@@ -24,12 +24,12 @@ pub struct FhirContext {
 pub struct PathDetails {
     pub path: String,
     pub fhir_type: Option<String>,
+    pub extensible: bool
 }
 
 #[derive(Clone, Debug)]
 pub struct ResourceNode<'a> {
     pub data_root: &'a Value,
-    pub parent_node: Option<Box<&'a ResourceNode<'a>>>,
     pub data: Value,
     pub context: &'a FhirContext,
     pub path: Option<String>,
@@ -66,7 +66,6 @@ impl<'a> ResourceNode<'a> {
 
         Self {
             data_root,
-            parent_node,
             data: node_data,
             context,
             path,

@@ -240,7 +240,7 @@ fn values_are_equivalent(first: &Value, second: &Value) -> Option<bool> {
         (Value::Number(n1), Value::Number(n2)) => Some(n1.eq(n2)),
         (Value::String(s1), Value::String(s2)) => Some(normalise(s1).eq(&normalise(s2))),
         (Value::Null, Value::Null) => Some(true),
-        _ => todo!(),
+        _ => Some(false),
     }
 }
 

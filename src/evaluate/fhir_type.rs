@@ -22,5 +22,6 @@ pub fn determine_fhir_type(
     PathDetails {
         path: child_path,
         fhir_type,
+        extensible: child_property.starts_with("_"),
     }
 }

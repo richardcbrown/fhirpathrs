@@ -61,6 +61,39 @@ impl Evaluate for FunctionInvocation {
 
 impl Text for FunctionInvocation {
     fn text(&self) -> EvaluateResult<String> {
-        todo!()
+        let identifier = self.children.first().and_then(|ident| {
+            match ident.deref() {
+                IdentifierAndParamList::Identifier(ident) => Some(ident),
+                _ => None,
+            }
+        }).ok_or(FhirpathError::EvaluateError {
+            msg: "First child of FunctionInvocation should be function name".to_string(),
+        })?.text()?;
+
+        let paramlist = self.children.iter().nth(1).and_then(|ident| {
+            match ident.deref() {
+                IdentifierAndParamList::ParamList(param_list) => Some(param_list),
+                _ => None,
+            }
+        }).and_then(|pl| {
+            pl.children.iter().map(|child| child.text()).collect::<EvaluateResult<Vec<String>>>().ok()
+        }).ok_or(FhirpathError::EvaluateError {
+            msg: "Second child of FunctionInvocation should be parameter list".to_string(),
+        })?;
+        
+        Ok(format!("{}({})",  identifier, paramlist.join(",")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::evaluate::{compile, Text};
+
+    #[test]
+    fn test_function_invocation_text() {
+        let compiled = compile(&"Patient.name.where(a = 'b')".to_string());
+
+        let text = compiled.unwrap().expression.text().unwrap();
+        assert_eq!(text, "Patient.name.where(a='b')");
     }
 }

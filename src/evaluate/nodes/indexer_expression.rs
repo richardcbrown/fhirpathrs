@@ -42,11 +42,6 @@ impl Evaluate for IndexerExpression {
 
         let array_data = array_node.get_array()?;
 
-        dbg!(array_data.clone());
-        dbg!(array_node.fhir_types.clone());
-        dbg!(input.path.clone());
-        dbg!(input.fhir_types.clone());
-
         let mut node = ResourceNode::from_node(input, array_data[index as usize].clone());
 
         node.fhir_types = array_node.fhir_types;
@@ -58,6 +53,27 @@ impl Evaluate for IndexerExpression {
 
 impl Text for IndexerExpression {
     fn text(&self) -> EvaluateResult<String> {
-        todo!()
+        let first = self.children.first().ok_or(FhirpathError::EvaluateError {
+            msg: "First child of IndexerExpression should be an identifier".to_string(),
+        })?.text()?;
+
+        let second = self.children.iter().nth(1).ok_or(FhirpathError::EvaluateError {
+            msg: "Second child of IndexerExpression should be an index".to_string(),
+        })?.text()?;
+
+        Ok(format!("{}[{}]", first, second))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::evaluate::{compile, Text};
+
+    #[test]
+    fn test_indexer_expression_text() {
+        let compiled = compile(&"Patient.name[0]".to_string());
+
+        let text = compiled.unwrap().expression.text().unwrap();
+        assert_eq!(text, "Patient.name[0]");
     }
 }

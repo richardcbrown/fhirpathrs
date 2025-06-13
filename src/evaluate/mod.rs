@@ -98,9 +98,36 @@ impl CompiledPath {
 
         let evaluate_result = self.expression.evaluate(&node)?;
 
-        dbg!(evaluate_result.path);
+        dbg!(evaluate_result.path.clone());
 
-        Ok(evaluate_result.data)
+        // where data contains values from both property and _property
+        // remove the _property results
+        let fhir_types = &evaluate_result.fhir_types;
+        let mut data = evaluate_result.get_array()?;
+
+        let has_none_extension_data = fhir_types.iter().any(|ft| {
+            ft.as_ref().and_then(|fhir_type| Some(fhir_type.extensible)).unwrap_or(false)
+        });
+
+        if has_none_extension_data {
+            let combined: Vec<(bool, Value)> = data.iter().enumerate().map(|(index, item)| {
+                let is_extensible = fhir_types
+                    .iter()
+                    .nth(index)
+                    .unwrap_or(&None)
+                    .as_ref()
+                    .and_then(|ft| Some(ft.extensible)).unwrap_or(false);
+
+                (is_extensible , item.clone())
+            }).collect();
+
+            let filtered: Vec<Value> =  combined.into_iter().filter(|item| !item.0).map(|item| item.1).collect();
+
+            return Ok(Value::Array(filtered));
+
+        }
+
+        Ok(Value::Array(data.clone()))
     }
 }
 

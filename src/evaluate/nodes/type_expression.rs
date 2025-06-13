@@ -42,6 +42,27 @@ impl Evaluate for TypeExpression {
 
 impl Text for TypeExpression {
     fn text(&self) -> EvaluateResult<String> {
-        todo!()
+        Ok(
+            self.children
+                .iter()
+                .map(|node| {
+                    node.text()
+                })
+                .collect::<EvaluateResult<Vec<String>>>()
+                ?.join(format!(" {} ",  self.op).as_str())
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::evaluate::{compile, Text};
+
+    #[test]
+    fn test_indexer_expression_text() {
+        let compiled = compile(&"Patient.name.where($this is FHIR.Patient)".to_string());
+
+        let text = compiled.unwrap().expression.text().unwrap();
+        assert_eq!(text, "Patient.name.where($this is FHIR.Patient)");
     }
 }
