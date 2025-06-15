@@ -25,7 +25,6 @@ fn evaluate_filter_expression(
         .filter_map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 item.to_owned(),
                 input.context,
                 input.path.clone(),
@@ -89,7 +88,6 @@ pub fn select<'a>(
         .map(|(index, val)| {
             let node = ResourceNode::new(
                 input.data_root,
-                None,
                 json!(val.clone()),
                 input.context,
                 input.path.clone(),

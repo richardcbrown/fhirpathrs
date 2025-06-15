@@ -212,9 +212,8 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
-    use crate::evaluate::{compile, EvaluateOptions};
+    use crate::evaluate::compile;
     use crate::evaluate::test::test::{run_tests, TestCase};
-    use crate::models::{get_model_details, ModelType};
 
     #[test]
     fn evaluate_and_true_path() {

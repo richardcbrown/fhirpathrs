@@ -2,7 +2,6 @@ use std::{cell::LazyCell, cmp::Ordering};
 
 use chrono::{NaiveTime, Timelike, Utc};
 use regex::Regex;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -10,7 +9,7 @@ use crate::{error::FhirpathError, evaluate::EvaluateResult};
 
 use super::{
     date_time::DateTimePrecision,
-    utils::{parse_optional_f64, parse_optional_u32},
+    utils::{parse_optional_u32},
 };
 
 /**

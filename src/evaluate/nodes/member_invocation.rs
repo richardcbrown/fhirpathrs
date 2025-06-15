@@ -9,6 +9,7 @@ use crate::{
     },
     parser::invocation::MemberInvocation,
 };
+use crate::evaluate::nodes::utils::capitalise;
 
 fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> Vec<String> {
     // if there is no model there's nothing to expand
@@ -34,7 +35,7 @@ fn expand_choice_values<'a>(input: &'a ResourceNode<'a>, property: &String) -> V
             Some(
                 choice_items
                     .into_iter()
-                    .map(|ci| vec![property.to_string(), ci.to_string()].join(""))
+                    .map(|ci| vec![property.to_string(), capitalise(ci)].join(""))
                     .collect::<Vec<String>>(),
             )
         });
@@ -82,6 +83,10 @@ impl Evaluate for MemberInvocation {
             _ => "".to_string(),
         };
 
+        // check if we're already invoking the extensible property
+        // of a primitive FHIR value
+        let is_extensible_key = key_value.starts_with("_");
+
         let input_data = input.get_array()?;
 
         let node_resource_type = input_data.first().and_then(|item| item.get("resourceType"));
@@ -95,7 +100,7 @@ impl Evaluate for MemberInvocation {
             node.fhir_types = vec![Some(PathDetails {
                 path: key_value.clone(),
                 fhir_type: Some(key_value.clone()),
-                extensible: key_value.starts_with("_")
+                extensible: false
             })];
 
             return Ok(node);
@@ -143,14 +148,14 @@ impl Evaluate for MemberInvocation {
         let mut node = ResourceNode::from_node(input, Value::Array(flattened_values));
 
         node.path = match &input.path {
-            Some(path) => Some(determine_fhir_type(path, &key_value, input.context).path),
+            Some(path) => Some(determine_fhir_type(path, &key_value, input.context, is_extensible_key).path),
             None => None,
         };
 
         let type_details: Vec<Option<PathDetails>> = keys
             .iter()
             .map(|key| match &input.path {
-                Some(path) => Some(determine_fhir_type(path, &key, input.context)),
+                Some(path) => Some(determine_fhir_type(path, &key, input.context, is_extensible_key)),
                 None => None,
             })
             .collect();

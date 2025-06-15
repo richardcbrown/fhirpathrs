@@ -3,7 +3,7 @@ use std::{cmp::Ordering, ops::Deref};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, parser::expression::Expression};
-
+use crate::evaluate::data_types::quantity::{CalendarUnit, Quantity, TimeUnit};
 use super::{
     data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     strings::normalise,
@@ -47,7 +47,9 @@ impl ArithmeticType {
                         Ordering::Equal => Some(true),
                         _ => Some(false),
                     },
-                    None => None,
+                    // in particular for Quantities, Time and Calendar Units return
+                    // true/false rather than empty when being compared
+                    None => q1.fhir_eq(&q2)
                 }
             }
             _ => Some(false),
@@ -287,8 +289,7 @@ fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Optio
 
     let mut equivalent_indexes: Vec<Vec<usize>> = vec![];
 
-    // https://www.google.com/search?q=find+all+permutations+of+arrays+of+arrays+picking+one+element+from+each+array+rust&client=firefox-b-d&sca_esv=51ee083cf20858f1&sxsrf=AHTn8zq6-Nm9g9j9YCQjG_MR9UWBmoiOlQ%3A1744666466231&ei=Yn_9Z8TtDaSPxc8PmayEyQo&ved=0ahUKEwjEpuKHvdiMAxWkR_EDHRkWIakQ4dUDCBA&uact=5&oq=find+all+permutations+of+arrays+of+arrays+picking+one+element+from+each+array+rust&gs_lp=Egxnd3Mtd2l6LXNlcnAiUmZpbmQgYWxsIHBlcm11dGF0aW9ucyBvZiBhcnJheXMgb2YgYXJyYXlzIHBpY2tpbmcgb25lIGVsZW1lbnQgZnJvbSBlYWNoIGFycmF5IHJ1c3RI6xNQkQNY3BBwAXgBkAEAmAGNAaAB_AKqAQM0LjG4AQPIAQD4AQGYAgGgAgvCAgoQABiwAxjWBBhHmAMAiAYBkAYIkgcBMaAHigWyBwC4BwA&sclient=gws-wiz-serp
-    for (fi, first_item) in first.iter().enumerate() {
+    for first_item in first.iter() {
         // for each item in first array, find items in the
         // second array that are equivalent and get the
         // indexes
@@ -558,7 +559,7 @@ mod test {
                 expected: json!([true]),
             },
             TestCase {
-                path: "1 'a' = 1 'year'".to_string(),
+                path: "1 'a' = 1 year".to_string(),
                 input: patient.clone(),
                 options: None,
                 expected: json!([false]),

@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    equality::{equal, values_are_equal},
+    equality::{values_are_equal},
     filtering::where_function,
     target::Target,
     utils::{

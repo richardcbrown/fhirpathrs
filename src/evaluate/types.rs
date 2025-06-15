@@ -18,7 +18,7 @@ fn is_type<'a>(
             msg: "expected exactly 1 Expression".to_string(),
         })?;
 
-    let type_details = expression.text()?;
+    let type_details = expression.text()?.replace("'", "").replace("`", "");
 
     dbg!(type_details);
 

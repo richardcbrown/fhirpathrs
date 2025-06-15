@@ -1,4 +1,3 @@
-use crate::models::r4::type_to_parent;
 use std::collections::{HashMap, HashSet};
 
 mod stu3;
@@ -24,7 +23,6 @@ pub struct ModelDetails {
 
 #[derive(Debug)]
 pub enum ModelError {
-    FileLoadFail { msg: String },
     ParseFail { msg: String },
 }
 

@@ -20,22 +20,6 @@ pub fn parse_optional_u32(capture: Option<Match>) -> EvaluateResult<Option<u32>>
     })
 }
 
-pub fn parse_optional_f64(capture: Option<Match>) -> EvaluateResult<Option<f64>> {
-    Ok(capture.and_then(|val| Some(val.as_str()))).and_then(|hour| match hour {
-        Some(h) => {
-            let parse_result = h.parse::<f64>().map_err(|_| FhirpathError::EvaluateError {
-                msg: "Could not parse value to number".to_string(),
-            });
-
-            match parse_result {
-                Ok(res) => Ok(Some(res)),
-                Err(err) => Err(err),
-            }
-        }
-        None => Ok(None),
-    })
-}
-
 pub fn implicit_convert(
     first: &ArithmeticType,
     second: &ArithmeticType,

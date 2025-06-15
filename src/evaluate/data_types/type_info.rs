@@ -114,7 +114,11 @@ impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
     fn try_from(value: &ResourceNode<'a>) -> Result<Self, Self::Error> {
         match &value.get_single()? {
             Value::String(string_value) => Ok(TypeInfo::try_from(&TypeDetails {
-                fhir_type: Some(string_value.to_string()),
+                // when we convert a String to an Expression we are currently using
+                // StringLiteral, the text() implementation wrap this in quotes
+                // so remove the quotes, ideally should have a better way of converting the string
+                // to an expression
+                fhir_type: Some(string_value.to_string().replace("'", "").replace("`", "")),
                 model: &value.context.model,
             })?),
             _ => Err(FhirpathError::EvaluateError {

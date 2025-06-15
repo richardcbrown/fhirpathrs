@@ -31,7 +31,7 @@ pub mod or_expression;
 pub mod parenthesized_term;
 pub mod polarity_expression;
 pub mod qualified_identifier;
-pub mod quantity_lteral;
+pub mod quantity_literal;
 pub mod resource_node;
 pub mod string_literal;
 pub mod term;

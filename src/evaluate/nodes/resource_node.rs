@@ -47,7 +47,6 @@ pub struct ResourceContext {
 impl<'a> ResourceNode<'a> {
     pub fn new(
         data_root: &'a Value,
-        parent_node: Option<Box<&'a ResourceNode<'a>>>,
         data: Value,
         context: &'a FhirContext,
         path: Option<String>,
@@ -78,7 +77,6 @@ impl<'a> ResourceNode<'a> {
     pub fn from_node(node: &'a ResourceNode, data: Value) -> Self {
         Self::new(
             node.data_root,
-            Some(Box::new(node)),
             data,
             node.context,
             node.path.clone(),

@@ -87,7 +87,6 @@ impl CompiledPath {
 
         let node = ResourceNode::new(
             &resource,
-            None,
             resource.clone(),
             &context,
             None,
@@ -103,7 +102,7 @@ impl CompiledPath {
         // where data contains values from both property and _property
         // remove the _property results
         let fhir_types = &evaluate_result.fhir_types;
-        let mut data = evaluate_result.get_array()?;
+        let data = evaluate_result.get_array()?;
 
         let has_none_extension_data = fhir_types.iter().any(|ft| {
             ft.as_ref().and_then(|fhir_type| Some(fhir_type.extensible)).unwrap_or(false)
@@ -124,7 +123,6 @@ impl CompiledPath {
             let filtered: Vec<Value> =  combined.into_iter().filter(|item| !item.0).map(|item| item.1).collect();
 
             return Ok(Value::Array(filtered));
-
         }
 
         Ok(Value::Array(data.clone()))

@@ -18,3 +18,11 @@ pub fn invoke_operation<'a>(
         })
         .and_then(|function| function(input, expressions))
 }
+
+pub fn capitalise(string_value: &String) -> String {
+    let mut c = string_value.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}

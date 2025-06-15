@@ -699,7 +699,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 1 'year'".to_string(),
+                path: "Patient.a + 1 year".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -708,7 +708,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 1 'month'".to_string(),
+                path: "Patient.a + 1 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -717,7 +717,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 12 'month'".to_string(),
+                path: "Patient.a + 12 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -726,7 +726,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 2 'month'".to_string(),
+                path: "Patient.a + 2 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-11"
@@ -735,7 +735,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 1 'week'".to_string(),
+                path: "Patient.a + 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -744,7 +744,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 53 'week'".to_string(),
+                path: "Patient.a + 53 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -753,7 +753,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 1 'week'".to_string(),
+                path: "Patient.a + 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-30"
@@ -762,7 +762,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 1 'hour'".to_string(),
+                path: "Patient.a + 1 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -771,7 +771,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 8800 'hour'".to_string(),
+                path: "Patient.a + 8800 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -780,7 +780,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 24 'hour'".to_string(),
+                path: "Patient.a + 24 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-31"
@@ -789,7 +789,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 2 'hour'".to_string(),
+                path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-31T12"
@@ -798,7 +798,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 2 'hour'".to_string(),
+                path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-31T22:00:00"
@@ -827,7 +827,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 1 'year'".to_string(),
+                path: "Patient.a - 1 year".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -836,7 +836,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 1 'month'".to_string(),
+                path: "Patient.a - 1 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -845,7 +845,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 12 'month'".to_string(),
+                path: "Patient.a - 12 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -854,7 +854,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 2 'month'".to_string(),
+                path: "Patient.a - 2 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-01"
@@ -863,7 +863,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 1 'week'".to_string(),
+                path: "Patient.a - 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -872,7 +872,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 53 'week'".to_string(),
+                path: "Patient.a - 53 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -881,7 +881,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 1 'week'".to_string(),
+                path: "Patient.a - 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-01-06"
@@ -890,7 +890,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 1 'hour'".to_string(),
+                path: "Patient.a - 1 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -899,7 +899,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 8800 'hour'".to_string(),
+                path: "Patient.a - 8800 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016"
@@ -908,7 +908,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a - 24 'hour'".to_string(),
+                path: "Patient.a - 24 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-01-01"
@@ -917,7 +917,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 2 'hour'".to_string(),
+                path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-31T12"
@@ -926,7 +926,7 @@ mod test {
                 options: None,
             },
             TestCase {
-                path: "Patient.a + 2 'hour'".to_string(),
+                path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
                     "a": "@2016-12-31T22:00:00"

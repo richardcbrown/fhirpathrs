@@ -519,8 +519,8 @@ pub TimeLiteral: TimeLiteral = {
 }
 
 pub QuantityLiteral: QuantityLiteral = {
-    <ql: r"([0-9]+(\.[0-9]+)?)\s*'(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|([^']*))'"> => {
-        let quantity_regex = r"([0-9]+(\.[0-9]+)?)\s*'(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|([^']*))'";
+    <ql: r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))"> => {
+        let quantity_regex = r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))";
 
         let captures = Regex::captures(&Regex::new(quantity_regex).unwrap(), ql).unwrap();
 
