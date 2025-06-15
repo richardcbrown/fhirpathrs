@@ -58,7 +58,7 @@ pub struct EvaluateOptions {
 }
 
 impl CompiledPath {
-    fn evaluate(&self, resources: Vec<Value>, options: Option<EvaluateOptions>) -> EvaluateResult<Vec<Value>> {
+    pub fn evaluate(&self, resources: Vec<Value>, options: Option<EvaluateOptions>) -> EvaluateResult<Vec<Value>> {
         let results: Vec<Value> = resources.into_iter().map(|res| self.evaluate_single(res, options.clone())).collect::<EvaluateResult<Vec<Value>>>()?;
 
         let collected = results.into_iter().try_fold(vec![], |mut acc, result| {
@@ -73,7 +73,7 @@ impl CompiledPath {
         Ok(collected?)
     }
 
-    fn evaluate_single(&self, resource: Value, options: Option<EvaluateOptions>) -> EvaluateResult<Value> {
+    pub fn evaluate_single(&self, resource: Value, options: Option<EvaluateOptions>) -> EvaluateResult<Value> {
         let opts = options.unwrap_or(EvaluateOptions {
             model: None,
             vars: None,
@@ -207,6 +207,43 @@ mod tests {
         assert_json_eq!(
             evaluate_result,
             json!([{
+                "use": "usual",
+                "given": ["test"]
+            }])
+        );
+    }
+
+    #[test]
+    fn evaluate_name_multiple_path() {
+        let compiled = compile(&"Patient.name".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test"]
+            }]
+        });
+
+        let evaluate_result = compiled
+            .evaluate(
+                vec![patient.clone(), patient.clone()],
+                Some(EvaluateOptions {
+                    model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                    vars: None,
+                    now: None,
+                }),
+            )
+            .unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"]
+            },{
                 "use": "usual",
                 "given": ["test"]
             }])
