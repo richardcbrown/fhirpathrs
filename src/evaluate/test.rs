@@ -21,7 +21,7 @@ pub mod test {
 
             println!("{:?}", compiled.expression);
 
-            let evaluate_result = compiled.evaluate(test.input, test.options).unwrap();
+            let evaluate_result = compiled.evaluate_single(test.input, test.options).unwrap();
 
             println!("{:?}", evaluate_result);
 

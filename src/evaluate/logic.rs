@@ -227,7 +227,7 @@ mod test {
             "b": 1
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -244,7 +244,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -261,7 +261,7 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -278,7 +278,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -295,7 +295,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -312,7 +312,7 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -328,7 +328,7 @@ mod test {
             "a": 0,
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -344,7 +344,7 @@ mod test {
             "a": true
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -360,7 +360,7 @@ mod test {
             "a": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -377,7 +377,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -394,7 +394,7 @@ mod test {
             "b": true
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -411,7 +411,7 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
