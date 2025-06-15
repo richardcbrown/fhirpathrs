@@ -2,6 +2,9 @@
 name = "fhirpathrs"
 version = "0.1.0"
 edition = "2021"
+description = "Fhirpath implementation in Rust"
+repository = "https://github.com/richardcbrown/fhirpathrs"
+keywords = ["fhirpath", "FHIR", "HL7"]
 
 [dependencies]
 assert-json-diff = "2.0.2"
