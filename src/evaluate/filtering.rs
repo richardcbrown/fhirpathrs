@@ -230,6 +230,70 @@ mod test {
     };
 
     #[test]
+    fn test_where_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4,5],
+            "b": []
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.where($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: json!([2,3,4,5]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.where($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: json!([]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.where(use = 'official')".to_string(),
+                input: patient.clone(),
+                expected: json!([]),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_select_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4,5],
+            "b": []
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.select($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: json!([false, true, true, true, true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.select($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: json!([]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(use = 'official')".to_string(),
+                input: patient.clone(),
+                expected: json!([]),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
     fn test_repeat_path() {
         let patient = json!({
             "resourceType": "Patient",
@@ -240,21 +304,23 @@ mod test {
             }
         });
 
-        let test_cases: Vec<TestCase> = vec![TestCase {
-            path: "Patient.repeat(value)".to_string(),
-            input: patient.clone(),
-            expected: json!([
-                {
-                    "value": {
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.repeat(value)".to_string(),
+                input: patient.clone(),
+                expected: json!([
+                    {
+                        "value": {
+                            "item": 'a'
+                        }
+                    },
+                    {
                         "item": 'a'
                     }
-                },
-                {
-                    "item": 'a'
-                }
-            ]),
-            options: None,
-        }];
+                ]),
+                options: None,
+            }
+        ];
 
         run_tests(test_cases);
     }
@@ -300,6 +366,31 @@ mod test {
                     now: None,
                 }),
             },
+            // @todo - should work but doesn't
+            // TestCase {
+            //     path: "Bundle.entry.resource.ofType(FHIR.Patient)".to_string(),
+            //     input: json!({
+            //         "resourceType": "Bundle",
+            //         "entry": [
+            //             {
+            //                 "resourceType": "Patient"
+            //             },
+            //             {
+            //                 "resourceType": "Observation"
+            //             }
+            //         ]
+            //     }),
+            //     expected: json!([
+            //         {
+            //             "resourceType": "Patient"
+            //         },
+            //     ]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //         now: None,
+            //     }),
+            // },
         ];
 
         run_tests(test_cases);

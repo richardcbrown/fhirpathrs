@@ -18,23 +18,23 @@ however due to the asynchronous nature of the R5 specification this will likely 
 
 - 5. Functions
   - 5.1. Existence
-    - 5.1.1. empty() : Boolean
-    - 5.1.2. exists([criteria : expression]) : Boolean
-    - 5.1.3. all(criteria : expression) : Boolean
-    - 5.1.4. allTrue() : Boolean
-    - 5.1.5. anyTrue() : Boolean
-    - 5.1.6. allFalse() : Boolean
-    - 5.1.7. anyFalse() : Boolean
-    - 5.1.8. subsetOf(other : collection) : Boolean
-    - 5.1.9. supersetOf(other : collection) : Boolean
-    - 5.1.10. count() : Integer
-    - 5.1.11. distinct() : collection
-    - 5.1.12. isDistinct() : Boolean
+    - 5.1.1. empty() : Boolean - :white_check_mark:
+    - 5.1.2. exists([criteria : expression]) : Boolean - :white_check_mark:
+    - 5.1.3. all(criteria : expression) : Boolean - :exclamation:
+    - 5.1.4. allTrue() : Boolean - :white_check_mark:
+    - 5.1.5. anyTrue() : Boolean - :white_check_mark:
+    - 5.1.6. allFalse() : Boolean - :white_check_mark:
+    - 5.1.7. anyFalse() : Boolean - :white_check_mark:
+    - 5.1.8. subsetOf(other : collection) : Boolean - :white_check_mark:
+    - 5.1.9. supersetOf(other : collection) : Boolean - :white_check_mark:
+    - 5.1.10. count() : Integer - :white_check_mark:
+    - 5.1.11. distinct() : collection - :white_check_mark:
+    - 5.1.12. isDistinct() : Boolean - :white_check_mark:
   - 5.2. Filtering and projection
-    - 5.2.1. where(criteria : expression) : collection
-    - 5.2.2. select(projection: expression) : collection
-    - 5.2.3. repeat(projection: expression) : collection
-    - 5.2.4. ofType(type : type specifier) : collection
+    - 5.2.1. where(criteria : expression) : collection - :white_check_mark:
+    - 5.2.2. select(projection: expression) : collection - :white_check_mark:
+    - 5.2.3. repeat(projection: expression) : collection - :white_check_mark:
+    - 5.2.4. ofType(type : type specifier) : collection - :exclamation:
   - 5.3. Subsetting
     - 5.3.1. [ index : Integer ] : collection
     - 5.3.2. single() : collection

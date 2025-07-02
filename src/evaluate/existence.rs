@@ -185,8 +185,105 @@ pub fn is_distinct<'a>(
 #[cfg(test)]
 mod test {
     use serde_json::json;
-
+    use crate::evaluate::EvaluateOptions;
     use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::models::{get_model_details, ModelType};
+
+    #[test]
+    fn test_all_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4],
+            "generalPractitioner": [
+                {
+                    "reference": "Practitioner/123"
+                }
+            ],
+            "b": [],
+            "contained": [
+                {
+                    "resourceType": "Patient"
+                }
+            ]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.b.all($this = true)".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.all($this > 0)".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.all($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: json!([false]),
+                options: None,
+            },
+            // @todo - should pass according to spec
+            // but doesn't as we don't reset the path
+            // for contained resources
+            // TestCase {
+            //     path: "Patient.contained.all($this is Patient)".to_string(),
+            //     input: patient.clone(),
+            //     expected: json!([true]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //         now: None,
+            //     }),
+            // },
+            // @todo - should pass according to spec
+            // but doesn't as we cannot yet determine the
+            // type of a reference
+            // TestCase {
+            //     path: "Patient.generalPractitioner.all($this is Patient)".to_string(),
+            //     input: patient.clone(),
+            //     expected: json!([true]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //         now: None,
+            //     }),
+            // },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_all_true_path() {
+        let patient = json!({ "resourceType": "Patient", "a": [true, false], "b": [] });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.allTrue()".to_string(),
+                input: patient.clone(),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value = true).allTrue()".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.allTrue()".to_string(),
+                input: patient.clone(),
+                expected: json!([true]),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 
     #[test]
     fn test_any_true_path() {
@@ -247,6 +344,12 @@ mod test {
             },
             TestCase {
                 path: "Patient.a.select(value > 2).allFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 1 }, { "value": 2 }, { "value": 2 }] }),
+                expected: json!([false]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).allFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [] }),
                 expected: json!([true]),
                 options: None,
@@ -277,6 +380,12 @@ mod test {
                 path: "Patient.a.select(value > 2).anyFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 3 }, { "value": 3 }, { "value": 2 }] }),
                 expected: json!([true]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(value > 2).anyFalse()".to_string(),
+                input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 3 }, { "value": 3 }, { "value": 3 }] }),
+                expected: json!([false]),
                 options: None,
             },
             TestCase {

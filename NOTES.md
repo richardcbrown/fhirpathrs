@@ -12,3 +12,6 @@ Quantity equality
 Quantity conversion
 
 Equality/Equivalent for complex objects -> respect Quantity conversion?
+
+Resource.contained -> reset path to contained resource
+Bundle.entry.resource -> correct type?
