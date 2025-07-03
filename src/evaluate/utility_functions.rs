@@ -51,6 +51,7 @@ mod test {
         test::test::{run_tests, TestCase},
         EvaluateOptions,
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn evaluate_now_path() {
@@ -66,13 +67,13 @@ mod test {
             TestCase {
                 path: "now() = now()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "now()".to_string(),
                 input: patient.clone(),
-                expected: json!(["@2025-04-13T23:00:00.000+00:00"]),
+                expected: Expected::Value(json!(["@2025-04-13T23:00:00.000+00:00"])),
                 options: Some(EvaluateOptions {
                     now: Some(test_datetime),
                     model: None,
@@ -82,7 +83,7 @@ mod test {
             TestCase {
                 path: "now() = @2025-04-13T23:00:00.000+00:00".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     now: Some(test_datetime),
                     model: None,

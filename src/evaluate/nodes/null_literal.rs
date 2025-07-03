@@ -21,7 +21,7 @@ impl Text for NullLiteral {
 #[cfg(test)]
 mod test {
     use serde_json::json;
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_delimited_path() {
@@ -36,7 +36,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
         ];

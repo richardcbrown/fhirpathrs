@@ -21,7 +21,7 @@ impl Text for LiteralDelimitedIdentifier {
 #[cfg(test)]
 mod test {
     use serde_json::json;
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_delimited_path() {
@@ -36,7 +36,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!(["test1", "test2"]),
+                expected: Expected::Value(json!(["test1", "test2"])),
                 options: None,
             },
         ];

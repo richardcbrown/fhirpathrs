@@ -228,6 +228,7 @@ mod test {
         },
         models::{get_model_details, ModelType},
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn test_where_path() {
@@ -241,19 +242,19 @@ mod test {
             TestCase {
                 path: "Patient.a.where($this > 1)".to_string(),
                 input: patient.clone(),
-                expected: json!([2,3,4,5]),
+                expected: Expected::Value(json!([2,3,4,5])),
                 options: None,
             },
             TestCase {
                 path: "Patient.b.where($this > 1)".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.where(use = 'official')".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             }
         ];
@@ -273,19 +274,19 @@ mod test {
             TestCase {
                 path: "Patient.a.select($this > 1)".to_string(),
                 input: patient.clone(),
-                expected: json!([false, true, true, true, true]),
+                expected: Expected::Value(json!([false, true, true, true, true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.b.select($this > 1)".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(use = 'official')".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             }
         ];
@@ -308,7 +309,7 @@ mod test {
             TestCase {
                 path: "Patient.repeat(value)".to_string(),
                 input: patient.clone(),
-                expected: json!([
+                expected: Expected::Value(json!([
                     {
                         "value": {
                             "item": 'a'
@@ -317,7 +318,7 @@ mod test {
                     {
                         "item": 'a'
                     }
-                ]),
+                ])),
                 options: None,
             }
         ];
@@ -346,10 +347,10 @@ mod test {
             TestCase {
                 path: "Observation.component.value.ofType(Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -359,7 +360,7 @@ mod test {
             TestCase {
                 path: "Observation.component.value.ofType(FHIR.string)".to_string(),
                 input: observation.clone(),
-                expected: json!(["abc"]),
+                expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -380,7 +381,7 @@ mod test {
             //             }
             //         ]
             //     }),
-            //     expected: json!([
+            //     expected: Expected::Value(json!([
             //         {
             //             "resourceType": "Patient"
             //         },

@@ -21,7 +21,7 @@ impl Text for ThisInvocation {
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_index_path() {
@@ -31,19 +31,19 @@ mod test {
             TestCase {
                 path: "Patient.a.where($this > 4)".to_string(),
                 input: patient.clone(),
-                expected: json!([6, 5]),
+                expected: Expected::Value(json!([6, 5])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select($this)".to_string(),
                 input: patient.clone(),
-                expected: json!([6, 5, 4, 3, 2, 1]),
+                expected: Expected::Value(json!([6, 5, 4, 3, 2, 1])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.all($this < 7)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];

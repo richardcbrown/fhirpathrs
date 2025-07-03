@@ -190,6 +190,7 @@ mod test {
     use crate::evaluate::{
         test::test::{run_tests, TestCase},
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn evaluate_extensible_path() {
@@ -212,13 +213,13 @@ mod test {
             // TestCase {
             //     path: "Patient.birthDate".to_string(),
             //     input: patient.clone(),
-            //     expected: json!(["2022"]),
+            //     expected: Expected::Value(json!(["2022"]),
             //     options: None,
             // },
             // TestCase {
             //     path: "Patient.birthDate.extension".to_string(),
             //     input: patient.clone(),
-            //     expected: json!([{
+            //     expected: Expected::Value(json!([{
             //         "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
             //         "valueDateTime": "1974-12-25T14:35:45-05:00"
             //       }]),
@@ -227,11 +228,11 @@ mod test {
             TestCase {
                 path: "Patient._birthDate".to_string(),
                 input: patient.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "extension": [{
                     "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
                     "valueDateTime": "1974-12-25T14:35:45-05:00"
-                  }]}]),
+                  }]}])),
                 options: None,
             },
         ];

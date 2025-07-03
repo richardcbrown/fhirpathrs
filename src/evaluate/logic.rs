@@ -213,7 +213,7 @@ mod test {
     use serde_json::json;
 
     use crate::evaluate::compile;
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn evaluate_and_true_path() {
@@ -430,7 +430,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -443,7 +443,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
@@ -456,7 +456,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -469,7 +469,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -482,7 +482,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
             TestCase {
@@ -495,7 +495,7 @@ mod test {
                         }
                     ]
                 }),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
         ];

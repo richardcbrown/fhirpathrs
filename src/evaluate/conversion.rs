@@ -325,8 +325,185 @@ pub fn converts_to_time<'a>(
 #[cfg(test)]
 mod test {
     use serde_json::json;
+    use crate::error::FhirpathError;
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    #[test]
+    fn test_iif_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": "1.0",
+            "b": true,
+            "c": 1.1
+        });
+
+        let tests: Vec<TestCase> = vec![
+            TestCase {
+                path: "iif(Patient.a.toBoolean(), 1, 2)".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([1])),
+            },
+            TestCase {
+                path: "iif(Patient.a.toBoolean() != true, 1)".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
+            },
+            TestCase {
+                path: "iif(Patient.a, 1)".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Value was not a Boolean".to_string() }),
+            },
+        ];
+
+        run_tests(tests);
+    }
+
+    #[test]
+    fn test_to_boolean_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": ["true", "t", "T", "yes", "y", "1", "1.0"],
+            "b": ["false", "f", "F", "no", "n", "0", "0.0"],
+            "c": 1,
+            "d": 0,
+            "e": 1.0,
+            "f": 0.0,
+            "g": 1.11,
+            "h": [1.11, 2.22],
+        });
+
+        let mut tests: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.c.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.d.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "Patient.e.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.f.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "Patient.g.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
+            },
+            TestCase {
+                path: "Patient.h.toBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            }
+        ];
+
+        for i in 0..7 {
+            tests.push(TestCase {
+                path: format!("Patient.a[{}].toBoolean()", i),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            });
+
+            tests.push(TestCase {
+                path: format!("Patient.b[{}].toBoolean()", i),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            });
+        }
+
+        run_tests(tests);
+    }
+
+    #[test]
+    fn test_converts_to_boolean_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": ["true", "t", "T", "yes", "y", "1", "1.0"],
+            "b": ["false", "f", "F", "no", "n", "0", "0.0"],
+            "c": 1,
+            "d": 0,
+            "e": 1.0,
+            "f": 0.0,
+            "g": 1.11,
+            "h": [1.11, 2.22],
+        });
+
+        let mut tests: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.c.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.d.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.e.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.f.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.g.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "Patient.h.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            }
+        ];
+
+        for i in 0..7 {
+            tests.push(TestCase {
+                path: format!("Patient.a[{}].convertsToBoolean()", i),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            });
+
+            tests.push(TestCase {
+                path: format!("Patient.b[{}].convertsToBoolean()", i),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            });
+        }
+
+        run_tests(tests);
+    }
 
     #[test]
     fn test_evaluate_to_integer_path() {
@@ -342,19 +519,19 @@ mod test {
                 path: "Patient.a.toInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([1]),
+                expected: Expected::Value(json!([1])),
             },
             TestCase {
                 path: "Patient.b.toInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([1]),
+                expected: Expected::Value(json!([1])),
             },
             TestCase {
                 path: "Patient.c.toInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
         ];
 
@@ -375,19 +552,19 @@ mod test {
                 path: "Patient.a.convertsToInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToInteger()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
         ];
 
@@ -409,25 +586,25 @@ mod test {
                 path: "Patient.a.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022"]),
+                expected: Expected::Value(json!(["@2022"])),
             },
             TestCase {
                 path: "Patient.b.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022-01-01"]),
+                expected: Expected::Value(json!(["@2022-01-01"])),
             },
             TestCase {
                 path: "Patient.c.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "Patient.d.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022-01-01"]),
+                expected: Expected::Value(json!(["@2022-01-01"])),
             },
         ];
 
@@ -449,25 +626,25 @@ mod test {
                 path: "Patient.a.convertsToDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "Patient.d.convertsToDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
         ];
 
@@ -489,25 +666,25 @@ mod test {
                 path: "Patient.a.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022"]),
+                expected: Expected::Value(json!(["@2022"])),
             },
             TestCase {
                 path: "Patient.b.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022-01-01"]),
+                expected: Expected::Value(json!(["@2022-01-01"])),
             },
             TestCase {
                 path: "Patient.c.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "Patient.d.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022-01-01T00:01:01.999"]),
+                expected: Expected::Value(json!(["@2022-01-01T00:01:01.999"])),
             },
         ];
 
@@ -529,25 +706,25 @@ mod test {
                 path: "Patient.a.convertsToDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "Patient.d.convertsToDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
         ];
 
@@ -569,25 +746,25 @@ mod test {
                 path: "Patient.a.toDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([1.111]),
+                expected: Expected::Value(json!([1.111])),
             },
             TestCase {
                 path: "Patient.b.toDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([1.0]),
+                expected: Expected::Value(json!([1.0])),
             },
             TestCase {
                 path: "Patient.c.toDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([1.0]),
+                expected: Expected::Value(json!([1.0])),
             },
             TestCase {
                 path: "Patient.d.toDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
         ];
 
@@ -609,25 +786,25 @@ mod test {
                 path: "Patient.a.convertsToDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.d.convertsToDecimal()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
         ];
 
@@ -654,37 +831,37 @@ mod test {
                 path: "Patient.a.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["1.0"]),
+                expected: Expected::Value(json!(["1.0"])),
             },
             TestCase {
                 path: "Patient.b.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["true"]),
+                expected: Expected::Value(json!(["true"])),
             },
             TestCase {
                 path: "Patient.c.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["1.1"]),
+                expected: Expected::Value(json!(["1.1"])),
             },
             TestCase {
                 path: "Patient.d.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "Patient.e.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@2022-01-02"]),
+                expected: Expected::Value(json!(["@2022-01-02"])),
             },
             TestCase {
                 path: "Patient.f.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["1 'year'"]),
+                expected: Expected::Value(json!(["1 'year'"])),
             },
         ];
 
@@ -711,37 +888,37 @@ mod test {
                 path: "Patient.a.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.d.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "Patient.e.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.f.convertsToString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
         ];
 
@@ -764,31 +941,31 @@ mod test {
                 path: "Patient.a.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@T12"]),
+                expected: Expected::Value(json!(["@T12"])),
             },
             TestCase {
                 path: "Patient.b.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@T12:20"]),
+                expected: Expected::Value(json!(["@T12:20"])),
             },
             TestCase {
                 path: "Patient.c.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "Patient.d.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@T12:20:01.1"]),
+                expected: Expected::Value(json!(["@T12:20:01.1"])),
             },
             TestCase {
                 path: "Patient.e.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!(["@T12:20:01.1"]),
+                expected: Expected::Value(json!(["@T12:20:01.1"])),
             },
         ];
 
@@ -811,31 +988,31 @@ mod test {
                 path: "Patient.a.convertsToTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.b.convertsToTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.c.convertsToTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "Patient.d.convertsToTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.e.convertsToTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
         ];
 

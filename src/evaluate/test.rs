@@ -2,14 +2,19 @@
 pub mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::Value;
-
+    use crate::error::FhirpathError;
     use crate::evaluate::{compile, EvaluateOptions};
+
+    pub enum Expected {
+        Value(Value),
+        Error(FhirpathError),
+    }
 
     pub struct TestCase {
         pub path: String,
         pub input: Value,
         pub options: Option<EvaluateOptions>,
-        pub expected: Value,
+        pub expected: Expected,
     }
 
     pub fn run_tests(tests: Vec<TestCase>) {
@@ -21,11 +26,23 @@ pub mod test {
 
             println!("{:?}", compiled.expression);
 
-            let evaluate_result = compiled.evaluate_single(test.input, test.options).unwrap();
+            let evaluate_result = compiled.evaluate_single(test.input, test.options);
 
             println!("{:?}", evaluate_result);
 
-            assert_json_eq!(evaluate_result, test.expected);
+            match test.expected {
+                Expected::Value(value) => {
+                    let evaluate_value = evaluate_result.unwrap();
+
+                    assert_json_eq!(evaluate_value, value);
+                },
+                Expected::Error(err) => {
+                    let evaluate_error = evaluate_result.err().unwrap();
+
+                    assert_eq!(evaluate_error, err);
+                }
+            }
+
         });
     }
 }

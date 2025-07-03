@@ -682,6 +682,7 @@ mod test {
         compile,
         test::test::{run_tests, TestCase},
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn evaluate_add_path() {
@@ -695,7 +696,7 @@ mod test {
             TestCase {
                 path: "Patient.a + Patient.b".to_string(),
                 input: patient.clone(),
-                expected: json!([8]),
+                expected: Expected::Value(json!([8])),
                 options: None,
             },
             TestCase {
@@ -704,7 +705,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2017"]),
+                expected: Expected::Value(json!(["@2017"])),
                 options: None,
             },
             TestCase {
@@ -713,7 +714,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2016"]),
+                expected: Expected::Value(json!(["@2016"])),
                 options: None,
             },
             TestCase {
@@ -722,7 +723,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2017"]),
+                expected: Expected::Value(json!(["@2017"])),
                 options: None,
             },
             TestCase {
@@ -731,7 +732,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-11"
                 }),
-                expected: json!(["@2017-01"]),
+                expected: Expected::Value(json!(["@2017-01"])),
                 options: None,
             },
             TestCase {
@@ -740,7 +741,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2016"]),
+                expected: Expected::Value(json!(["@2016"])),
                 options: None,
             },
             TestCase {
@@ -749,7 +750,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2017"]),
+                expected: Expected::Value(json!(["@2017"])),
                 options: None,
             },
             TestCase {
@@ -758,7 +759,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-30"
                 }),
-                expected: json!(["@2017-01-06"]),
+                expected: Expected::Value(json!(["@2017-01-06"])),
                 options: None,
             },
             TestCase {
@@ -767,7 +768,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2016"]),
+                expected: Expected::Value(json!(["@2016"])),
                 options: None,
             },
             TestCase {
@@ -776,7 +777,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2017"]),
+                expected: Expected::Value(json!(["@2017"])),
                 options: None,
             },
             TestCase {
@@ -785,7 +786,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-31"
                 }),
-                expected: json!(["@2017-01-01"]),
+                expected: Expected::Value(json!(["@2017-01-01"])),
                 options: None,
             },
             TestCase {
@@ -794,7 +795,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-31T12"
                 }),
-                expected: json!(["@2016-12-31T14"]),
+                expected: Expected::Value(json!(["@2016-12-31T14"])),
                 options: None,
             },
             TestCase {
@@ -803,7 +804,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-31T22:00:00"
                 }),
-                expected: json!(["@2017-01-01T00:00:00"]),
+                expected: Expected::Value(json!(["@2017-01-01T00:00:00"])),
                 options: None,
             },
         ];
@@ -823,7 +824,7 @@ mod test {
             TestCase {
                 path: "Patient.a - Patient.b".to_string(),
                 input: patient.clone(),
-                expected: json!([-4]),
+                expected: Expected::Value(json!([-4])),
                 options: None,
             },
             TestCase {
@@ -832,7 +833,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2015"]),
+                expected: Expected::Value(json!(["@2015"])),
                 options: None,
             },
             TestCase {
@@ -841,7 +842,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2015"]),
+                expected: Expected::Value(json!(["@2015"])),
                 options: None,
             },
             TestCase {
@@ -850,7 +851,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2015"]),
+                expected: Expected::Value(json!(["@2015"])),
                 options: None,
             },
             TestCase {
@@ -859,7 +860,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-01"
                 }),
-                expected: json!(["@2015-11"]),
+                expected: Expected::Value(json!(["@2015-11"])),
                 options: None,
             },
             TestCase {
@@ -868,7 +869,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2015"]),
+                expected: Expected::Value(json!(["@2015"])),
                 options: None,
             },
             TestCase {
@@ -877,7 +878,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2014"]),
+                expected: Expected::Value(json!(["@2014"])),
                 options: None,
             },
             TestCase {
@@ -886,7 +887,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-01-06"
                 }),
-                expected: json!(["@2015-12-30"]),
+                expected: Expected::Value(json!(["@2015-12-30"])),
                 options: None,
             },
             TestCase {
@@ -895,7 +896,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2015"]),
+                expected: Expected::Value(json!(["@2015"])),
                 options: None,
             },
             TestCase {
@@ -904,7 +905,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: json!(["@2014"]),
+                expected: Expected::Value(json!(["@2014"])),
                 options: None,
             },
             TestCase {
@@ -913,7 +914,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-01-01"
                 }),
-                expected: json!(["@2015-12-31"]),
+                expected: Expected::Value(json!(["@2015-12-31"])),
                 options: None,
             },
             TestCase {
@@ -922,7 +923,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-31T12"
                 }),
-                expected: json!(["@2016-12-31T14"]),
+                expected: Expected::Value(json!(["@2016-12-31T14"])),
                 options: None,
             },
             TestCase {
@@ -931,7 +932,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016-12-31T22:00:00"
                 }),
-                expected: json!(["@2017-01-01T00:00:00"]),
+                expected: Expected::Value(json!(["@2017-01-01T00:00:00"])),
                 options: None,
             },
         ];

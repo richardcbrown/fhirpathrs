@@ -828,27 +828,6 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_single_path_no_values() {
-        let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None);
-
-        assert_eq!(
-            evaluate_result,
-            Err(FhirpathError::EvaluateError {
-                msg: "Expected array with single element but had 0".to_string()
-            })
-        )
-    }
-
-    #[test]
     fn evaluate_single_path_multiple_values() {
         let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
 

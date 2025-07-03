@@ -186,7 +186,7 @@ pub fn is_distinct<'a>(
 mod test {
     use serde_json::json;
     use crate::evaluate::EvaluateOptions;
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
     use crate::models::{get_model_details, ModelType};
 
     #[test]
@@ -211,19 +211,19 @@ mod test {
             TestCase {
                 path: "Patient.b.all($this = true)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.all($this > 0)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.all($this > 1)".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             // @todo - should pass according to spec
@@ -232,7 +232,7 @@ mod test {
             // TestCase {
             //     path: "Patient.contained.all($this is Patient)".to_string(),
             //     input: patient.clone(),
-            //     expected: json!([true]),
+            //     expected: Expected::Value(json!([true]),
             //     options: Some(EvaluateOptions {
             //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
             //         vars: None,
@@ -245,7 +245,7 @@ mod test {
             // TestCase {
             //     path: "Patient.generalPractitioner.all($this is Patient)".to_string(),
             //     input: patient.clone(),
-            //     expected: json!([true]),
+            //     expected: Expected::Value(json!([true]),
             //     options: Some(EvaluateOptions {
             //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
             //         vars: None,
@@ -265,19 +265,19 @@ mod test {
             TestCase {
                 path: "Patient.a.allTrue()".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value = true).allTrue()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.b.allTrue()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];
@@ -293,25 +293,25 @@ mod test {
             TestCase {
                 path: "Patient.a.anyTrue()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyTrue()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyTrue()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }, { "value": 1 }, { "value": 2 }, { "value": 3 }] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyTrue()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [] }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
         ];
@@ -327,31 +327,31 @@ mod test {
             TestCase {
                 path: "Patient.a.allFalse()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).allFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).allFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }, { "value": 1 }, { "value": 2 }, { "value": 2 }] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).allFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 1 }, { "value": 2 }, { "value": 2 }] }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).allFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];
@@ -367,31 +367,31 @@ mod test {
             TestCase {
                 path: "Patient.a.anyFalse()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 1 }] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 3 }, { "value": 3 }, { "value": 2 }] }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [{ "value": 3 }, { "value": 3 }, { "value": 3 }, { "value": 3 }] }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.select(value > 2).anyFalse()".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [] }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
         ];
@@ -411,7 +411,7 @@ mod test {
             TestCase {
                 path: "Patient.a.subsetOf(Patient.b)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -421,7 +421,7 @@ mod test {
                     "a": [true, false],
                     "b": [false]
                 }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
@@ -431,7 +431,7 @@ mod test {
                     "a": [true],
                     "b": [true, false]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -441,7 +441,7 @@ mod test {
                     "a": [],
                     "b": [false]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -451,7 +451,7 @@ mod test {
                     "a": [false],
                     "b": []
                 }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
         ];
@@ -471,7 +471,7 @@ mod test {
             TestCase {
                 path: "Patient.a.supersetOf(Patient.b)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -481,7 +481,7 @@ mod test {
                     "a": [true, false],
                     "b": [false]
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -491,7 +491,7 @@ mod test {
                     "a": [true],
                     "b": [true, false]
                 }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
@@ -501,7 +501,7 @@ mod test {
                     "a": [],
                     "b": [false]
                 }),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
@@ -511,7 +511,7 @@ mod test {
                     "a": [false],
                     "b": []
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];
@@ -530,13 +530,13 @@ mod test {
             TestCase {
                 path: "Patient.a.count()".to_string(),
                 input: patient.clone(),
-                expected: json!([2]),
+                expected: Expected::Value(json!([2])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.where(value = true).count()".to_string(),
                 input: patient.clone(),
-                expected: json!([1]),
+                expected: Expected::Value(json!([1])),
                 options: None,
             },
             TestCase {
@@ -545,7 +545,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": [],
                 }),
-                expected: json!([0]),
+                expected: Expected::Value(json!([0])),
                 options: None,
             },
         ];
@@ -564,7 +564,7 @@ mod test {
             TestCase {
                 path: "Patient.a.distinct()".to_string(),
                 input: patient.clone(),
-                expected: json!(['a', 'b']),
+                expected: Expected::Value(json!(['a', 'b'])),
                 options: None,
             },
             TestCase {
@@ -573,7 +573,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": []
                 }),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
         ];
@@ -592,7 +592,7 @@ mod test {
             TestCase {
                 path: "Patient.a.isDistinct()".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
@@ -601,7 +601,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": []
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
@@ -610,7 +610,7 @@ mod test {
                     "resourceType": "Patient",
                     "a": ['a', 'b', 'c']
                 }),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];

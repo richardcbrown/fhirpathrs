@@ -36,7 +36,7 @@ impl Text for ParenthesizedTerm {
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_parenthesized_path() {
@@ -47,25 +47,25 @@ mod test {
             TestCase {
                 path: "(Patient.a or Patient.b or Patient.c)".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "(Patient.a and (Patient.b or Patient.c))".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "((Patient.a + Patient.b) * Patient.c)".to_string(),
                 input: patient2.clone(),
-                expected: json!([9]),
+                expected: Expected::Value(json!([9])),
                 options: None,
             },
             TestCase {
                 path: "(Patient.a + (Patient.b * Patient.c))".to_string(),
                 input: patient2.clone(),
-                expected: json!([7]),
+                expected: Expected::Value(json!([7])),
                 options: None,
             },
         ];

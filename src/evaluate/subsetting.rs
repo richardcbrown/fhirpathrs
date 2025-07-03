@@ -13,6 +13,10 @@ pub fn single<'a>(
     input: &'a ResourceNode<'a>,
     _expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<ResourceNode<'a>> {
+    if input.is_empty()? {
+        return Ok(ResourceNode::from_node(input, Value::Array(vec![])))
+    }
+
     let array = input.get_array()?;
 
     if array.len() != 1 {
@@ -164,4 +168,293 @@ pub fn exclude<'a>(
         .collect();
 
     Ok(ResourceNode::from_node(input, json!(exclude_array)))
+}
+
+#[cfg(test)]
+mod test {
+    use serde_json::json;
+    use crate::error::FhirpathError;
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
+
+    #[test]
+    fn test_single_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.single()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.single()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.single()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected array with single element but had 3".to_string() }),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_first_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.first()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.first()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.first()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_last_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.last()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.last()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.last()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([3])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_tail_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.tail()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.tail()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.tail()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([2, 3])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_skip_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.skip(0)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.skip(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.skip(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([3])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.skip(-1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1, 2, 3])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_take_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.take(0)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.take(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.take(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1, 2])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.take(-1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_intersect_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1, 1],
+            "b": [],
+            "c": [1, 2, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.intersect(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.intersect(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.intersect(1 | 2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1, 2])),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_exclude_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1, 1],
+            "b": [],
+            "c": [1, 2, 3, 3],
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.exclude(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.exclude(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1, 1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.exclude(1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.exclude(1 | 2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([3, 3])),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 }

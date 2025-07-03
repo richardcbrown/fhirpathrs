@@ -36,23 +36,23 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 5.2.3. repeat(projection: expression) : collection - :white_check_mark:
     - 5.2.4. ofType(type : type specifier) : collection - :exclamation:
   - 5.3. Subsetting
-    - 5.3.1. [ index : Integer ] : collection
-    - 5.3.2. single() : collection
-    - 5.3.3. first() : collection
-    - 5.3.4. last() : collection
-    - 5.3.5. tail() : collection
-    - 5.3.6. skip(num : Integer) : collection
-    - 5.3.7. take(num : Integer) : collection
-    - 5.3.8. intersect(other: collection) : collection
-    - 5.3.9. exclude(other: collection) : collection
+    - 5.3.1. [ index : Integer ] : collection - :white_check_mark:
+    - 5.3.2. single() : collection - :white_check_mark:
+    - 5.3.3. first() : collection - :white_check_mark:
+    - 5.3.4. last() : collection - :white_check_mark:
+    - 5.3.5. tail() : collection - :white_check_mark:
+    - 5.3.6. skip(num : Integer) : collection - :white_check_mark:
+    - 5.3.7. take(num : Integer) : collection - :white_check_mark:
+    - 5.3.8. intersect(other: collection) : collection - :white_check_mark:
+    - 5.3.9. exclude(other: collection) : collection - :white_check_mark:
   - 5.4. Combining
-    - 5.4.1. union(other : collection)
-    - 5.4.2. combine(other : collection) : collection
+    - 5.4.1. union(other : collection) - :white_check_mark:
+    - 5.4.2. combine(other : collection) : collection - :white_check_mark:
   - 5.5. Conversion
-    - 5.5.1. iif(criterion: expression, true-result: collection [, otherwise-result: collection]) : collection
+    - 5.5.1. iif(criterion: expression, true-result: collection [, otherwise-result: collection]) : collection - :white_check_mark:
     - 5.5.2. Boolean Conversion Functions
-      - toBoolean() : Boolean
-      - convertsToBoolean() : Boolean
+      - toBoolean() : Boolean - :white_check_mark:
+      - convertsToBoolean() : Boolean - :white_check_mark:
     - 5.5.3. Integer Conversion Functions
       - toInteger() : Integer
       - convertsToInteger() : Boolean

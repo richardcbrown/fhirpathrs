@@ -89,6 +89,7 @@ mod test {
         },
         models::{get_model_details, ModelType},
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn test_is_fn_path() {
@@ -115,7 +116,7 @@ mod test {
             TestCase {
                 path: "Observation.value.is(FHIR.Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -125,7 +126,7 @@ mod test {
             TestCase {
                 path: "Observation.value.is(Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -135,7 +136,7 @@ mod test {
             TestCase {
                 path: "Observation.component[0].value.is(FHIR.Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -145,7 +146,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value.is(System.String)".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -182,7 +183,7 @@ mod test {
             TestCase {
                 path: "Observation.value is FHIR.Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -192,7 +193,7 @@ mod test {
             TestCase {
                 path: "Observation.value is Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -202,7 +203,7 @@ mod test {
             TestCase {
                 path: "Observation.component[0].value is FHIR.Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -212,7 +213,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value is System.String".to_string(),
                 input: observation.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -249,10 +250,10 @@ mod test {
             TestCase {
                 path: "Observation.value.as(FHIR.Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -262,10 +263,10 @@ mod test {
             TestCase {
                 path: "Observation.value.as(Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -275,10 +276,10 @@ mod test {
             TestCase {
                 path: "Observation.component[0].value.as(FHIR.Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -288,7 +289,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value.as(System.String)".to_string(),
                 input: observation.clone(),
-                expected: json!(["abc"]),
+                expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -298,7 +299,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value.as(FHIR.Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -335,10 +336,10 @@ mod test {
             TestCase {
                 path: "Observation.value as FHIR.Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -348,10 +349,10 @@ mod test {
             TestCase {
                 path: "Observation.value as Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -361,10 +362,10 @@ mod test {
             TestCase {
                 path: "Observation.component[0].value as FHIR.Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -374,7 +375,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value as System.String".to_string(),
                 input: observation.clone(),
-                expected: json!(["abc"]),
+                expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -384,7 +385,7 @@ mod test {
             TestCase {
                 path: "Observation.component[1].value as FHIR.Quantity".to_string(),
                 input: observation.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
