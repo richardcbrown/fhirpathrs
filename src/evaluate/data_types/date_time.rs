@@ -277,8 +277,8 @@ impl DateTime {
 
     pub fn to_string(&self) -> String {
         match &self.time {
-            Some(time) => format!("@{}T{}", self.date.to_string(), time.to_string()),
-            None => format!("@{}", self.date.to_string()),
+            Some(time) => format!("{}T{}", self.date.to_string(), time.to_string()),
+            None => format!("{}", self.date.to_string()),
         }
     }
 

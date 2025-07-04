@@ -54,26 +54,26 @@ however due to the asynchronous nature of the R5 specification this will likely 
       - toBoolean() : Boolean - :white_check_mark:
       - convertsToBoolean() : Boolean - :white_check_mark:
     - 5.5.3. Integer Conversion Functions
-      - toInteger() : Integer
-      - convertsToInteger() : Boolean
+      - toInteger() : Integer - :white_check_mark:
+      - convertsToInteger() : Boolean - :white_check_mark:
     - 5.5.4. Date Conversion Functions
-      - toDate() : Date
-      - convertsToDate() : Boolean
+      - toDate() : Date - :white_check_mark:
+      - convertsToDate() : Boolean - :white_check_mark:
     - 5.5.5. DateTime Conversion Functions
-      - toDateTime() : DateTime
-      - convertsToDateTime() : Boolean
+      - toDateTime() : DateTime - :white_check_mark:
+      - convertsToDateTime() : Boolean - :white_check_mark:
     - 5.5.6. Decimal Conversion Functions
-      - toDecimal() : Decimal
-      - convertsToDecimal() : Boolean
+      - toDecimal() : Decimal - :white_check_mark:
+      - convertsToDecimal() : Boolean - :white_check_mark:
     - 5.5.7. Quantity Conversion Functions
-      - toQuantity([unit : String]) : Quantity
-      - convertsToQuantity([unit : String]) : Boolean
+      - toQuantity([unit : String]) : Quantity - :x:
+      - convertsToQuantity([unit : String]) : Boolean - :x:
     - 5.5.8. String Conversion Functions
-      - toString() : String
-      - convertsToString() : String
+      - toString() : String - :white_check_mark:
+      - convertsToString() : String - :white_check_mark:
     - 5.5.9. Time Conversion Functions
-      - toTime() : Time
-      - convertsToTime() : Boolean
+      - toTime() : Time - :white_check_mark:
+      - convertsToTime() : Boolean - :white_check_mark:
   - 5.6. String Manipulation
     - 5.6.1. indexOf(substring : String) : Integer
     - 5.6.2. substring(start : Integer [, length : Integer]) : String

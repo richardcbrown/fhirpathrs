@@ -703,45 +703,45 @@ mod test {
                 path: "Patient.a + 1 year".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2017"])),
+                expected: Expected::Value(json!(["2017"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 1 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2016"])),
+                expected: Expected::Value(json!(["2016"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 12 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2017"])),
+                expected: Expected::Value(json!(["2017"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 2 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-11"
+                    "a": "2016-11"
                 }),
-                expected: Expected::Value(json!(["@2017-01"])),
+                expected: Expected::Value(json!(["2017-01"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2016"])),
+                expected: Expected::Value(json!(["2016"])),
                 options: None,
             },
             TestCase {
@@ -750,61 +750,61 @@ mod test {
                     "resourceType": "Patient",
                     "a": "@2016"
                 }),
-                expected: Expected::Value(json!(["@2017"])),
+                expected: Expected::Value(json!(["2017"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-30"
+                    "a": "2016-12-30"
                 }),
-                expected: Expected::Value(json!(["@2017-01-06"])),
+                expected: Expected::Value(json!(["2017-01-06"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 1 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2016"])),
+                expected: Expected::Value(json!(["2016"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 8800 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2017"])),
+                expected: Expected::Value(json!(["2017"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 24 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-31"
+                    "a": "2016-12-31"
                 }),
-                expected: Expected::Value(json!(["@2017-01-01"])),
+                expected: Expected::Value(json!(["2017-01-01"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-31T12"
+                    "a": "2016-12-31T12"
                 }),
-                expected: Expected::Value(json!(["@2016-12-31T14"])),
+                expected: Expected::Value(json!(["2016-12-31T14"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-31T22:00:00"
+                    "a": "2016-12-31T22:00:00"
                 }),
-                expected: Expected::Value(json!(["@2017-01-01T00:00:00"])),
+                expected: Expected::Value(json!(["2017-01-01T00:00:00"])),
                 options: None,
             },
         ];
@@ -831,108 +831,108 @@ mod test {
                 path: "Patient.a - 1 year".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2015"])),
+                expected: Expected::Value(json!(["2015"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 1 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2015"])),
+                expected: Expected::Value(json!(["2015"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 12 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2015"])),
+                expected: Expected::Value(json!(["2015"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 2 month".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-01"
+                    "a": "2016-01"
                 }),
-                expected: Expected::Value(json!(["@2015-11"])),
+                expected: Expected::Value(json!(["2015-11"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2015"])),
+                expected: Expected::Value(json!(["2015"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 53 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2014"])),
+                expected: Expected::Value(json!(["2014"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 1 week".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-01-06"
+                    "a": "2016-01-06"
                 }),
-                expected: Expected::Value(json!(["@2015-12-30"])),
+                expected: Expected::Value(json!(["2015-12-30"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 1 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2015"])),
+                expected: Expected::Value(json!(["2015"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 8800 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016"
+                    "a": "2016"
                 }),
-                expected: Expected::Value(json!(["@2014"])),
+                expected: Expected::Value(json!(["2014"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a - 24 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-01-01"
+                    "a": "2016-01-01"
                 }),
-                expected: Expected::Value(json!(["@2015-12-31"])),
+                expected: Expected::Value(json!(["2015-12-31"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-31T12"
+                    "a": "2016-12-31T12"
                 }),
-                expected: Expected::Value(json!(["@2016-12-31T14"])),
+                expected: Expected::Value(json!(["2016-12-31T14"])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a + 2 hour".to_string(),
                 input: json!({
                     "resourceType": "Patient",
-                    "a": "@2016-12-31T22:00:00"
+                    "a": "2016-12-31T22:00:00"
                 }),
-                expected: Expected::Value(json!(["@2017-01-01T00:00:00"])),
+                expected: Expected::Value(json!(["2017-01-01T00:00:00"])),
                 options: None,
             },
         ];

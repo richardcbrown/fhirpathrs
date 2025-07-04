@@ -511,7 +511,8 @@ mod test {
             "resourceType": "Patient",
             "a": "1.0",
             "b": true,
-            "c": 1.1
+            "c": 1.1,
+            "d": [1, 2]
         });
 
         let tests: Vec<TestCase> = vec![
@@ -533,6 +534,12 @@ mod test {
                 options: None,
                 expected: Expected::Value(json!([])),
             },
+            TestCase {
+                path: "Patient.d.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            }
         ];
 
         run_tests(tests);
@@ -544,7 +551,8 @@ mod test {
             "resourceType": "Patient",
             "a": "1.0",
             "b": true,
-            "c": 1.1
+            "c": 1.1,
+            "d": [1, 2]
         });
 
         let tests: Vec<TestCase> = vec![
@@ -566,6 +574,12 @@ mod test {
                 options: None,
                 expected: Expected::Value(json!([false])),
             },
+            TestCase {
+                path: "Patient.c.convertsToInteger()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
         ];
 
         run_tests(tests);
@@ -575,10 +589,13 @@ mod test {
     fn test_evaluate_to_date_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@2022",
-            "b": "@2022-01-01",
+            "a": "2022",
+            "b": "2022-01-01",
             "c": 1.1,
-            "d": "@2022-01-01T01:01:01"
+            "d": "2022-01-01T01:01:01",
+            "e": "2022-01-01",
+            "f": [],
+            "g": ["2022-01-01", "2022-01-01"],
         });
 
         let tests: Vec<TestCase> = vec![
@@ -586,13 +603,13 @@ mod test {
                 path: "Patient.a.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022"])),
+                expected: Expected::Value(json!(["2022"])),
             },
             TestCase {
                 path: "Patient.b.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022-01-01"])),
+                expected: Expected::Value(json!(["2022-01-01"])),
             },
             TestCase {
                 path: "Patient.c.toDate()".to_string(),
@@ -604,8 +621,26 @@ mod test {
                 path: "Patient.d.toDate()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022-01-01"])),
+                expected: Expected::Value(json!(["2022-01-01"])),
             },
+            TestCase {
+                path: "Patient.e.toDate()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["2022-01-01"])),
+            },
+            TestCase {
+                path: "Patient.f.toDate()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
+            },
+            TestCase {
+                path: "Patient.g.convertsToBoolean()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            }
         ];
 
         run_tests(tests);
@@ -615,10 +650,10 @@ mod test {
     fn test_evaluate_converts_to_date_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@2022",
-            "b": "@2022-01-01",
+            "a": "2022",
+            "b": "2022-01-01",
             "c": 1.1,
-            "d": "@2022-01-01T01:01:01"
+            "d": "2022-01-01T01:01:01"
         });
 
         let tests: Vec<TestCase> = vec![
@@ -655,10 +690,10 @@ mod test {
     fn test_evaluate_to_datetime_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@2022",
-            "b": "@2022-01-01",
+            "a": "2022",
+            "b": "2022-01-01",
             "c": 1.1,
-            "d": "@2022-01-01T01:01:01.999+01:00"
+            "d": "2022-01-01T01:01:01.999+01:00"
         });
 
         let tests: Vec<TestCase> = vec![
@@ -666,13 +701,13 @@ mod test {
                 path: "Patient.a.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022"])),
+                expected: Expected::Value(json!(["2022"])),
             },
             TestCase {
                 path: "Patient.b.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022-01-01"])),
+                expected: Expected::Value(json!(["2022-01-01"])),
             },
             TestCase {
                 path: "Patient.c.toDateTime()".to_string(),
@@ -684,7 +719,7 @@ mod test {
                 path: "Patient.d.toDateTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@2022-01-01T00:01:01.999"])),
+                expected: Expected::Value(json!(["2022-01-01T00:01:01.999"])),
             },
         ];
 
@@ -695,10 +730,10 @@ mod test {
     fn test_evaluate_converts_to_datetime_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@2022",
-            "b": "@2022-01-01",
+            "a": "2022",
+            "b": "2022-01-01",
             "c": 1.1,
-            "d": "@2022-01-01T01:01:01+01:00"
+            "d": "2022-01-01T01:01:01+01:00"
         });
 
         let tests: Vec<TestCase> = vec![
@@ -929,10 +964,10 @@ mod test {
     fn test_evaluate_to_time_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@T12",
-            "b": "@T12:20",
+            "a": "12",
+            "b": "12:20",
             "c": 1.1,
-            "d": "@T12:20:01.1",
+            "d": "12:20:01.1",
             "e": "12:20:01.1"
         });
 
@@ -941,13 +976,13 @@ mod test {
                 path: "Patient.a.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@T12"])),
+                expected: Expected::Value(json!(["12"])),
             },
             TestCase {
                 path: "Patient.b.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@T12:20"])),
+                expected: Expected::Value(json!(["12:20"])),
             },
             TestCase {
                 path: "Patient.c.toTime()".to_string(),
@@ -959,13 +994,13 @@ mod test {
                 path: "Patient.d.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@T12:20:01.1"])),
+                expected: Expected::Value(json!(["12:20:01.1"])),
             },
             TestCase {
                 path: "Patient.e.toTime()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["@T12:20:01.1"])),
+                expected: Expected::Value(json!(["12:20:01.1"])),
             },
         ];
 
@@ -976,10 +1011,10 @@ mod test {
     fn test_evaluate_converts_to_time_path() {
         let patient = json!({
             "resourceType": "Patient",
-            "a": "@T12",
-            "b": "@T12:20",
+            "a": "12",
+            "b": "12:20",
             "c": 1.1,
-            "d": "@T12:20:01.1",
+            "d": "12:20:01.1",
             "e": "12:20:01.1"
         });
 

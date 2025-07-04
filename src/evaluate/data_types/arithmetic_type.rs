@@ -27,14 +27,14 @@ impl TryFrom<&Value> for ArithmeticType {
                 })?,
             )),
             Value::String(string_val) => {
+                if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
+                    return Ok(ArithmeticType::DateTime(datetime_value));
+                }
+                
                 let num = Decimal::from_str(&string_val);
 
                 if let Ok(num_value) = num {
                     return Ok(ArithmeticType::Number(num_value));
-                }
-
-                if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
-                    return Ok(ArithmeticType::DateTime(datetime_value));
                 }
 
                 Ok(ArithmeticType::String(string_val.to_string()))

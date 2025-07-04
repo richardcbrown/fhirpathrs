@@ -50,7 +50,7 @@ impl Time {
     }
 
     pub fn to_time_string(&self) -> String {
-        format!("@T{}", self.to_string())
+        format!("{}", self.to_string())
     }
 
     pub fn to_time(&self) -> Option<NaiveTime> {
