@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
-
+use crate::evaluate::utils::get_i32_from_expression;
 use super::{
     target::Target,
     equality::values_are_equal,
@@ -81,7 +81,7 @@ pub fn skip<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<ResourceNode<'a>> {
-    let array = input.get_array()?;
+    let array = input.get_array()?.to_vec();
 
     if expressions.len() > 1 {
         return Err(FhirpathError::EvaluateError {
@@ -95,11 +95,19 @@ pub fn skip<'a>(
             msg: "Skip expects exactly one expression".to_string(),
         })?;
 
-    let skip_num = get_usize_from_expression(input, expression)?;
+    let int_num = get_i32_from_expression(input, expression)?;
+
+    if int_num <= 0 {
+        return Ok(ResourceNode::from_node(input, Value::Array(array)));
+    }
+
+    let skip_num: usize = int_num.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Value cannot be converted to usize: {}", e),
+    })?;
 
     Ok(ResourceNode::from_node(
         input,
-        json!(array.into_iter().skip(skip_num).collect::<Vec<&Value>>()),
+        Value::Array(array.into_iter().skip(skip_num).collect::<Vec<Value>>()),
     ))
 }
 
@@ -107,7 +115,7 @@ pub fn take<'a>(
     input: &'a ResourceNode<'a>,
     expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<ResourceNode<'a>> {
-    let array = input.get_array()?;
+    let array = input.get_array()?.to_vec();
 
     if expressions.len() > 1 {
         return Err(FhirpathError::EvaluateError {
@@ -121,11 +129,19 @@ pub fn take<'a>(
             msg: "Skip expects exactly one expression".to_string(),
         })?;
 
-    let take_num = get_usize_from_expression(input, expression)?;
+    let int_num = get_i32_from_expression(input, expression)?;
+
+    if int_num <= 0 {
+        return Ok(ResourceNode::from_node(input, Value::Array(vec![])));
+    }
+
+    let take_num: usize = int_num.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Value cannot be converted to usize: {}", e),
+    })?;
 
     Ok(ResourceNode::from_node(
         input,
-        json!(array.into_iter().take(take_num).collect::<Vec<&Value>>()),
+        Value::Array(array.into_iter().take(take_num).collect::<Vec<Value>>()),
     ))
 }
 

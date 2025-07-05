@@ -199,7 +199,14 @@ impl ArithmeticType {
                         msg: format!("Could not convert from Decimal: {}", err.to_string()),
                     })?,
                 )
-            }
+            },
+            ArithmeticType::Quantity(quantity) => {
+                let mut abs_quantity = quantity.clone();
+
+                abs_quantity.value = abs_quantity.value.abs();
+
+                Ok(Value::String(abs_quantity.to_string()))
+            },
             _ => Err(FhirpathError::EvaluateError {
                 msg: "abs operation not supported for type".to_string(),
             })
@@ -677,7 +684,7 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use rust_decimal_macros::dec;
     use serde_json::json;
-
+    use crate::error::FhirpathError;
     use crate::evaluate::{
         compile,
         test::test::{run_tests, TestCase},
@@ -1105,12 +1112,47 @@ mod test {
 
         let patient = json!({
             "resourceType": "Patient",
-            "a": -1.1
+            "a": -5,
+            "b": -5.5,
+            "c": "-5.5 'mg'",
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.abs()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([5])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.abs()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([5.5])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.abs()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!(["5.5 'mg'"])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.abs()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.abs()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([1.1]));
+        run_tests(test_cases);
     }
 
     #[test]

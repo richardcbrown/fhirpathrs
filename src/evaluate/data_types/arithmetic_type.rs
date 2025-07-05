@@ -1,11 +1,11 @@
+use crate::evaluate::data_types::quantity::Quantity;
 use std::str::FromStr;
 
 use rust_decimal::Decimal;
 use serde_json::Value;
 
 use crate::error::FhirpathError;
-
-use super::{date_time::DateTime, quantity::Quantity, time::Time};
+use super::{date_time::DateTime, time::Time};
 
 #[derive(Clone)]
 pub enum ArithmeticType {
@@ -27,6 +27,10 @@ impl TryFrom<&Value> for ArithmeticType {
                 })?,
             )),
             Value::String(string_val) => {
+                if let Ok(quantity) = Quantity::try_from(string_val) {
+                    return Ok(ArithmeticType::Quantity(quantity));
+                }
+
                 if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
                     return Ok(ArithmeticType::DateTime(datetime_value));
                 }

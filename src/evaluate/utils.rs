@@ -73,23 +73,50 @@ pub fn get_number_from_expression(
     }
 }
 
+pub fn get_i32_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> EvaluateResult<i32> {
+    let json_num = get_number_from_expression(input, expression)?;
+
+    let num = json_num.as_f64().ok_or(FhirpathError::EvaluateError {
+        msg: "Could not convert number to f64".to_string(),
+    })?;
+
+    let decimal = Decimal::from_f64(num).ok_or(FhirpathError::EvaluateError {
+        msg: "Could not convert number to Decimal".to_string(),
+    })?;
+
+    if !decimal.is_integer() {
+        return Err(FhirpathError::EvaluateError {
+            msg: "Decimal is not an integer".to_string(),
+        })
+    }
+
+    let converted: i32 = decimal.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Decimal cannot be converted to usize: {}", e),
+    })?;
+
+    Ok(converted)
+}
+
 pub fn get_usize_from_expression(
     input: &ResourceNode,
     expression: &Expression,
 ) -> EvaluateResult<usize> {
-    let json_num = get_number_from_expression(input, expression)?;
+    let int_val = get_i32_from_expression(input, expression)?;
 
-    json_num
-        .as_f64()
-        .and_then(|num| Some(num as u64))
-        .ok_or(FhirpathError::EvaluateError {
-            msg: "Could not convert number to u64".to_string(),
+    if int_val < 0 {
+        return Err(FhirpathError::EvaluateError {
+            msg: "Value cannot be negative".to_string(),
         })
-        .and_then(|num| {
-            usize::try_from(num).map_err(|_| FhirpathError::EvaluateError {
-                msg: "Could not convert number to u64".to_string(),
-            })
-        })
+    }
+
+    let converted: usize = int_val.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Value cannot be converted to usize: {}", e),
+    })?;
+
+    Ok(converted)
 }
 
 pub fn get_string_from_expression(

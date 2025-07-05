@@ -3,12 +3,17 @@ use std::{
     ops::{Add, Mul, Sub},
     str::FromStr,
 };
-
+use std::cell::LazyCell;
+use regex::Regex;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::EvaluateResult, parser::literal::QuantityLiteral};
+
+const QUANTITY_REGEX: LazyCell<Regex> = LazyCell::new(|| {
+    Regex::new(r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))").unwrap()
+});
 
 #[derive(PartialEq)]
 pub enum CalendarUnit {
@@ -213,10 +218,29 @@ impl TryFrom<&Value> for Quantity {
     }
 }
 
+impl TryFrom<&String> for Quantity {
+    type Error = FhirpathError;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        let captures = Regex::captures(&QUANTITY_REGEX, value).ok_or(FhirpathError::EvaluateError { msg: format!("Failed to parse Quantity. {}", value) })?;
+
+        let capture_text = captures[1].to_string();
+
+        let capture_unit = captures[3].to_string();
+
+        Ok(Quantity {
+            value: Decimal::from_str_exact(&capture_text).map_err(|e| FhirpathError::EvaluateError {
+                msg: format!("Could not convert value to Decimal: {}", e)
+            })?,
+            unit: Some(capture_unit),
+        })
+    }
+}
+
 impl Quantity {
     pub fn to_string(&self) -> String {
         match &self.unit {
-            Some(u) => format!("{} '{}'", self.value, u),
+            Some(u) => format!("{} {}", self.value, u),
             None => self.value.to_string(),
         }
     }

@@ -127,7 +127,15 @@ impl<'a> ResourceNode<'a> {
 
     pub fn get_single_or_empty(&self) -> EvaluateResult<Option<Value>> {
         match &self.data {
-            Value::Array(array) => Ok(array.first().cloned()),
+            Value::Array(array) => {
+                if array.len() > 1 {
+                    return Err(FhirpathError::EvaluateError {
+                        msg: "Expected single value for node".to_string(),
+                    })
+                }
+                
+                Ok(array.first().cloned())
+            },
             _ => Err(FhirpathError::EvaluateError {
                 msg: "Data must be a Value::Array".to_string(),
             }),

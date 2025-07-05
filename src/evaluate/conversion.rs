@@ -896,7 +896,7 @@ mod test {
                 path: "Patient.f.toString()".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!(["1 'year'"])),
+                expected: Expected::Value(json!(["1 year"])),
             },
         ];
 

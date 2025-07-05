@@ -75,20 +75,20 @@ however due to the asynchronous nature of the R5 specification this will likely 
       - toTime() : Time - :white_check_mark:
       - convertsToTime() : Boolean - :white_check_mark:
   - 5.6. String Manipulation
-    - 5.6.1. indexOf(substring : String) : Integer
-    - 5.6.2. substring(start : Integer [, length : Integer]) : String
-    - 5.6.3. startsWith(prefix : String) : Boolean
-    - 5.6.4. endsWith(suffix : String) : Boolean
-    - 5.6.5. contains(substring : String) : Boolean
-    - 5.6.6. upper() : String
-    - 5.6.7. lower() : String
-    - 5.6.8. replace(pattern : String, substitution : String) : String
-    - 5.6.9. matches(regex : String) : Boolean
-    - 5.6.10. replaceMatches(regex : String, substitution: String) : String
-    - 5.6.11. length() : Integer
-    - 5.6.12. toChars() : collection
+    - 5.6.1. indexOf(substring : String) : Integer - :white_check_mark:
+    - 5.6.2. substring(start : Integer [, length : Integer]) : String - :white_check_mark:
+    - 5.6.3. startsWith(prefix : String) : Boolean - :white_check_mark:
+    - 5.6.4. endsWith(suffix : String) : Boolean - :white_check_mark:
+    - 5.6.5. contains(substring : String) : Boolean - :white_check_mark:
+    - 5.6.6. upper() : String - :white_check_mark:
+    - 5.6.7. lower() : String - :white_check_mark:
+    - 5.6.8. replace(pattern : String, substitution : String) : String - :white_check_mark:
+    - 5.6.9. matches(regex : String) : Boolean - :white_check_mark:
+    - 5.6.10. replaceMatches(regex : String, substitution: String) : String - :white_check_mark:
+    - 5.6.11. length() : Integer - :white_check_mark:
+    - 5.6.12. toChars() : collection - :white_check_mark:
   - 5.7. Math
-    - 5.7.1. abs() : Integer | Decimal | Quantity
+    - 5.7.1. abs() : Integer | Decimal | Quantity - :white_check_mark:
     - 5.7.2. ceiling() : Integer
     - 5.7.3. exp() : Decimal
     - 5.7.4. floor() : Integer
