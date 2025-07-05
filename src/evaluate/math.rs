@@ -2,6 +2,7 @@ use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal, MathematicalOps,
 };
+use rust_decimal::prelude::Signed;
 use serde_json::{json, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
@@ -285,11 +286,23 @@ impl ArithmeticType {
     pub fn power(&self, exponent: f64) -> EvaluateResult<Value> {
         match self {
             ArithmeticType::Number(num) => {
-                Ok(serde_json::to_value(num.powf(exponent)).map_err(|err| {
-                    FhirpathError::EvaluateError {
-                        msg: format!("Could not convert from Decimal: {}", err.to_string()),
-                    }
-                })?)
+                // slightly naive approach to avoid complex numbers
+                if num.is_sign_negative() && (exponent != 0.0 && exponent < 1.0) {
+                    return Ok(Value::Array(vec![]));
+                }
+
+                let result = num.checked_powf(exponent);
+
+                let value = match result {
+                    Some(result) => serde_json::to_value(result).map_err(|err| {
+                        FhirpathError::EvaluateError {
+                            msg: format!("Could not convert from Decimal: {}", err.to_string()),
+                        }
+                    })?,
+                    None => Value::Array(vec![]),
+                };
+
+                Ok(value)
             }
             _ => Err(FhirpathError::EvaluateError {
                 msg: "pow operation not supported for type".to_string(),
@@ -1156,51 +1169,50 @@ mod test {
     }
 
     #[test]
-    fn evaluate_abs_empty_path() {
-        let compiled = compile(&"Patient.a.abs()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
-    }
-
-    #[test]
     fn evaluate_ceiling_path() {
-        let compiled = compile(&"Patient.a.ceiling()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
-            "a": 1.1
+            "a": 1,
+            "b": 1.1,
+            "c": -1.1,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.ceiling()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.ceiling()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([2])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.ceiling()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([-1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.ceiling()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.ceiling()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([2]));
-    }
-
-    #[test]
-    fn evaluate_ceiling_empty_path() {
-        let compiled = compile(&"Patient.a.ceiling()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
@@ -1217,153 +1229,248 @@ mod test {
         let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([7.38905609893065]));
-    }
 
-    #[test]
-    fn evaluate_exp_empty_path() {
-        let compiled = compile(&"Patient.a.exp()".to_string()).unwrap();
+        let compiled = compile(&"Patient.a.abs()".to_string()).unwrap();
 
         print!("{:?}", compiled.expression);
 
         let patient = json!({
             "resourceType": "Patient",
-            "a": []
+            "a": 2,
+            "b": 0,
+            "c": -0.0,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.exp()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([7.38905609893065])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.exp()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.exp()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.exp()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.exp()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
     fn evaluate_floor_path() {
-        let compiled = compile(&"Patient.a.floor()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
-            "a": 1.1
+            "a": 1,
+            "b": 2.1,
+            "c": -2.1,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.floor()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.floor()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([2])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.floor()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([-3])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.floor()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.floor()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([1]));
-    }
-
-    #[test]
-    fn evaluate_floor_empty_path() {
-        let compiled = compile(&"Patient.a.floor()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
     fn evaluate_ln_path() {
-        let compiled = compile(&"Patient.a.ln()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
-            "a": 1.1
+            "a": 1,
+            "b": 1.0,
+            "c": 1.1,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.ln()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([0])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.ln()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([0])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.ln()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([dec!(0.0953101798043248600439525528)])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.ln()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.ln()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(
-            evaluate_result,
-            json!([dec!(0.0953101798043248600439525528)])
-        );
-    }
-
-    #[test]
-    fn evaluate_ln_empty_path() {
-        let compiled = compile(&"Patient.a.ln()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
     fn evaluate_log_path() {
-        let compiled = compile(&"Patient.a.log(2.0)".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
-            "a": 1.1
+            "a": 16,
+            "b": 100.0,
+            "c": 1.1,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.log(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([4])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.log(10)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([2])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.log(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([dec!(0.137503523749935)])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.log(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.log(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([0.137503523749935]));
-    }
-
-    #[test]
-    fn evaluate_log_empty_path() {
-        let compiled = compile(&"Patient.a.log(2.0)".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
     fn evaluate_power_path() {
-        let compiled = compile(&"Patient.a.power(2.0)".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
         let patient = json!({
             "resourceType": "Patient",
-            "a": 2
+            "a": 2,
+            "b": 2.5,
+            "c": -1,
+            "d": [],
+            "e": [-5, -6]
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.power(3)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([8])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.power(2)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([6.25])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.power(0.5)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.c.power(0.0)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([1])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.d.power(0.5)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.e.power(0.5)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+                options: None,
+            },
+        ];
 
-        assert_json_eq!(evaluate_result, json!([4]));
-    }
-
-    #[test]
-    fn evaluate_power_empty_path() {
-        let compiled = compile(&"Patient.a.power(2.0)".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "a": []
-        });
-
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([]));
+        run_tests(test_cases);
     }
 
     #[test]
