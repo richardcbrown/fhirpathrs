@@ -95,12 +95,12 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 5.7.5. ln() : Decimal - :white_check_mark:
     - 5.7.6. log(base : Decimal) : Decimal - :white_check_mark:
     - 5.7.7. power(exponent : Integer | Decimal) : Integer | Decimal - :exclamation: - complex numbers need checking correctly
-    - 5.7.8. round([precision : Integer]) : Decimal
-    - 5.7.9. sqrt() : Decimal
-    - 5.7.10. truncate() : Integer
+    - 5.7.8. round([precision : Integer]) : Decimal - :white_check_mark:
+    - 5.7.9. sqrt() : Decimal - :white_check_mark:
+    - 5.7.10. truncate() : Integer - :white_check_mark:
   - 5.8. Tree navigation
-    - 5.8.1. children() : collection
-    - 5.8.2. descendants() : collection
+    - 5.8.1. children() : collection - :exclamation:
+    - 5.8.2. descendants() : collection - :exclamation:
   - 5.9. Utility functions
     - 5.9.1. trace(name : String [, projection: Expression]) : collection
     - 5.9.2. Current date and time functions
