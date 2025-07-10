@@ -19,3 +19,5 @@ Bundle.entry.resource -> correct type?
 children() and descendants() - we currently return any nodes that are children/descendants, which seems to differ
 with other implementations, there is discussion here https://chat.fhir.org/#narrow/channel/179298-fhirpath.2Ejs/topic/descendants.28.29
 on the correct way to do this. This implementation also doesn't flatten array nodes out, which all other implementations appear to do.
+
+Time equality does not respect second / millisecond comparison

@@ -564,6 +564,12 @@ mod test {
                 options: None,
                 expected: Expected::Value(json!([false])),
             },
+            TestCase {
+                path: "@T01:30:00.000 = @T01:30:00".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
         ];
 
         run_tests(tests);

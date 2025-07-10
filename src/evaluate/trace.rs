@@ -41,7 +41,7 @@ pub fn trace<'a, 'b>(
         Some(exp) => exp.evaluate(input)?.data,
     };
 
-    call_trace(input.context, name.clone(), output_result.clone());
+    call_trace(input.context, name.clone(), output_result.clone())?;
     
     Ok(ResourceNode::from_node(input, input.data.clone()))
 }
