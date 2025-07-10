@@ -8,7 +8,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for TotalInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let index = input.get_total().unwrap_or(Value::Array(vec![]));
 
         Ok(ResourceNode::from_node(input, index))

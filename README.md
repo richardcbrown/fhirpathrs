@@ -102,11 +102,11 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 5.8.1. children() : collection - :exclamation:
     - 5.8.2. descendants() : collection - :exclamation:
   - 5.9. Utility functions
-    - 5.9.1. trace(name : String [, projection: Expression]) : collection
+    - 5.9.1. trace(name : String [, projection: Expression]) : collection - :white_check_mark:
     - 5.9.2. Current date and time functions
-      - now() : DateTime
+      - now() : DateTime - :white_check_mark:
       - timeOfDay() : Time
-      - today() : Date
+      - today() : Date - :white_check_mark:
 - 6. Operations
   - 6.1. Equality
     - 6.1.1. = (Equals)
@@ -145,7 +145,7 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 6.7.1. + (addition)
     - 6.7.2. - (subtraction)
 - 7. Aggregates
-  - 7.1. aggregate(aggregator : expression [, init : value]) : value
+  - 7.1. aggregate(aggregator : expression [, init : value]) : value - :white_check_mark:
 - 8. Lexical Elements
   - 8.1. Whitespace
   - 8.2. Comments

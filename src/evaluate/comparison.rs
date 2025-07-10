@@ -205,10 +205,10 @@ impl ArithmeticType {
     }
 }
 
-pub fn gt<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn gt<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "> expects exactly two expressions".to_string(),
@@ -227,10 +227,10 @@ pub fn gt<'a>(
     })
 }
 
-pub fn gte<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn gte<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: ">= expects exactly two expressions".to_string(),
@@ -249,10 +249,10 @@ pub fn gte<'a>(
     })
 }
 
-pub fn lt<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn lt<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "< expects exactly two expressions".to_string(),
@@ -271,10 +271,10 @@ pub fn lt<'a>(
     })
 }
 
-pub fn lte<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn lte<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "< expects exactly two expressions".to_string(),

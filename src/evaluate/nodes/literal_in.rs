@@ -7,7 +7,7 @@ use crate::parser::identifier::LiteralIn;
 use super::resource_node::ResourceNode;
 
 impl Evaluate for LiteralIn {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         Ok(ResourceNode::from_node(input, json!(self.text.clone())))
     }
 }

@@ -8,10 +8,10 @@ use crate::parser::{
 
 use super::{filtering::repeat, nodes::resource_node::ResourceNode, EvaluateResult};
 
-pub fn children<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn children<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let children = input
         .get_array()?
         .iter()
@@ -31,10 +31,10 @@ pub fn children<'a>(
     Ok(ResourceNode::from_node(input, Value::Array(children)))
 }
 
-pub fn descendants<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn descendants<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let children_expression = Expression::TermExpression(Box::new(TermExpression {
         children: vec![Box::new(Term::InvocationTerm(Box::new(InvocationTerm {
             children: vec![Box::new(Invocation::FunctionInvocation(Box::new(

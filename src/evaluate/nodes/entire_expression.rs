@@ -7,7 +7,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for EntireExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let child = self.children.first().ok_or(FhirpathError::EvaluateError {
             msg: "Missing EntireExpression child element".to_string(),
         })?;

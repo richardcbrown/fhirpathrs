@@ -18,10 +18,10 @@ pub fn normalise(string_val: &String) -> String {
         .to_string()
 }
 
-pub fn index_of<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn index_of<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -43,10 +43,10 @@ pub fn index_of<'a>(
     Ok(ResourceNode::from_node(input, json!(index)))
 }
 
-pub fn substring<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn substring<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "Substring expects at least one expression".to_string(),
     })?;
@@ -95,10 +95,10 @@ pub fn substring<'a>(
     ))
 }
 
-pub fn starts_with<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn starts_with<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
@@ -116,10 +116,10 @@ pub fn starts_with<'a>(
     Ok(ResourceNode::from_node(input, json!(starts_with)))
 }
 
-pub fn ends_with<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn ends_with<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
@@ -137,10 +137,10 @@ pub fn ends_with<'a>(
     Ok(ResourceNode::from_node(input, Value::Bool(ends_with)))
 }
 
-pub fn contains<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn contains<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "StartsWith expects one expression".to_string(),
     })?;
@@ -158,10 +158,10 @@ pub fn contains<'a>(
     Ok(ResourceNode::from_node(input, Value::Bool(contains)))
 }
 
-pub fn upper<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn upper<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -173,10 +173,10 @@ pub fn upper<'a>(
     Ok(ResourceNode::from_node(input, Value::String(replaced)))
 }
 
-pub fn lower<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn lower<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -188,10 +188,10 @@ pub fn lower<'a>(
     Ok(ResourceNode::from_node(input, Value::String(replaced)))
 }
 
-pub fn replace<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn replace<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -205,10 +205,10 @@ pub fn replace<'a>(
     Ok(ResourceNode::from_node(input, Value::String(replaced)))
 }
 
-pub fn matches<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn matches<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -224,10 +224,10 @@ pub fn matches<'a>(
     Ok(ResourceNode::from_node(input, Value::Bool(matches)))
 }
 
-pub fn replace_matches<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn replace_matches<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -244,10 +244,10 @@ pub fn replace_matches<'a>(
     Ok(ResourceNode::from_node(input, Value::String(replace_result)))
 }
 
-pub fn length<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn length<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }
@@ -257,10 +257,10 @@ pub fn length<'a>(
     Ok(ResourceNode::from_node(input, Value::Number(Number::from(string_value.len()))))
 }
 
-pub fn to_chars<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn to_chars<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if input.is_empty()? {
         return Ok(ResourceNode::from_node(input, Value::Array(Vec::new())));
     }

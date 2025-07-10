@@ -6,7 +6,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for ExpressionAndTypeSpecifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             ExpressionAndTypeSpecifier::Expression(expr) => expr.evaluate(input),
             ExpressionAndTypeSpecifier::TypeSpecifier(ts) => ts.evaluate(input),

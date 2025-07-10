@@ -21,9 +21,10 @@ mod test;
 mod types;
 mod utility_functions;
 mod utils;
+mod trace;
 
 use std::collections::HashMap;
-
+use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use nodes::resource_node::{FhirContext, PathDetails, ResourceNode};
 use serde_json::Value;
@@ -43,23 +44,25 @@ pub struct CompiledPath {
 }
 
 pub trait Evaluate {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>>;
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>>;
 }
 
 pub trait Text {
     fn text(&self) -> EvaluateResult<String>;
 }
 
-#[derive(Clone)]
-pub struct EvaluateOptions {
+pub struct EvaluateOptions<'a> {
     model: Option<ModelDetails>,
     vars: Option<HashMap<String, Value>>,
     now: Option<DateTime<Utc>>,
+    trace_function: Option<Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>>
 }
 
 impl CompiledPath {
     pub fn evaluate(&self, resources: Vec<Value>, options: Option<EvaluateOptions>) -> EvaluateResult<Vec<Value>> {
-        let results: Vec<Value> = resources.into_iter().map(|res| self.evaluate_single(res, options.clone())).collect::<EvaluateResult<Vec<Value>>>()?;
+        let opts = options.and_then(|opts| Some(Arc::new(opts)));
+
+        let results: Vec<Value> = resources.into_iter().map(|res| self.evaluate_single(res, opts.clone())).collect::<EvaluateResult<Vec<Value>>>()?;
 
         let collected = results.into_iter().try_fold(vec![], |mut acc, result| {
             match result {
@@ -73,12 +76,13 @@ impl CompiledPath {
         Ok(collected?)
     }
 
-    pub fn evaluate_single(&self, resource: Value, options: Option<EvaluateOptions>) -> EvaluateResult<Value> {
-        let opts = options.unwrap_or(EvaluateOptions {
+    pub fn evaluate_single(&self, resource: Value, options: Option<Arc<EvaluateOptions>>) -> EvaluateResult<Value> {
+        let opts = options.unwrap_or(Arc::new(EvaluateOptions {
             model: None,
             vars: None,
             now: None,
-        });
+            trace_function: None,
+        }));
 
         let mut vars = HashMap::<String, Value>::new();
 
@@ -90,14 +94,16 @@ impl CompiledPath {
         vars.insert("resource".to_string(), resource.clone());
         vars.insert("rootResource".to_string(), resource.clone());
 
-        if let Some(custom_vars) = opts.vars {
+        if let Some(custom_vars) = opts.clone().vars.clone() {
             vars.extend(custom_vars);
         }
 
         let context = FhirContext {
-            model: opts.model,
+            // @todo - model clone
+            model: opts.clone().model.clone(),
             vars,
             now: opts.now.unwrap_or(Utc::now()),
+            trace_function: opts.clone().trace_function.clone()
         };
 
         let node = ResourceNode::new(
@@ -196,11 +202,12 @@ mod tests {
         let evaluate_result = compiled
             .evaluate_single(
                 patient,
-                Some(EvaluateOptions {
+                Some(Arc::new(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
-                }),
+                    trace_function: None,
+                })),
             )
             .unwrap();
 
@@ -234,6 +241,7 @@ mod tests {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None
                 }),
             )
             .unwrap();

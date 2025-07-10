@@ -6,7 +6,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Literal {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             Literal::BooleanLiteral(exp) => exp.evaluate(input),
             Literal::DatetimeLiteral(exp) => exp.evaluate(input),

@@ -6,7 +6,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Identifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             Identifier::LiteralIdentifier(exp) => exp.evaluate(input),
             Identifier::LiteralAs(exp) => exp.evaluate(input),

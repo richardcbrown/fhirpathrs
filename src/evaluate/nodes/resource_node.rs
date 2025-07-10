@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 
@@ -13,11 +13,11 @@ use crate::{
     models::ModelDetails,
 };
 
-#[derive(Clone, Debug)]
-pub struct FhirContext {
+pub struct FhirContext<'a> {
     pub model: Option<ModelDetails>,
     pub vars: HashMap<String, Value>,
     pub now: DateTime<Utc>,
+    pub trace_function: Option<Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -27,11 +27,11 @@ pub struct PathDetails {
     pub extensible: bool
 }
 
-#[derive(Clone, Debug)]
-pub struct ResourceNode<'a> {
+#[derive(Clone)]
+pub struct ResourceNode<'a, 'b> {
     pub data_root: &'a Value,
     pub data: Value,
-    pub context: &'a FhirContext,
+    pub context: &'a FhirContext<'b>,
     pub path: Option<String>,
     pub fhir_types: Vec<Option<PathDetails>>,
     pub reflection_types: Vec<Option<ReflectionType>>,
@@ -44,11 +44,11 @@ pub struct ResourceContext {
     pub total: Option<Value>,
 }
 
-impl<'a> ResourceNode<'a> {
+impl<'a, 'b> ResourceNode<'a, 'b> {
     pub fn new(
         data_root: &'a Value,
         data: Value,
-        context: &'a FhirContext,
+        context: &'a FhirContext<'b>,
         path: Option<String>,
         fhir_types: Vec<Option<PathDetails>>,
         resource_context: Option<ResourceContext>,
@@ -74,7 +74,7 @@ impl<'a> ResourceNode<'a> {
         }
     }
 
-    pub fn from_node(node: &'a ResourceNode, data: Value) -> Self {
+    pub fn from_node(node: &'a ResourceNode<'a, 'b>, data: Value) -> Self {
         Self::new(
             node.data_root,
             data,

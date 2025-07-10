@@ -7,7 +7,7 @@ use crate::{
 use super::{resource_node::ResourceNode, utils::invoke_operation};
 
 impl Evaluate for MembershipExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 2 {
             return Err(FhirpathError::EvaluateError {
                 msg: "MembershipExpression must have exactly two children".to_string(),

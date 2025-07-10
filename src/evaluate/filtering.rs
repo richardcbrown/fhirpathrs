@@ -54,10 +54,10 @@ fn evaluate_filter_expression(
     results
 }
 
-pub fn where_function<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn where_function<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     expressions
         .first()
         .ok_or(FhirpathError::EvaluateError {
@@ -72,10 +72,10 @@ pub fn where_function<'a>(
         })
 }
 
-pub fn select<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn select<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let expression = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "select function requires single expression argument".to_string(),
     })?;
@@ -121,8 +121,8 @@ pub fn select<'a>(
     Ok(ResourceNode::from_node(input, json!(combined)))
 }
 
-fn repeat_expr<'a>(
-    input: &'a ResourceNode<'a>,
+fn repeat_expr<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     mut values: Vec<Value>,
     expression: &Expression,
 ) -> EvaluateResult<Vec<Value>> {
@@ -151,10 +151,10 @@ fn repeat_expr<'a>(
     Ok(unique_array_elements(&values))
 }
 
-pub fn repeat<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn repeat<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
         .ok_or_else(|| FhirpathError::EvaluateError {
@@ -168,10 +168,10 @@ pub fn repeat<'a>(
     Ok(ResourceNode::from_node(input, Value::Array(accumulated)))
 }
 
-pub fn of_type<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn of_type<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
         .ok_or_else(|| FhirpathError::EvaluateError {
@@ -355,6 +355,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             TestCase {
@@ -365,6 +366,7 @@ mod test {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
                     now: None,
+                    trace_function: None,
                 }),
             },
             // @todo - should work but doesn't

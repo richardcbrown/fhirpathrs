@@ -13,17 +13,17 @@ use super::{
     EvaluateResult, Evaluate, ResourceNode,
 };
 
-pub fn empty<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn empty<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(input, json!(input.is_empty()?)))
 }
 
-pub fn exists<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn exists<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() == 0 {
         return Ok(ResourceNode::from_node(input, json!(!input.is_empty()?)));
     }
@@ -33,10 +33,10 @@ pub fn exists<'a>(
     Ok(ResourceNode::from_node(input, json!(!result.is_empty()?)))
 }
 
-pub fn all<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn all<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 1 {
         return Err(FhirpathError::EvaluateError {
             msg: "Expected single expression".to_string(),
@@ -57,7 +57,7 @@ pub fn all<'a>(
     ))
 }
 
-fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> EvaluateResult<Vec<bool>> {
+fn input_to_bool_array<'a, 'b>(input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<Vec<bool>> {
     let array = input.get_array()?;
 
     array
@@ -75,10 +75,10 @@ fn input_to_bool_array<'a>(input: &'a ResourceNode<'a>) -> EvaluateResult<Vec<bo
         .collect::<EvaluateResult<Vec<bool>>>()
 }
 
-pub fn all_true<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn all_true<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input_to_bool_array(input)?;
 
     let all_true = array.iter().all(|item| *item);
@@ -86,10 +86,10 @@ pub fn all_true<'a>(
     Ok(ResourceNode::from_node(input, json!(all_true)))
 }
 
-pub fn any_true<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn any_true<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input_to_bool_array(input)?;
 
     let any_true = array.iter().any(|item| *item);
@@ -97,10 +97,10 @@ pub fn any_true<'a>(
     Ok(ResourceNode::from_node(input, json!(any_true)))
 }
 
-pub fn all_false<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn all_false<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input_to_bool_array(input)?;
 
     let all_false = array.iter().all(|item| !*item);
@@ -108,10 +108,10 @@ pub fn all_false<'a>(
     Ok(ResourceNode::from_node(input, json!(all_false)))
 }
 
-pub fn any_false<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn any_false<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input_to_bool_array(input)?;
 
     let any_false = array.iter().any(|item| !*item);
@@ -119,11 +119,11 @@ pub fn any_false<'a>(
     Ok(ResourceNode::from_node(input, json!(any_false)))
 }
 
-pub fn subset_of<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn subset_of<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
     target: Target,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let (first_array, second_array) = get_arrays(input, expressions, target)?;
 
     let is_subset = first_array.iter().all(|self_item| {
@@ -135,11 +135,11 @@ pub fn subset_of<'a>(
     Ok(ResourceNode::from_node(input, json!(is_subset)))
 }
 
-pub fn superset_of<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn superset_of<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
     target: Target,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let (first_array, second_array) = get_arrays(input, expressions, target)?;
 
     let is_superset = second_array.iter().all(|self_item| {
@@ -151,28 +151,28 @@ pub fn superset_of<'a>(
     Ok(ResourceNode::from_node(input, json!(is_superset)))
 }
 
-pub fn count<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn count<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
     Ok(ResourceNode::from_node(input, json!(array.len())))
 }
 
-pub fn distinct<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn distinct<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = unique_array_elements(input.get_array()?);
 
     Ok(ResourceNode::from_node(input, Value::Array(array)))
 }
 
-pub fn is_distinct<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn is_distinct<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let total_array = input.get_array()?;
 
     let array = unique_array_elements(total_array);
@@ -188,6 +188,42 @@ mod test {
     use crate::evaluate::EvaluateOptions;
     use crate::evaluate::test::test::{run_tests, Expected, TestCase};
     use crate::models::{get_model_details, ModelType};
+
+    #[test]
+    fn test_empty_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4],
+            "generalPractitioner": [
+                {
+                    "reference": "Practitioner/123"
+                }
+            ],
+            "b": [],
+            "contained": [
+                {
+                    "resourceType": "Patient"
+                }
+            ]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "{}.empty()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.empty()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([false])),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 
     #[test]
     fn test_all_path() {

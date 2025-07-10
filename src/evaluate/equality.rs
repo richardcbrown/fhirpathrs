@@ -139,7 +139,7 @@ fn value_arrays_are_equal(first: &Vec<Value>, second: &Vec<Value>) -> Option<boo
     Some(true)
 }
 
-fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> EvaluateResult<Value> {
+fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "Equal function takes exactly 2 expressions".to_string(),
@@ -168,19 +168,19 @@ fn are_equal(input: &ResourceNode, expressions: &Vec<Box<Expression>>) -> Evalua
     }
 }
 
-pub fn equal<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn equal<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let result = are_equal(input, expressions)?;
 
     Ok(ResourceNode::from_node(input, result))
 }
 
-pub fn not_equal<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn not_equal<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let result = are_equal(input, expressions)?;
 
     let inverse = match result {
@@ -336,8 +336,8 @@ fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Optio
     Some(equivalent_arrays)
 }
 
-fn are_equivalent(
-    input: &ResourceNode,
+fn are_equivalent<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
@@ -375,20 +375,20 @@ fn are_equivalent(
     }
 }
 
-pub fn equivalent<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn equivalent<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(
         input,
         are_equivalent(input, expressions)?,
     ))
 }
 
-pub fn not_equivalent<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn not_equivalent<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let equivalent = are_equivalent(input, expressions)?;
 
     let are_not_equivalent = match equivalent {
@@ -563,6 +563,12 @@ mod test {
                 input: patient.clone(),
                 options: None,
                 expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "@T01:30:00.000 = @T01:30:00".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
             },
         ];
 

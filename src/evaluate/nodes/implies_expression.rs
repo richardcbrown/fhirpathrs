@@ -5,7 +5,7 @@ use crate::evaluate::nodes::utils::invoke_operation;
 use crate::parser::expression::ImpliesExpression;
 
 impl Evaluate for ImpliesExpression {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 2 {
             return Err(FhirpathError::EvaluateError {
                 msg: "ImpliesExpression must have exactly two children".to_string(),

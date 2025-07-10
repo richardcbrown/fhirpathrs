@@ -6,11 +6,11 @@ use crate::{
 
 use super::resource_node::ResourceNode;
 
-pub fn invoke_operation<'a>(
+pub fn invoke_operation<'a, 'b>(
     op: &String,
-    input: &'a ResourceNode<'a>,
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     invocation_table()
         .get(op)
         .ok_or(FhirpathError::EvaluateError {

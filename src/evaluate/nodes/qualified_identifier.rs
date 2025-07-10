@@ -9,7 +9,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for QualifiedIdentifier {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let identifiers: Vec<String> = self
             .children
             .iter()

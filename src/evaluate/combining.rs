@@ -9,11 +9,11 @@ use super::{
     EvaluateResult, ResourceNode,
 };
 
-pub fn union<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn union<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
     arity: Target,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let (array, mut second_array) = get_arrays(input, expressions, arity)?;
 
     let mut union_array: Vec<Value> = array
@@ -34,10 +34,10 @@ pub fn union<'a>(
     ))
 }
 
-pub fn combine<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn combine<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let (mut first_array, mut second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
     first_array.append(&mut second_array);

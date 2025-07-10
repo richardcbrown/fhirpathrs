@@ -108,10 +108,10 @@ struct NameAndModel<'a> {
     pub model: &'a Option<ModelDetails>,
 }
 
-impl<'a> TryFrom<&ResourceNode<'a>> for TypeInfo {
+impl<'a, 'b> TryFrom<&ResourceNode<'a, 'b>> for TypeInfo {
     type Error = FhirpathError;
 
-    fn try_from(value: &ResourceNode<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: &ResourceNode<'a, 'b>) -> Result<Self, Self::Error> {
         match &value.get_single()? {
             Value::String(string_value) => Ok(TypeInfo::try_from(&TypeDetails {
                 // when we convert a String to an Expression we are currently using

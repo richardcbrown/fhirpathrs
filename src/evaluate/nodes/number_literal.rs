@@ -11,7 +11,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for NumberLiteral {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let value =
             Decimal::from_str(self.text.as_str()).map_err(|_| FhirpathError::EvaluateError {
                 msg: "NumberLiteral is not a Number".to_string(),

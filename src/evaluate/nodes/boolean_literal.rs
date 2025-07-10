@@ -9,7 +9,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for BooleanLiteral {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let bool_val =
             try_convert_to_boolean(&Value::String(self.text.clone())).ok_or_else(|| {
                 FhirpathError::EvaluateError {

@@ -7,10 +7,10 @@ use super::{
     EvaluateResult, Evaluate,
 };
 
-pub fn aggregate<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn aggregate<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first = expressions
         .first()
         .ok_or_else(|| FhirpathError::EvaluateError {

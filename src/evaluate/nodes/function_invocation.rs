@@ -11,7 +11,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for FunctionInvocation {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let function_name_child = self.children[0].deref();
         let param_list_child = if self.children.len() == 2 {
             Some(self.children[1].deref())

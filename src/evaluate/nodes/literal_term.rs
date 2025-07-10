@@ -7,7 +7,7 @@ use crate::{
 use super::resource_node::ResourceNode;
 
 impl Evaluate for LiteralTerm {
-    fn evaluate<'a>(&self, input: &'a ResourceNode<'a>) -> EvaluateResult<ResourceNode<'a>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 1 {
             return Err(FhirpathError::EvaluateError {
                 msg: "LiteralTerm should have exactly one child".to_string(),

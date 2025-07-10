@@ -6,8 +6,8 @@ use super::{
     equality::values_are_equal, nodes::resource_node::ResourceNode, EvaluateResult, Evaluate,
 };
 
-fn collection_contains_item<'a>(
-    input: &'a ResourceNode<'a>,
+fn collection_contains_item<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     collection_exp: &Expression,
     item_expr: &Expression,
 ) -> EvaluateResult<Value> {
@@ -35,10 +35,10 @@ fn collection_contains_item<'a>(
     Ok(Value::Bool(item_in_collection))
 }
 
-pub fn in_collection<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn in_collection<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
@@ -64,10 +64,10 @@ pub fn in_collection<'a>(
     ))
 }
 
-pub fn collection_contains<'a>(
-    input: &'a ResourceNode<'a>,
+pub fn collection_contains<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> EvaluateResult<ResourceNode<'a>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
