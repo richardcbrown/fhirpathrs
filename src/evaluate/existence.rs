@@ -190,6 +190,42 @@ mod test {
     use crate::models::{get_model_details, ModelType};
 
     #[test]
+    fn test_empty_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4],
+            "generalPractitioner": [
+                {
+                    "reference": "Practitioner/123"
+                }
+            ],
+            "b": [],
+            "contained": [
+                {
+                    "resourceType": "Patient"
+                }
+            ]
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "{}.empty()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.empty()".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([false])),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
     fn test_all_path() {
         let patient = json!({
             "resourceType": "Patient",
