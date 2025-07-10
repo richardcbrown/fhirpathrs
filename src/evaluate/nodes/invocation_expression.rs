@@ -9,9 +9,7 @@ impl Evaluate for InvocationExpression {
     fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         self.children.iter().fold(Ok(input.clone()), |acc, child| {
             acc.and_then(|val| {
-                let node = ResourceNode::from_node(&val, val.data.clone());
-
-                let result = child.evaluate(&node);
+                let result = child.evaluate(&val);
 
                 match result {
                     Ok(res) => {
