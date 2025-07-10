@@ -1,13 +1,13 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{utils::get_string, CompileResult, Evaluate, Text},
+    evaluate::{utils::get_string, EvaluateResult, Evaluate, Text},
     parser::expression::IdentifierOrStringLiteral,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for IdentifierOrStringLiteral {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let result = match &self {
             IdentifierOrStringLiteral::Identifier(identifier) => identifier.evaluate(input),
             IdentifierOrStringLiteral::StringLiteral(literal) => literal.evaluate(input),
@@ -17,7 +17,7 @@ impl Evaluate for IdentifierOrStringLiteral {
 
         let variable = input
             .get_var(&var_name)
-            .ok_or_else(|| FhirpathError::CompileError {
+            .ok_or_else(|| FhirpathError::EvaluateError {
                 msg: format!("Unknown variable {}", var_name),
             })?;
 
@@ -26,7 +26,7 @@ impl Evaluate for IdentifierOrStringLiteral {
 }
 
 impl Text for IdentifierOrStringLiteral {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match &self {
             IdentifierOrStringLiteral::Identifier(identifier) => identifier.text(),
             IdentifierOrStringLiteral::StringLiteral(literal) => literal.text(),

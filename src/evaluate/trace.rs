@@ -1,13 +1,13 @@
 use serde_json::Value;
 use crate::error::FhirpathError;
-use crate::evaluate::{CompileResult, Evaluate};
+use crate::evaluate::{Evaluate, EvaluateResult};
 use crate::evaluate::nodes::resource_node::{FhirContext, ResourceNode};
 use crate::evaluate::utils::get_string;
 use crate::parser::expression::Expression;
 
-fn call_trace(ctx: &FhirContext, name: String, value: Value) -> CompileResult<()> {
+fn call_trace(ctx: &FhirContext, name: String, value: Value) -> EvaluateResult<()> {
     let mut func = ctx.trace_function.lock().map_err(|e| {
-        FhirpathError::CompileError {
+        FhirpathError::EvaluateError {
             msg: format!("Could not obtain lock on trace function: {}", e),
         }
     })?;
@@ -20,8 +20,8 @@ fn call_trace(ctx: &FhirContext, name: String, value: Value) -> CompileResult<()
 pub fn trace<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
-    let name_expr = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
+    let name_expr = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "Trace expects at least one expression".to_string()
     })?;
 
@@ -38,7 +38,6 @@ pub fn trace<'a, 'b>(
 
     println!("TRACE:[{}] {}", name.clone(), output_result.clone());
 
-
     Ok(ResourceNode::from_node(input, input.data.clone()))
 }
 
@@ -48,7 +47,7 @@ mod test {
     use std::sync::{Arc, Mutex};
     use serde_json::{json, Value};
     use crate::evaluate::EvaluateOptions;
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_trace_path() {
@@ -58,7 +57,7 @@ mod test {
             TestCase {
                 path: "Patient.a.trace('test', b).b.anyTrue()".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
         ];
@@ -81,7 +80,7 @@ mod test {
                 TestCase {
                     path: "Patient.a.trace('test', b).b.anyTrue()".to_string(),
                     input: patient.clone(),
-                    expected: json!([true]),
+                    expected: Expected::Value(json!([true])),
                     options: Some(EvaluateOptions {
                         model: None,
                         vars: None,

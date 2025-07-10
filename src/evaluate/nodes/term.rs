@@ -1,12 +1,12 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::Term,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Term {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             Term::InvocationTerm(exp) => exp.evaluate(input),
             Term::LiteralTerm(exp) => exp.evaluate(input),
@@ -17,7 +17,7 @@ impl Evaluate for Term {
 }
 
 impl Text for Term {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Term::InvocationTerm(exp) => exp.text(),
             Term::LiteralTerm(exp) => exp.text(),

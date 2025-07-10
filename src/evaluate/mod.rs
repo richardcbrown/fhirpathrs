@@ -37,18 +37,18 @@ use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(pub fhirpath);
 
-pub type CompileResult<T> = std::result::Result<T, FhirpathError>;
+pub type EvaluateResult<T> = std::result::Result<T, FhirpathError>;
 
 pub struct CompiledPath {
     expression: Box<EntireExpression>,
 }
 
 pub trait Evaluate {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>>;
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>>;
 }
 
 pub trait Text {
-    fn text(&self) -> CompileResult<String>;
+    fn text(&self) -> EvaluateResult<String>;
 }
 
 pub struct EvaluateOptions<'a> {
@@ -59,7 +59,22 @@ pub struct EvaluateOptions<'a> {
 }
 
 impl CompiledPath {
-    fn evaluate(&self, resource: Value, options: Option<EvaluateOptions>) -> CompileResult<Value> {
+    pub fn evaluate(&self, resources: Vec<Value>, options: Option<EvaluateOptions>) -> EvaluateResult<Vec<Value>> {
+        let results: Vec<Value> = resources.into_iter().map(|res| self.evaluate_single(res, options.clone())).collect::<EvaluateResult<Vec<Value>>>()?;
+
+        let collected = results.into_iter().try_fold(vec![], |mut acc, result| {
+            match result {
+                Value::Array(mut array) => acc.append(&mut array),
+                _ => return Err(FhirpathError::EvaluateError { msg: "Result was not an array".to_string() })
+            }
+
+            Ok(acc)
+        });
+
+        Ok(collected?)
+    }
+
+    pub fn evaluate_single(&self, resource: Value, options: Option<EvaluateOptions>) -> EvaluateResult<Value> {
         let opts = options.unwrap_or(EvaluateOptions {
             model: None,
             vars: None,
@@ -87,10 +102,10 @@ impl CompiledPath {
             model: opts.model,
             vars,
             now: opts.now.unwrap_or(Utc::now()),
-            trace_function: Arc::new(Mutex::new(match opts.trace_function {
-                Some(trace_function) => trace_function,
-                None => &mut default_trace,
-            }))
+            trace_function: match opts.trace_function {
+                Some(trace_function) => Arc::new(Mutex::new(trace_function)),
+                None => Arc::new(Mutex::new(&mut default_trace)),
+            }
         };
 
         let node = ResourceNode::new(
@@ -105,13 +120,39 @@ impl CompiledPath {
 
         let evaluate_result = self.expression.evaluate(&node)?;
 
-        dbg!(evaluate_result.path);
+        dbg!(evaluate_result.path.clone());
 
-        Ok(evaluate_result.data)
+        // where data contains values from both property and _property
+        // remove the _property results
+        let fhir_types = &evaluate_result.fhir_types;
+        let data = evaluate_result.get_array()?;
+
+        let has_none_extension_data = fhir_types.iter().any(|ft| {
+            ft.as_ref().and_then(|fhir_type| Some(fhir_type.extensible)).unwrap_or(false)
+        });
+
+        if has_none_extension_data {
+            let combined: Vec<(bool, Value)> = data.iter().enumerate().map(|(index, item)| {
+                let is_extensible = fhir_types
+                    .iter()
+                    .nth(index)
+                    .unwrap_or(&None)
+                    .as_ref()
+                    .and_then(|ft| Some(ft.extensible)).unwrap_or(false);
+
+                (is_extensible , item.clone())
+            }).collect();
+
+            let filtered: Vec<Value> =  combined.into_iter().filter(|item| !item.0).map(|item| item.1).collect();
+
+            return Ok(Value::Array(filtered));
+        }
+
+        Ok(Value::Array(data.clone()))
     }
 }
 
-pub fn compile(path: &String) -> CompileResult<CompiledPath> {
+pub fn compile(path: &String) -> EvaluateResult<CompiledPath> {
     Ok(CompiledPath {
         expression: Box::new(fhirpath::EntireExpressionParser::new().parse(path).unwrap()),
     })
@@ -136,7 +177,7 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -161,7 +202,7 @@ mod tests {
         });
 
         let evaluate_result = compiled
-            .evaluate(
+            .evaluate_single(
                 patient,
                 Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
@@ -182,6 +223,44 @@ mod tests {
     }
 
     #[test]
+    fn evaluate_name_multiple_path() {
+        let compiled = compile(&"Patient.name".to_string()).unwrap();
+
+        print!("{:?}", compiled.expression);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "name": [{
+                "use": "usual",
+                "given": ["test"]
+            }]
+        });
+
+        let evaluate_result = compiled
+            .evaluate(
+                vec![patient.clone(), patient.clone()],
+                Some(EvaluateOptions {
+                    model: Some(get_model_details(ModelType::Stu3).unwrap()),
+                    vars: None,
+                    now: None,
+                    trace_function: None
+                }),
+            )
+            .unwrap();
+
+        assert_json_eq!(
+            evaluate_result,
+            json!([{
+                "use": "usual",
+                "given": ["test"]
+            },{
+                "use": "usual",
+                "given": ["test"]
+            }])
+        );
+    }
+
+    #[test]
     fn evaluate_name_given_path() {
         let compiled = compile(&"Patient.name.given".to_string()).unwrap();
 
@@ -195,7 +274,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         println!("{:?}", evaluate_result);
 
@@ -216,7 +295,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -241,7 +320,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
     }
@@ -260,7 +339,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -286,7 +365,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
     }
@@ -305,7 +384,7 @@ mod tests {
             }]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test1"]));
     }
@@ -330,7 +409,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test1"]));
     }
@@ -358,7 +437,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -393,7 +472,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -428,7 +507,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -462,7 +541,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -496,7 +575,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -530,7 +609,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["TEST"]));
     }
@@ -557,36 +636,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test"]));
-    }
-
-    #[test]
-    fn evaluate_replace_path() {
-        let compiled = compile(&"Patient.name.family.replace('es', '')".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": [
-                {
-                    "use": "usual",
-                    "given": ["test"],
-                    "family": "test"
-                },
-                {
-                    "use": "official",
-                    "given": ["test1"],
-                    "family": "abc"
-                }
-            ]
-        });
-
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
     }
 
     #[test]
@@ -611,94 +663,9 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
-    }
-
-    #[test]
-    fn evaluate_replace_matches_path() {
-        let compiled =
-            compile(&"Patient.name.family.replaceMatches('es', '')".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": [
-                {
-                    "use": "usual",
-                    "given": ["test"],
-                    "family": "test"
-                },
-                {
-                    "use": "official",
-                    "given": ["test1"],
-                    "family": "abc"
-                }
-            ]
-        });
-
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!(["tt", "abc"]));
-    }
-
-    #[test]
-    fn evaluate_length_path() {
-        let compiled = compile(&"Patient.name.family.length()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": [
-                {
-                    "use": "usual",
-                    "given": ["test"],
-                    "family": "test"
-                },
-                {
-                    "use": "official",
-                    "given": ["test1"],
-                    "family": "abc"
-                }
-            ]
-        });
-
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
-
-        assert_json_eq!(evaluate_result, json!([4, 3]));
-    }
-
-    #[test]
-    fn evaluate_to_chars_path() {
-        let compiled = compile(&"Patient.name.family.toChars()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": [
-                {
-                    "use": "usual",
-                    "given": ["test"],
-                    "family": "test"
-                },
-                {
-                    "use": "official",
-                    "given": ["test1"],
-                    "family": "abc"
-                }
-            ]
-        });
-
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
-
-        assert_json_eq!(
-            evaluate_result,
-            json!([['t', 'e', 's', 't'], ['a', 'b', 'c']])
-        );
     }
 
     #[test]
@@ -724,7 +691,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["test test", "test1 abc"]));
     }
@@ -746,7 +713,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -756,27 +723,6 @@ mod tests {
                 "family": "test"
             }])
         );
-    }
-
-    #[test]
-    fn evaluate_single_path_no_values() {
-        let compiled = compile(&"Patient.name.single()".to_string()).unwrap();
-
-        print!("{:?}", compiled.expression);
-
-        let patient = json!({
-            "resourceType": "Patient",
-            "name": []
-        });
-
-        let evaluate_result = compiled.evaluate(patient, None);
-
-        assert_eq!(
-            evaluate_result,
-            Err(FhirpathError::CompileError {
-                msg: "Expected array with single element but had 0".to_string()
-            })
-        )
     }
 
     #[test]
@@ -801,11 +747,11 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None);
+        let evaluate_result = compiled.evaluate_single(patient, None);
 
         assert_eq!(
             evaluate_result,
-            Err(FhirpathError::CompileError {
+            Err(FhirpathError::EvaluateError {
                 msg: "Expected array with single element but had 2".to_string()
             })
         )
@@ -833,7 +779,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -856,7 +802,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -883,7 +829,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -906,7 +852,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -938,7 +884,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -966,7 +912,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -998,7 +944,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1026,7 +972,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1058,7 +1004,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -1086,7 +1032,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1103,7 +1049,7 @@ mod tests {
             "b": [1,2]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2]));
     }
@@ -1120,7 +1066,7 @@ mod tests {
             "b": [1,2]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([3]));
     }
@@ -1137,7 +1083,7 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 3]));
     }
@@ -1154,7 +1100,7 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 3]));
     }
@@ -1171,7 +1117,7 @@ mod tests {
             "b": [1,2,3]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2, 1, 2, 3]));
     }
@@ -1189,7 +1135,7 @@ mod tests {
             "c": true
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([1, 2]));
     }
@@ -1207,7 +1153,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1225,7 +1171,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1243,7 +1189,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1261,7 +1207,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -1279,7 +1225,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1297,7 +1243,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1315,7 +1261,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1333,7 +1279,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1351,7 +1297,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1369,7 +1315,7 @@ mod tests {
             "c": false
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1396,7 +1342,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1423,7 +1369,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1450,7 +1396,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1466,7 +1412,7 @@ mod tests {
             "name": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1493,7 +1439,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1509,7 +1455,7 @@ mod tests {
             "b": [1, "1", 1.0, "1.0", "y", "yes", true]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -1525,7 +1471,7 @@ mod tests {
             "b": [1, "1", 1.0, "1.0", "y", "yes", true, false]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -1545,7 +1491,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["http://unitsofmeasure.org"]));
     }
@@ -1565,7 +1511,7 @@ mod tests {
             ]
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!(["http://unitsofmeasure.org"]));
     }

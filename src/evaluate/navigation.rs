@@ -6,12 +6,12 @@ use crate::parser::{
     invocation::{FunctionInvocation, IdentifierAndParamList, Invocation, InvocationTerm},
 };
 
-use super::{filtering::repeat, nodes::resource_node::ResourceNode, CompileResult};
+use super::{filtering::repeat, nodes::resource_node::ResourceNode, EvaluateResult};
 
 pub fn children<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let children = input
         .get_array()?
         .iter()
@@ -34,7 +34,7 @@ pub fn children<'a, 'b>(
 pub fn descendants<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let children_expression = Expression::TermExpression(Box::new(TermExpression {
         children: vec![Box::new(Term::InvocationTerm(Box::new(InvocationTerm {
             children: vec![Box::new(Invocation::FunctionInvocation(Box::new(
@@ -56,7 +56,7 @@ pub fn descendants<'a, 'b>(
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn evaluate_children_path() {
@@ -70,7 +70,7 @@ mod test {
             TestCase {
                 path: "Patient.children()".to_string(),
                 input: patient.clone(),
-                expected: json!([2, 6, "Patient"]),
+                expected: Expected::Value(json!([2, 6, "Patient"])),
                 options: None,
             },
             TestCase {
@@ -80,7 +80,7 @@ mod test {
                   "a": [2, 3],
                   "b": 6
                 }),
-                expected: json!([[2, 3], 6, "Patient"]),
+                expected: Expected::Value(json!([[2, 3], 6, "Patient"])),
                 options: None,
             },
         ];
@@ -100,7 +100,7 @@ mod test {
             TestCase {
                 path: "Patient.descendants()".to_string(),
                 input: patient.clone(),
-                expected: json!([2, 6, "Patient"]),
+                expected: Expected::Value(json!([2, 6, "Patient"])),
                 options: None,
             },
             TestCase {
@@ -110,7 +110,7 @@ mod test {
                   "a": [2, 3],
                   "b": 6
                 }),
-                expected: json!([[2, 3], 6, "Patient"]),
+                expected: Expected::Value(json!([[2, 3], 6, "Patient"])),
                 options: None,
             },
             TestCase {
@@ -119,7 +119,7 @@ mod test {
                   "resourceType": "Patient",
                   "c": { "e": { "f": { "g": 2 } } }
                 }),
-                expected: json!([{ "e": { "f": { "g": 2 } } }, "Patient", { "f": { "g": 2 } }, { "g": 2 }, 2]),
+                expected: Expected::Value(json!([{ "e": { "f": { "g": 2 } } }, "Patient", { "f": { "g": 2 } }, { "g": 2 }, 2])),
                 options: None,
             },
             TestCase {
@@ -130,7 +130,7 @@ mod test {
                   "b": 6,
                   "c": { "d": 1, "e": { "f": 2 } }
                 }),
-                expected: json!([[2, 3], 6, { "d": 1, "e": { "f": 2 } }, "Patient", 1, { "f": 2 }, 2]),
+                expected: Expected::Value(json!([[2, 3], 6, { "d": 1, "e": { "f": 2 } }, "Patient", 1, { "f": 2 }, 2])),
                 options: None,
             },
         ];

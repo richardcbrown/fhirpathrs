@@ -3,14 +3,14 @@ use serde_json::Value;
 use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
-    equality::values_are_equal, nodes::resource_node::ResourceNode, CompileResult, Evaluate,
+    equality::values_are_equal, nodes::resource_node::ResourceNode, EvaluateResult, Evaluate,
 };
 
 fn collection_contains_item<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     collection_exp: &Expression,
     item_expr: &Expression,
-) -> CompileResult<Value> {
+) -> EvaluateResult<Value> {
     let item_node = item_expr.evaluate(input)?;
 
     if item_node.is_empty()? {
@@ -38,23 +38,23 @@ fn collection_contains_item<'a, 'b>(
 pub fn in_collection<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
         });
     }
 
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
     let second = expressions
         .iter()
         .nth(1)
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
@@ -67,23 +67,23 @@ pub fn in_collection<'a, 'b>(
 pub fn collection_contains<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "in expects exactly two expression".to_string(),
         });
     }
 
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
     let second = expressions
         .iter()
         .nth(1)
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "in expects exactly two expressions".to_string(),
         })?;
 
@@ -97,7 +97,7 @@ pub fn collection_contains<'a, 'b>(
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_in_path() {
@@ -113,25 +113,34 @@ mod test {
             TestCase {
                 path: "'test1' in Patient.name.given".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "'test3' in Patient.name.given".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a in Patient.name.given".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
             TestCase {
                 path: "'test1' in Patient.a".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.where('test1' in given)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([{
+                    "use": "usual",
+                    "given": ["test1", "test2"]
+                }])),
                 options: None,
             },
         ];
@@ -153,25 +162,25 @@ mod test {
             TestCase {
                 path: "Patient.name.given contains 'test1'".to_string(),
                 input: patient.clone(),
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
                 options: None,
             },
             TestCase {
                 path: "Patient.name.given contains 'test3'".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
             TestCase {
                 path: "Patient.name.given contains Patient.a".to_string(),
                 input: patient.clone(),
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a contains 'test1'".to_string(),
                 input: patient.clone(),
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
                 options: None,
             },
         ];

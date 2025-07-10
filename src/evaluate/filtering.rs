@@ -11,7 +11,7 @@ use super::{
     equality::values_are_equal,
     nodes::resource_node::ResourceContext,
     utils::{get_array_from_expression, unique_array_elements},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 fn evaluate_filter_expression(
@@ -57,10 +57,10 @@ fn evaluate_filter_expression(
 pub fn where_function<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     expressions
         .first()
-        .ok_or(FhirpathError::CompileError {
+        .ok_or(FhirpathError::EvaluateError {
             msg: "Missing first expression".to_string(),
         })
         .and_then(|expr| {
@@ -75,8 +75,8 @@ pub fn where_function<'a, 'b>(
 pub fn select<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
-    let expression = expressions.first().ok_or(FhirpathError::CompileError {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
+    let expression = expressions.first().ok_or(FhirpathError::EvaluateError {
         msg: "select function requires single expression argument".to_string(),
     })?;
 
@@ -103,17 +103,17 @@ pub fn select<'a, 'b>(
 
             Ok(result)
         })
-        .collect::<CompileResult<Vec<Value>>>()?;
+        .collect::<EvaluateResult<Vec<Value>>>()?;
 
     let combined: Vec<Value> = result
         .iter()
         .map(|item| match item {
             Value::Array(array) => Ok(array.to_owned()),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Result was not an array".to_string(),
             }),
         })
-        .collect::<CompileResult<Vec<Vec<Value>>>>()?
+        .collect::<EvaluateResult<Vec<Vec<Value>>>>()?
         .into_iter()
         .flatten()
         .collect();
@@ -125,7 +125,7 @@ fn repeat_expr<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     mut values: Vec<Value>,
     expression: &Expression,
-) -> CompileResult<Vec<Value>> {
+) -> EvaluateResult<Vec<Value>> {
     let mut items: Vec<Value> = values.iter().try_fold(vec![], |mut acc, val| {
         let node = ResourceNode::from_node(input, val.clone());
 
@@ -154,10 +154,10 @@ fn repeat_expr<'a, 'b>(
 pub fn repeat<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "repeat expects exactly 1 Expression".to_string(),
         })?;
 
@@ -171,10 +171,10 @@ pub fn repeat<'a, 'b>(
 pub fn of_type<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let expression = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "ofType expects exactly 1 Expression".to_string(),
         })?;
 
@@ -185,7 +185,7 @@ pub fn of_type<'a, 'b>(
     let type_node = TypeSpecifier::try_from(&**expression)?.evaluate(input)?;
 
     let type_info: TypeInfo = serde_json::from_value(type_node.get_single()?).map_err(|err| {
-        FhirpathError::CompileError {
+        FhirpathError::EvaluateError {
             msg: format!("Failed to deserialize TypeInfo: {}", err.to_string()),
         }
     })?;
@@ -228,6 +228,71 @@ mod test {
         },
         models::{get_model_details, ModelType},
     };
+    use crate::evaluate::test::test::Expected;
+
+    #[test]
+    fn test_where_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4,5],
+            "b": []
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.where($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([2,3,4,5])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.where($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.where(use = 'official')".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
+
+    #[test]
+    fn test_select_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": [1,2,3,4,5],
+            "b": []
+        });
+
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.select($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([false, true, true, true, true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.b.select($this > 1)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.a.select(use = 'official')".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([])),
+                options: None,
+            }
+        ];
+
+        run_tests(test_cases);
+    }
 
     #[test]
     fn test_repeat_path() {
@@ -240,21 +305,23 @@ mod test {
             }
         });
 
-        let test_cases: Vec<TestCase> = vec![TestCase {
-            path: "Patient.repeat(value)".to_string(),
-            input: patient.clone(),
-            expected: json!([
-                {
-                    "value": {
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.repeat(value)".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([
+                    {
+                        "value": {
+                            "item": 'a'
+                        }
+                    },
+                    {
                         "item": 'a'
                     }
-                },
-                {
-                    "item": 'a'
-                }
-            ]),
-            options: None,
-        }];
+                ])),
+                options: None,
+            }
+        ];
 
         run_tests(test_cases);
     }
@@ -280,10 +347,10 @@ mod test {
             TestCase {
                 path: "Observation.component.value.ofType(Quantity)".to_string(),
                 input: observation.clone(),
-                expected: json!([{
+                expected: Expected::Value(json!([{
                     "value": 1,
                     "unit": "s"
-                }]),
+                }])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -294,7 +361,7 @@ mod test {
             TestCase {
                 path: "Observation.component.value.ofType(FHIR.string)".to_string(),
                 input: observation.clone(),
-                expected: json!(["abc"]),
+                expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -302,6 +369,31 @@ mod test {
                     trace_function: None,
                 }),
             },
+            // @todo - should work but doesn't
+            // TestCase {
+            //     path: "Bundle.entry.resource.ofType(FHIR.Patient)".to_string(),
+            //     input: json!({
+            //         "resourceType": "Bundle",
+            //         "entry": [
+            //             {
+            //                 "resourceType": "Patient"
+            //             },
+            //             {
+            //                 "resourceType": "Observation"
+            //             }
+            //         ]
+            //     }),
+            //     expected: Expected::Value(json!([
+            //         {
+            //             "resourceType": "Patient"
+            //         },
+            //     ]),
+            //     options: Some(EvaluateOptions {
+            //         model: Some(get_model_details(ModelType::Stu3).unwrap()),
+            //         vars: None,
+            //         now: None,
+            //     }),
+            // },
         ];
 
         run_tests(test_cases);

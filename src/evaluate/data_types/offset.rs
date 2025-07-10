@@ -1,6 +1,6 @@
 use chrono::{FixedOffset, Local};
 
-use crate::{error::FhirpathError, evaluate::CompileResult};
+use crate::{error::FhirpathError, evaluate::EvaluateResult};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OffsetDirection {
@@ -52,7 +52,7 @@ impl Offset {
     }
 }
 
-pub fn get_fixed_offset(offset: &Option<Offset>) -> CompileResult<FixedOffset> {
+pub fn get_fixed_offset(offset: &Option<Offset>) -> EvaluateResult<FixedOffset> {
     match offset {
         None => Ok(Local::now().offset().clone()),
         Some(tz) => {
@@ -60,12 +60,12 @@ pub fn get_fixed_offset(offset: &Option<Offset>) -> CompileResult<FixedOffset> {
 
             match tz.direction {
                 OffsetDirection::Plus => FixedOffset::east_opt(seconds as i32).ok_or_else(|| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: "Could not create FixedOffset".to_string(),
                     }
                 }),
                 OffsetDirection::Minus => FixedOffset::west_opt(seconds as i32).ok_or_else(|| {
-                    FhirpathError::CompileError {
+                    FhirpathError::EvaluateError {
                         msg: "Could not create FixedOffset".to_string(),
                     }
                 }),

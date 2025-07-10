@@ -1,15 +1,15 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::literal::LiteralTerm,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for LiteralTerm {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         if self.children.len() != 1 {
-            return Err(FhirpathError::CompileError {
+            return Err(FhirpathError::EvaluateError {
                 msg: "LiteralTerm should have exactly one child".to_string(),
             });
         }
@@ -21,12 +21,12 @@ impl Evaluate for LiteralTerm {
 }
 
 impl Text for LiteralTerm {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self
             .children
             .iter()
             .map(|c| c.text())
-            .collect::<CompileResult<Vec<String>>>()?
+            .collect::<EvaluateResult<Vec<String>>>()?
             .join(""))
     }
 }

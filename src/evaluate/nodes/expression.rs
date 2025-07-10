@@ -1,12 +1,12 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::Expression,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Expression {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             Expression::TermExpression(exp) => exp.evaluate(input),
             Expression::InvocationExpression(exp) => exp.evaluate(input),
@@ -21,13 +21,13 @@ impl Evaluate for Expression {
             Expression::MembershipExpression(exp) => exp.evaluate(input),
             Expression::AndExpression(exp) => exp.evaluate(input),
             Expression::OrExpression(exp) => exp.evaluate(input),
-            Expression::ImpliesExpression(exp) => todo!(),
+            Expression::ImpliesExpression(exp) => exp.evaluate(input),
         }
     }
 }
 
 impl Text for Expression {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Expression::TermExpression(exp) => exp.text(),
             Expression::InvocationExpression(exp) => exp.text(),
@@ -42,7 +42,7 @@ impl Text for Expression {
             Expression::MembershipExpression(exp) => exp.text(),
             Expression::AndExpression(exp) => exp.text(),
             Expression::OrExpression(exp) => exp.text(),
-            Expression::ImpliesExpression(exp) => todo!(),
+            Expression::ImpliesExpression(exp) => exp.text(),
         }
     }
 }

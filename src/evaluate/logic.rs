@@ -2,14 +2,14 @@ use serde_json::Value;
 
 use crate::{error::FhirpathError, parser::expression::Expression};
 
-use super::{utils::try_convert_to_boolean, CompileResult, Evaluate, ResourceNode};
+use super::{utils::try_convert_to_boolean, EvaluateResult, Evaluate, ResourceNode};
 
 pub fn and<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "and expects exactly two expressions".to_string(),
         });
     }
@@ -54,9 +54,9 @@ pub fn and<'a, 'b>(
 pub fn or<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "or expects exactly two expressions".to_string(),
         });
     }
@@ -101,7 +101,7 @@ pub fn or<'a, 'b>(
 pub fn not<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let data = input
         .get_single_or_empty()?
         .and_then(|val| try_convert_to_boolean(&val));
@@ -122,9 +122,9 @@ pub fn not<'a, 'b>(
 pub fn xor<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "xor expects exactly two expressions".to_string(),
         });
     }
@@ -157,9 +157,9 @@ pub fn xor<'a, 'b>(
 pub fn implies<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "xor expects exactly two expressions".to_string(),
         });
     }
@@ -213,6 +213,7 @@ mod test {
     use serde_json::json;
 
     use crate::evaluate::compile;
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn evaluate_and_true_path() {
@@ -226,7 +227,7 @@ mod test {
             "b": 1
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -243,7 +244,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -260,7 +261,7 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -277,7 +278,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -294,7 +295,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -311,7 +312,7 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -327,7 +328,7 @@ mod test {
             "a": 0,
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -343,7 +344,7 @@ mod test {
             "a": true
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -359,7 +360,7 @@ mod test {
             "a": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
@@ -376,7 +377,7 @@ mod test {
             "b": 0
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([true]));
     }
@@ -393,7 +394,7 @@ mod test {
             "b": true
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([false]));
     }
@@ -410,10 +411,95 @@ mod test {
             "b": []
         });
 
-        let evaluate_result = compiled.evaluate(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
 
         assert_json_eq!(evaluate_result, json!([]));
     }
 
-    // @todo - implies tests
+    #[test]
+    fn test_implies_path() {
+        let test_cases: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "given": ["test"],
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "given": ["test"]
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([false])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given.exists() implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "family": "test"
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([true])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family.exists()".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "use": "usual"
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.name.given implies Patient.name.family".to_string(),
+                input: json!({
+                    "resourceType": "Patient",
+                    "name": [
+                        {
+                            "use": "usual"
+                        }
+                    ]
+                }),
+                expected: Expected::Value(json!([])),
+                options: None,
+            },
+        ];
+
+        run_tests(test_cases);
+    }
 }

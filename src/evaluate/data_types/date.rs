@@ -21,7 +21,7 @@ impl Date {
     }
 
     pub fn to_date_string(&self) -> String {
-        format!("@{}", self.to_string())
+        format!("{}", self.to_string())
     }
 
     pub fn to_date(&self) -> Option<NaiveDate> {

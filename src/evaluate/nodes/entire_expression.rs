@@ -1,14 +1,14 @@
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::EntireExpression,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for EntireExpression {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
-        let child = self.children.first().ok_or(FhirpathError::CompileError {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
+        let child = self.children.first().ok_or(FhirpathError::EvaluateError {
             msg: "Missing EntireExpression child element".to_string(),
         })?;
 
@@ -17,12 +17,12 @@ impl Evaluate for EntireExpression {
 }
 
 impl Text for EntireExpression {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self
             .children
             .iter()
             .map(|c| c.text())
-            .collect::<CompileResult<Vec<String>>>()?
+            .collect::<EvaluateResult<Vec<String>>>()?
             .join(""))
     }
 }

@@ -9,7 +9,7 @@ use super::{
     equality::values_are_equal,
     nodes::resource_node::ResourceContext,
     target::{get_input_for_target, Target},
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 static TRUTHY_STRINGS: [&str; 6] = ["1", "1.0", "y", "yes", "t", "true"];
@@ -27,24 +27,24 @@ pub fn bool_from_string(string_value: &String) -> Option<bool> {
     }
 }
 
-pub fn get_string(value: &Value) -> CompileResult<String> {
+pub fn get_string(value: &Value) -> EvaluateResult<String> {
     match value {
         Value::String(string) => Ok(string.clone()),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: format!("Value {} is not a string", value),
         }),
     }
 }
 
-pub fn get_string_vec(value: &Value) -> CompileResult<Vec<String>> {
+pub fn get_string_vec(value: &Value) -> EvaluateResult<Vec<String>> {
     match value {
         Value::Array(array) => {
-            let string_vec: CompileResult<Vec<String>> =
+            let string_vec: EvaluateResult<Vec<String>> =
                 array.iter().map(|item| get_string(item)).collect();
 
             Ok(string_vec?)
         }
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Expected Vec<String>".to_string(),
         }),
     }
@@ -53,54 +53,81 @@ pub fn get_string_vec(value: &Value) -> CompileResult<Vec<String>> {
 pub fn get_value_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<Value> {
+) -> EvaluateResult<Value> {
     expression.evaluate(input).and_then(|res| Ok(res.data))
 }
 
 pub fn get_number_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<Number> {
+) -> EvaluateResult<Number> {
     let expr_result = expression
         .evaluate(input)
         .and_then(|res| Ok(res.get_single()?))?;
 
     match expr_result {
         Value::Number(num) => Ok(num),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Value was not a Number".to_string(),
         }),
     }
 }
 
-pub fn get_usize_from_expression<'a, 'b>(
+pub fn get_i32_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<usize> {
+) -> EvaluateResult<i32> {
     let json_num = get_number_from_expression(input, expression)?;
 
-    json_num
-        .as_f64()
-        .and_then(|num| Some(num as u64))
-        .ok_or(FhirpathError::CompileError {
-            msg: "Could not convert number to u64".to_string(),
+    let num = json_num.as_f64().ok_or(FhirpathError::EvaluateError {
+        msg: "Could not convert number to f64".to_string(),
+    })?;
+
+    let decimal = Decimal::from_f64(num).ok_or(FhirpathError::EvaluateError {
+        msg: "Could not convert number to Decimal".to_string(),
+    })?;
+
+    if !decimal.is_integer() {
+        return Err(FhirpathError::EvaluateError {
+            msg: "Decimal is not an integer".to_string(),
         })
-        .and_then(|num| {
-            usize::try_from(num).map_err(|_| FhirpathError::CompileError {
-                msg: "Could not convert number to u64".to_string(),
-            })
+    }
+
+    let converted: i32 = decimal.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Decimal cannot be converted to usize: {}", e),
+    })?;
+
+    Ok(converted)
+}
+
+pub fn get_usize_from_expression(
+    input: &ResourceNode,
+    expression: &Expression,
+) -> EvaluateResult<usize> {
+    let int_val = get_i32_from_expression(input, expression)?;
+
+    if int_val < 0 {
+        return Err(FhirpathError::EvaluateError {
+            msg: "Value cannot be negative".to_string(),
         })
+    }
+
+    let converted: usize = int_val.try_into().map_err(|e| FhirpathError::EvaluateError {
+        msg: format!("Value cannot be converted to usize: {}", e),
+    })?;
+
+    Ok(converted)
 }
 
 pub fn get_string_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<String> {
+) -> EvaluateResult<String> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;
 
     match value {
         Value::String(str_result) => Ok(str_result),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Value was not a String".to_string(),
         }),
     }
@@ -109,29 +136,29 @@ pub fn get_string_from_expression<'a, 'b>(
 pub fn get_boolean_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<bool> {
+) -> EvaluateResult<bool> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;
 
     match value {
         Value::Bool(bool_result) => Ok(bool_result),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Value was not a Boolean".to_string(),
         }),
     }
 }
 
-pub fn get_single_value(value: Value) -> CompileResult<Value> {
+pub fn get_single_value(value: Value) -> EvaluateResult<Value> {
     match value {
         Value::Array(array) => {
             if array.len() != 1 {
-                return Err(FhirpathError::CompileError {
+                return Err(FhirpathError::EvaluateError {
                     msg: "expected single result".to_string(),
                 });
             }
 
             Ok(array
                 .first()
-                .ok_or(FhirpathError::CompileError {
+                .ok_or(FhirpathError::EvaluateError {
                     msg: "expected single result".to_string(),
                 })?
                 .clone())
@@ -143,14 +170,14 @@ pub fn get_single_value(value: Value) -> CompileResult<Value> {
 pub fn get_array_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<Vec<Value>> {
+) -> EvaluateResult<Vec<Value>> {
     let value = get_value_from_expression(input, expression)?;
 
     dbg!(value.clone());
 
     match value {
         Value::Array(array) => Ok(array),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Value was not an Array".to_string(),
         }),
     }
@@ -160,20 +187,20 @@ pub fn get_arrays<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
     arity: Target,
-) -> CompileResult<(Vec<Value>, Vec<Value>)> {
+) -> EvaluateResult<(Vec<Value>, Vec<Value>)> {
     match arity {
         Target::AnyAtRoot => {
             let array = input.get_array()?;
 
             if expressions.len() > 1 {
-                return Err(FhirpathError::CompileError {
+                return Err(FhirpathError::EvaluateError {
                     msg: "Expected exactly one expression".to_string(),
                 });
             }
 
             let expression = expressions
                 .first()
-                .ok_or_else(|| FhirpathError::CompileError {
+                .ok_or_else(|| FhirpathError::EvaluateError {
                     msg: "Expected exactly one expression".to_string(),
                 })?;
 
@@ -185,7 +212,7 @@ pub fn get_arrays<'a, 'b>(
         }
         Target::Expr => {
             if expressions.len() != 2 {
-                return Err(FhirpathError::CompileError {
+                return Err(FhirpathError::EvaluateError {
                     msg: "Expected exactly two expressions".to_string(),
                 });
             }
@@ -193,7 +220,7 @@ pub fn get_arrays<'a, 'b>(
             let first_expression =
                 expressions
                     .first()
-                    .ok_or_else(|| FhirpathError::CompileError {
+                    .ok_or_else(|| FhirpathError::EvaluateError {
                         msg: "Expected exactly two expressions".to_string(),
                     })?;
 
@@ -201,7 +228,7 @@ pub fn get_arrays<'a, 'b>(
                 expressions
                     .into_iter()
                     .nth(1)
-                    .ok_or_else(|| FhirpathError::CompileError {
+                    .ok_or_else(|| FhirpathError::EvaluateError {
                         msg: "Expected exactly two expressions".to_string(),
                     })?;
 
@@ -234,7 +261,7 @@ pub fn unique_array_elements(array: &Vec<Value>) -> Vec<Value> {
 pub fn evaluate_array_boolean_expression(
     input: &ResourceNode,
     expr: &Expression,
-) -> CompileResult<Vec<bool>> {
+) -> EvaluateResult<Vec<bool>> {
     let results: Vec<bool> = input
         .get_array()?
         .iter()
@@ -260,13 +287,13 @@ pub fn evaluate_array_boolean_expression(
 
                     match bool_result {
                         Some(bool) => Ok(bool),
-                        None => Err(FhirpathError::CompileError {
+                        None => Err(FhirpathError::EvaluateError {
                             msg: "Value was not a boolean".to_string(),
                         }),
                     }
                 })
         })
-        .collect::<CompileResult<Vec<bool>>>()?;
+        .collect::<EvaluateResult<Vec<bool>>>()?;
 
     Ok(results)
 }
@@ -316,21 +343,21 @@ pub fn try_convert_to_decimal(value: &Value) -> Option<Decimal> {
 pub fn get_f64_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> CompileResult<f64> {
+) -> EvaluateResult<f64> {
     let value = get_single_value(get_value_from_expression(input, expression)?)?;
 
     match value {
-        Value::Number(num) => num.as_f64().ok_or_else(|| FhirpathError::CompileError {
+        Value::Number(num) => num.as_f64().ok_or_else(|| FhirpathError::EvaluateError {
             msg: "Value was not an f64".to_string(),
         }),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Value was not a Number".to_string(),
         }),
     }
 }
 
-pub fn from_decimal(dec: Decimal) -> CompileResult<f64> {
-    dec.try_into().map_err(|_| FhirpathError::CompileError {
+pub fn from_decimal(dec: Decimal) -> EvaluateResult<f64> {
+    dec.try_into().map_err(|_| FhirpathError::EvaluateError {
         msg: format!("Could not convert from Decimal"),
     })
 }

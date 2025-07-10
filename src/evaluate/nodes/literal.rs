@@ -1,16 +1,16 @@
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::literal::Literal,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for Literal {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         match self {
             Literal::BooleanLiteral(exp) => exp.evaluate(input),
             Literal::DatetimeLiteral(exp) => exp.evaluate(input),
-            Literal::NullLiteral(exp) => todo!(),
+            Literal::NullLiteral(exp) => exp.evaluate(input),
             Literal::NumberLiteral(exp) => exp.evaluate(input),
             Literal::QuantityLiteral(exp) => exp.evaluate(input),
             Literal::StringLiteral(exp) => exp.evaluate(input),
@@ -20,11 +20,11 @@ impl Evaluate for Literal {
 }
 
 impl Text for Literal {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         match self {
             Literal::BooleanLiteral(exp) => exp.text(),
             Literal::DatetimeLiteral(exp) => exp.text(),
-            Literal::NullLiteral(exp) => todo!(),
+            Literal::NullLiteral(exp) => exp.text(),
             Literal::NumberLiteral(exp) => exp.text(),
             Literal::QuantityLiteral(exp) => exp.text(),
             Literal::StringLiteral(exp) => exp.text(),

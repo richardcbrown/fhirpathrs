@@ -1,14 +1,14 @@
 use serde_json::Value;
 
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::invocation::TotalInvocation,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for TotalInvocation {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let index = input.get_total().unwrap_or(Value::Array(vec![]));
 
         Ok(ResourceNode::from_node(input, index))
@@ -16,7 +16,7 @@ impl Evaluate for TotalInvocation {
 }
 
 impl Text for TotalInvocation {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self.text.clone())
     }
 }

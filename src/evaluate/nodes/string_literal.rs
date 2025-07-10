@@ -1,20 +1,20 @@
 use serde_json::json;
 
 use crate::{
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::literal::StringLiteral,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for StringLiteral {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         Ok(ResourceNode::from_node(input, json!(self.text)))
     }
 }
 
 impl Text for StringLiteral {
-    fn text(&self) -> CompileResult<String> {
-        Ok(self.text.clone())
+    fn text(&self) -> EvaluateResult<String> {
+        Ok(format!("'{}'", self.text.clone()))
     }
 }

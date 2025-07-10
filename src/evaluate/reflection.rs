@@ -1,4 +1,3 @@
-use std::fmt::format;
 use serde::{Serialize, Serializer};
 use serde_json::Value;
 
@@ -7,7 +6,7 @@ use crate::{error::FhirpathError, models::ModelDetails, parser::expression::Expr
 use super::{
     data_types::type_info::{Namespace, TypeInfo},
     nodes::resource_node::{PathDetails, ResourceNode},
-    CompileResult,
+    EvaluateResult,
 };
 
 #[derive(Clone, Debug)]
@@ -23,7 +22,7 @@ impl TryFrom<&str> for Cardinality {
         match value {
             "1" => Ok(Cardinality::Single),
             "*" => Ok(Cardinality::Multiple),
-            _ => Err(FhirpathError::CompileError { msg: format!("unknown cardinality: {}", value) })
+            _ => Err(FhirpathError::EvaluateError { msg: format!("unknown cardinality: {}", value) })
         }
     }
 }
@@ -118,7 +117,7 @@ impl TryFrom<&Value> for SimpleTypeInfo {
                 }),
             })
         } else {
-            Err(FhirpathError::CompileError {
+            Err(FhirpathError::EvaluateError {
                 msg: "No namespace for type".to_string(),
             })
         }
@@ -224,12 +223,12 @@ pub fn get_reflection_type(
 pub fn reflection_type<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let reflection_types = input.get_reflection_types();
 
     Ok(ResourceNode::from_node(
         input,
-        serde_json::to_value(reflection_types).map_err(|err| FhirpathError::CompileError {
+        serde_json::to_value(reflection_types).map_err(|err| FhirpathError::EvaluateError {
             msg: format!("Failed to Serialize TypeInfo: {}", err.to_string()),
         })?,
     ))
@@ -246,6 +245,7 @@ mod test {
         },
         models::{get_model_details, ModelType},
     };
+    use crate::evaluate::test::test::Expected;
 
     #[test]
     fn test_type_path() {
@@ -253,10 +253,10 @@ mod test {
             TestCase {
                 path: "('John' | 'Mary').type()".to_string(),
                 input: json!({}),
-                expected: json!([
+                expected: Expected::Value(json!([
                     { "namespace": "System", "name": "String", "baseType": "System.Any" },
                     { "namespace": "System", "name": "String", "baseType": "System.Any" }
-                ]),
+                ])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::Stu3).unwrap()),
                     vars: None,
@@ -267,7 +267,7 @@ mod test {
             TestCase {
                 path: "Patient.address.type()".to_string(),
                 input: json!({ "resourceType": "Patient", "address": [{ "text": "abc" }] }),
-                expected: json!([
+                expected: Expected::Value(json!([
                     {
                         "namespace": "FHIR",
                         "name": "Address",
@@ -279,7 +279,7 @@ mod test {
                             }
                         ]
                     }
-                ]),
+                ])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,
@@ -290,7 +290,7 @@ mod test {
             TestCase {
                 path: "Patient.maritalStatus.type()".to_string(),
                 input: json!({ "resourceType": "Patient", "maritalStatus": { "coding": [{ "system": "system", "code": "code" }], "text": "text" } }),
-                expected: json!([
+                expected: Expected::Value(json!([
                     {
                         "namespace": "FHIR",
                         "name": "CodeableConcept",
@@ -300,7 +300,7 @@ mod test {
                            { "name": "text", "type": "FHIR.string" }
                         ]
                     }
-                ]),
+                ])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,
@@ -311,13 +311,13 @@ mod test {
             TestCase {
                 path: "Patient.contact.single().type()".to_string(),
                 input: json!({ "resourceType": "Patient", "contact": [{ "gender": "male" }]}),
-                expected: json!([
+                expected: Expected::Value(json!([
                     {
                         "element": [
                            { "name": "gender", "type": "FHIR.code" },
                         ]
                     }
-                ]),
+                ])),
                 options: Some(EvaluateOptions {
                     model: Some(get_model_details(ModelType::R4).unwrap()),
                     vars: None,

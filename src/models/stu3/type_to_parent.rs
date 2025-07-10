@@ -1,264 +1,176 @@
 use std::collections::HashMap;
-
 pub fn type_to_parent() -> HashMap<String, String> {
-    HashMap::from([
-        ("Account".to_string(), "DomainResource".to_string()),
-        (
-            "ActivityDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Address".to_string(), "Element".to_string()),
-        ("AdverseEvent".to_string(), "DomainResource".to_string()),
-        ("Age".to_string(), "Quantity".to_string()),
-        (
-            "AllergyIntolerance".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Annotation".to_string(), "Element".to_string()),
-        ("Appointment".to_string(), "DomainResource".to_string()),
-        (
-            "AppointmentResponse".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Attachment".to_string(), "Element".to_string()),
-        ("AuditEvent".to_string(), "DomainResource".to_string()),
-        ("BackboneElement".to_string(), "Element".to_string()),
-        ("Basic".to_string(), "DomainResource".to_string()),
-        ("Binary".to_string(), "Resource".to_string()),
-        ("BodySite".to_string(), "DomainResource".to_string()),
-        ("Bundle".to_string(), "Resource".to_string()),
-        (
-            "CapabilityStatement".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("CarePlan".to_string(), "DomainResource".to_string()),
-        ("CareTeam".to_string(), "DomainResource".to_string()),
-        ("ChargeItem".to_string(), "DomainResource".to_string()),
-        ("Claim".to_string(), "DomainResource".to_string()),
-        ("ClaimResponse".to_string(), "DomainResource".to_string()),
-        (
-            "ClinicalImpression".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("CodeSystem".to_string(), "DomainResource".to_string()),
-        ("CodeableConcept".to_string(), "Element".to_string()),
-        ("Coding".to_string(), "Element".to_string()),
-        ("Communication".to_string(), "DomainResource".to_string()),
-        (
-            "CommunicationRequest".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "CompartmentDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Composition".to_string(), "DomainResource".to_string()),
-        ("ConceptMap".to_string(), "DomainResource".to_string()),
-        ("Condition".to_string(), "DomainResource".to_string()),
-        ("Consent".to_string(), "DomainResource".to_string()),
-        ("ContactDetail".to_string(), "Element".to_string()),
-        ("ContactPoint".to_string(), "Element".to_string()),
-        ("Contract".to_string(), "DomainResource".to_string()),
-        ("Contributor".to_string(), "Element".to_string()),
-        ("Count".to_string(), "Quantity".to_string()),
-        ("Coverage".to_string(), "DomainResource".to_string()),
-        ("DataElement".to_string(), "DomainResource".to_string()),
-        ("DataRequirement".to_string(), "Element".to_string()),
-        ("DetectedIssue".to_string(), "DomainResource".to_string()),
-        ("Device".to_string(), "DomainResource".to_string()),
-        ("DeviceComponent".to_string(), "DomainResource".to_string()),
-        ("DeviceMetric".to_string(), "DomainResource".to_string()),
-        ("DeviceRequest".to_string(), "DomainResource".to_string()),
-        (
-            "DeviceUseStatement".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("DiagnosticReport".to_string(), "DomainResource".to_string()),
-        ("Distance".to_string(), "Quantity".to_string()),
-        ("DocumentManifest".to_string(), "DomainResource".to_string()),
-        (
-            "DocumentReference".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("DomainResource".to_string(), "Resource".to_string()),
-        ("Dosage".to_string(), "Element".to_string()),
-        ("Duration".to_string(), "Quantity".to_string()),
-        ("ElementDefinition".to_string(), "Element".to_string()),
-        (
-            "EligibilityRequest".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "EligibilityResponse".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Encounter".to_string(), "DomainResource".to_string()),
-        ("Endpoint".to_string(), "DomainResource".to_string()),
-        (
-            "EnrollmentRequest".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "EnrollmentResponse".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("EpisodeOfCare".to_string(), "DomainResource".to_string()),
-        ("ExpansionProfile".to_string(), "DomainResource".to_string()),
-        (
-            "ExplanationOfBenefit".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Extension".to_string(), "Element".to_string()),
-        (
-            "FamilyMemberHistory".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Flag".to_string(), "DomainResource".to_string()),
-        ("Goal".to_string(), "DomainResource".to_string()),
-        ("GraphDefinition".to_string(), "DomainResource".to_string()),
-        ("Group".to_string(), "DomainResource".to_string()),
-        ("GuidanceResponse".to_string(), "DomainResource".to_string()),
-        (
-            "HealthcareService".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("HumanName".to_string(), "Element".to_string()),
-        ("Identifier".to_string(), "Element".to_string()),
-        ("ImagingManifest".to_string(), "DomainResource".to_string()),
-        ("ImagingStudy".to_string(), "DomainResource".to_string()),
-        ("Immunization".to_string(), "DomainResource".to_string()),
-        (
-            "ImmunizationRecommendation".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "ImplementationGuide".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Library".to_string(), "DomainResource".to_string()),
-        ("Linkage".to_string(), "DomainResource".to_string()),
-        ("List".to_string(), "DomainResource".to_string()),
-        ("Location".to_string(), "DomainResource".to_string()),
-        ("Measure".to_string(), "DomainResource".to_string()),
-        ("MeasureReport".to_string(), "DomainResource".to_string()),
-        ("Media".to_string(), "DomainResource".to_string()),
-        ("Medication".to_string(), "DomainResource".to_string()),
-        (
-            "MedicationAdministration".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "MedicationDispense".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "MedicationRequest".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "MedicationStatement".to_string(),
-            "DomainResource".to_string(),
-        ),
-        (
-            "MessageDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("MessageHeader".to_string(), "DomainResource".to_string()),
-        ("Meta".to_string(), "Element".to_string()),
-        ("Money".to_string(), "Quantity".to_string()),
-        ("NamingSystem".to_string(), "DomainResource".to_string()),
-        ("Narrative".to_string(), "Element".to_string()),
-        ("NutritionOrder".to_string(), "DomainResource".to_string()),
-        ("Observation".to_string(), "DomainResource".to_string()),
-        (
-            "OperationDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("OperationOutcome".to_string(), "DomainResource".to_string()),
-        ("Organization".to_string(), "DomainResource".to_string()),
-        ("ParameterDefinition".to_string(), "Element".to_string()),
-        ("Parameters".to_string(), "Resource".to_string()),
-        ("Patient".to_string(), "DomainResource".to_string()),
-        ("PaymentNotice".to_string(), "DomainResource".to_string()),
-        (
-            "PaymentReconciliation".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Period".to_string(), "Element".to_string()),
-        ("Person".to_string(), "DomainResource".to_string()),
-        ("PlanDefinition".to_string(), "DomainResource".to_string()),
-        ("Practitioner".to_string(), "DomainResource".to_string()),
-        ("PractitionerRole".to_string(), "DomainResource".to_string()),
-        ("Procedure".to_string(), "DomainResource".to_string()),
-        ("ProcedureRequest".to_string(), "DomainResource".to_string()),
-        ("ProcessRequest".to_string(), "DomainResource".to_string()),
-        ("ProcessResponse".to_string(), "DomainResource".to_string()),
-        ("Provenance".to_string(), "DomainResource".to_string()),
-        ("Quantity".to_string(), "Element".to_string()),
-        ("Questionnaire".to_string(), "DomainResource".to_string()),
-        (
-            "QuestionnaireResponse".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Range".to_string(), "Element".to_string()),
-        ("Ratio".to_string(), "Element".to_string()),
-        ("Reference".to_string(), "Element".to_string()),
-        ("ReferralRequest".to_string(), "DomainResource".to_string()),
-        ("RelatedArtifact".to_string(), "Element".to_string()),
-        ("RelatedPerson".to_string(), "DomainResource".to_string()),
-        ("RequestGroup".to_string(), "DomainResource".to_string()),
-        ("ResearchStudy".to_string(), "DomainResource".to_string()),
-        ("ResearchSubject".to_string(), "DomainResource".to_string()),
-        ("RiskAssessment".to_string(), "DomainResource".to_string()),
-        ("SampledData".to_string(), "Element".to_string()),
-        ("Schedule".to_string(), "DomainResource".to_string()),
-        ("SearchParameter".to_string(), "DomainResource".to_string()),
-        ("Sequence".to_string(), "DomainResource".to_string()),
-        (
-            "ServiceDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("Signature".to_string(), "Element".to_string()),
-        ("SimpleQuantity".to_string(), "Quantity".to_string()),
-        ("Slot".to_string(), "DomainResource".to_string()),
-        ("Specimen".to_string(), "DomainResource".to_string()),
-        (
-            "StructureDefinition".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("StructureMap".to_string(), "DomainResource".to_string()),
-        ("Subscription".to_string(), "DomainResource".to_string()),
-        ("Substance".to_string(), "DomainResource".to_string()),
-        ("SupplyDelivery".to_string(), "DomainResource".to_string()),
-        ("SupplyRequest".to_string(), "DomainResource".to_string()),
-        ("Task".to_string(), "DomainResource".to_string()),
-        ("TestReport".to_string(), "DomainResource".to_string()),
-        ("TestScript".to_string(), "DomainResource".to_string()),
-        ("Timing".to_string(), "Element".to_string()),
-        ("TriggerDefinition".to_string(), "Element".to_string()),
-        ("UsageContext".to_string(), "Element".to_string()),
-        ("ValueSet".to_string(), "DomainResource".to_string()),
-        (
-            "VisionPrescription".to_string(),
-            "DomainResource".to_string(),
-        ),
-        ("base64Binary".to_string(), "Element".to_string()),
-        ("boolean".to_string(), "Element".to_string()),
-        ("code".to_string(), "string".to_string()),
-        ("date".to_string(), "Element".to_string()),
-        ("dateTime".to_string(), "Element".to_string()),
-        ("decimal".to_string(), "Element".to_string()),
-        ("id".to_string(), "string".to_string()),
-        ("instant".to_string(), "Element".to_string()),
-        ("integer".to_string(), "Element".to_string()),
-        ("markdown".to_string(), "string".to_string()),
-        ("oid".to_string(), "uri".to_string()),
-        ("positiveInt".to_string(), "integer".to_string()),
-        ("string".to_string(), "Element".to_string()),
-        ("time".to_string(), "Element".to_string()),
-        ("unsignedInt".to_string(), "integer".to_string()),
-        ("uri".to_string(), "Element".to_string()),
-        ("uuid".to_string(), "uri".to_string()),
-        ("xhtml".to_string(), "Element".to_string()),
-    ])
+    let mut map = HashMap::<String, String>::new();
+    map.insert("Account".to_string(), "DomainResource".to_string());
+    map.insert("ActivityDefinition".to_string(), "DomainResource".to_string());
+    map.insert("Address".to_string(), "Element".to_string());
+    map.insert("AdverseEvent".to_string(), "DomainResource".to_string());
+    map.insert("Age".to_string(), "Quantity".to_string());
+    map.insert("AllergyIntolerance".to_string(), "DomainResource".to_string());
+    map.insert("Annotation".to_string(), "Element".to_string());
+    map.insert("Appointment".to_string(), "DomainResource".to_string());
+    map.insert("AppointmentResponse".to_string(), "DomainResource".to_string());
+    map.insert("Attachment".to_string(), "Element".to_string());
+    map.insert("AuditEvent".to_string(), "DomainResource".to_string());
+    map.insert("BackboneElement".to_string(), "Element".to_string());
+    map.insert("Basic".to_string(), "DomainResource".to_string());
+    map.insert("Binary".to_string(), "Resource".to_string());
+    map.insert("BodySite".to_string(), "DomainResource".to_string());
+    map.insert("Bundle".to_string(), "Resource".to_string());
+    map.insert("CapabilityStatement".to_string(), "DomainResource".to_string());
+    map.insert("CarePlan".to_string(), "DomainResource".to_string());
+    map.insert("CareTeam".to_string(), "DomainResource".to_string());
+    map.insert("ChargeItem".to_string(), "DomainResource".to_string());
+    map.insert("Claim".to_string(), "DomainResource".to_string());
+    map.insert("ClaimResponse".to_string(), "DomainResource".to_string());
+    map.insert("ClinicalImpression".to_string(), "DomainResource".to_string());
+    map.insert("CodeSystem".to_string(), "DomainResource".to_string());
+    map.insert("CodeableConcept".to_string(), "Element".to_string());
+    map.insert("Coding".to_string(), "Element".to_string());
+    map.insert("Communication".to_string(), "DomainResource".to_string());
+    map.insert("CommunicationRequest".to_string(), "DomainResource".to_string());
+    map.insert("CompartmentDefinition".to_string(), "DomainResource".to_string());
+    map.insert("Composition".to_string(), "DomainResource".to_string());
+    map.insert("ConceptMap".to_string(), "DomainResource".to_string());
+    map.insert("Condition".to_string(), "DomainResource".to_string());
+    map.insert("Consent".to_string(), "DomainResource".to_string());
+    map.insert("ContactDetail".to_string(), "Element".to_string());
+    map.insert("ContactPoint".to_string(), "Element".to_string());
+    map.insert("Contract".to_string(), "DomainResource".to_string());
+    map.insert("Contributor".to_string(), "Element".to_string());
+    map.insert("Count".to_string(), "Quantity".to_string());
+    map.insert("Coverage".to_string(), "DomainResource".to_string());
+    map.insert("DataElement".to_string(), "DomainResource".to_string());
+    map.insert("DataRequirement".to_string(), "Element".to_string());
+    map.insert("DetectedIssue".to_string(), "DomainResource".to_string());
+    map.insert("Device".to_string(), "DomainResource".to_string());
+    map.insert("DeviceComponent".to_string(), "DomainResource".to_string());
+    map.insert("DeviceMetric".to_string(), "DomainResource".to_string());
+    map.insert("DeviceRequest".to_string(), "DomainResource".to_string());
+    map.insert("DeviceUseStatement".to_string(), "DomainResource".to_string());
+    map.insert("DiagnosticReport".to_string(), "DomainResource".to_string());
+    map.insert("Distance".to_string(), "Quantity".to_string());
+    map.insert("DocumentManifest".to_string(), "DomainResource".to_string());
+    map.insert("DocumentReference".to_string(), "DomainResource".to_string());
+    map.insert("DomainResource".to_string(), "Resource".to_string());
+    map.insert("Dosage".to_string(), "Element".to_string());
+    map.insert("Duration".to_string(), "Quantity".to_string());
+    map.insert("ElementDefinition".to_string(), "Element".to_string());
+    map.insert("EligibilityRequest".to_string(), "DomainResource".to_string());
+    map.insert("EligibilityResponse".to_string(), "DomainResource".to_string());
+    map.insert("Encounter".to_string(), "DomainResource".to_string());
+    map.insert("Endpoint".to_string(), "DomainResource".to_string());
+    map.insert("EnrollmentRequest".to_string(), "DomainResource".to_string());
+    map.insert("EnrollmentResponse".to_string(), "DomainResource".to_string());
+    map.insert("EpisodeOfCare".to_string(), "DomainResource".to_string());
+    map.insert("ExpansionProfile".to_string(), "DomainResource".to_string());
+    map.insert("ExplanationOfBenefit".to_string(), "DomainResource".to_string());
+    map.insert("Extension".to_string(), "Element".to_string());
+    map.insert("FamilyMemberHistory".to_string(), "DomainResource".to_string());
+    map.insert("Flag".to_string(), "DomainResource".to_string());
+    map.insert("Goal".to_string(), "DomainResource".to_string());
+    map.insert("GraphDefinition".to_string(), "DomainResource".to_string());
+    map.insert("Group".to_string(), "DomainResource".to_string());
+    map.insert("GuidanceResponse".to_string(), "DomainResource".to_string());
+    map.insert("HealthcareService".to_string(), "DomainResource".to_string());
+    map.insert("HumanName".to_string(), "Element".to_string());
+    map.insert("Identifier".to_string(), "Element".to_string());
+    map.insert("ImagingManifest".to_string(), "DomainResource".to_string());
+    map.insert("ImagingStudy".to_string(), "DomainResource".to_string());
+    map.insert("Immunization".to_string(), "DomainResource".to_string());
+    map.insert("ImmunizationRecommendation".to_string(), "DomainResource".to_string());
+    map.insert("ImplementationGuide".to_string(), "DomainResource".to_string());
+    map.insert("Library".to_string(), "DomainResource".to_string());
+    map.insert("Linkage".to_string(), "DomainResource".to_string());
+    map.insert("List".to_string(), "DomainResource".to_string());
+    map.insert("Location".to_string(), "DomainResource".to_string());
+    map.insert("Measure".to_string(), "DomainResource".to_string());
+    map.insert("MeasureReport".to_string(), "DomainResource".to_string());
+    map.insert("Media".to_string(), "DomainResource".to_string());
+    map.insert("Medication".to_string(), "DomainResource".to_string());
+    map.insert("MedicationAdministration".to_string(), "DomainResource".to_string());
+    map.insert("MedicationDispense".to_string(), "DomainResource".to_string());
+    map.insert("MedicationRequest".to_string(), "DomainResource".to_string());
+    map.insert("MedicationStatement".to_string(), "DomainResource".to_string());
+    map.insert("MessageDefinition".to_string(), "DomainResource".to_string());
+    map.insert("MessageHeader".to_string(), "DomainResource".to_string());
+    map.insert("Meta".to_string(), "Element".to_string());
+    map.insert("MetadataResource".to_string(), "DomainResource".to_string());
+    map.insert("Money".to_string(), "Quantity".to_string());
+    map.insert("NamingSystem".to_string(), "DomainResource".to_string());
+    map.insert("Narrative".to_string(), "Element".to_string());
+    map.insert("NutritionOrder".to_string(), "DomainResource".to_string());
+    map.insert("Observation".to_string(), "DomainResource".to_string());
+    map.insert("OperationDefinition".to_string(), "DomainResource".to_string());
+    map.insert("OperationOutcome".to_string(), "DomainResource".to_string());
+    map.insert("Organization".to_string(), "DomainResource".to_string());
+    map.insert("ParameterDefinition".to_string(), "Element".to_string());
+    map.insert("Parameters".to_string(), "Resource".to_string());
+    map.insert("Patient".to_string(), "DomainResource".to_string());
+    map.insert("PaymentNotice".to_string(), "DomainResource".to_string());
+    map.insert("PaymentReconciliation".to_string(), "DomainResource".to_string());
+    map.insert("Period".to_string(), "Element".to_string());
+    map.insert("Person".to_string(), "DomainResource".to_string());
+    map.insert("PlanDefinition".to_string(), "DomainResource".to_string());
+    map.insert("Practitioner".to_string(), "DomainResource".to_string());
+    map.insert("PractitionerRole".to_string(), "DomainResource".to_string());
+    map.insert("Procedure".to_string(), "DomainResource".to_string());
+    map.insert("ProcedureRequest".to_string(), "DomainResource".to_string());
+    map.insert("ProcessRequest".to_string(), "DomainResource".to_string());
+    map.insert("ProcessResponse".to_string(), "DomainResource".to_string());
+    map.insert("Provenance".to_string(), "DomainResource".to_string());
+    map.insert("Quantity".to_string(), "Element".to_string());
+    map.insert("Questionnaire".to_string(), "DomainResource".to_string());
+    map.insert("QuestionnaireResponse".to_string(), "DomainResource".to_string());
+    map.insert("Range".to_string(), "Element".to_string());
+    map.insert("Ratio".to_string(), "Element".to_string());
+    map.insert("Reference".to_string(), "Element".to_string());
+    map.insert("ReferralRequest".to_string(), "DomainResource".to_string());
+    map.insert("RelatedArtifact".to_string(), "Element".to_string());
+    map.insert("RelatedPerson".to_string(), "DomainResource".to_string());
+    map.insert("RequestGroup".to_string(), "DomainResource".to_string());
+    map.insert("ResearchStudy".to_string(), "DomainResource".to_string());
+    map.insert("ResearchSubject".to_string(), "DomainResource".to_string());
+    map.insert("RiskAssessment".to_string(), "DomainResource".to_string());
+    map.insert("SampledData".to_string(), "Element".to_string());
+    map.insert("Schedule".to_string(), "DomainResource".to_string());
+    map.insert("SearchParameter".to_string(), "DomainResource".to_string());
+    map.insert("Sequence".to_string(), "DomainResource".to_string());
+    map.insert("ServiceDefinition".to_string(), "DomainResource".to_string());
+    map.insert("Signature".to_string(), "Element".to_string());
+    map.insert("Slot".to_string(), "DomainResource".to_string());
+    map.insert("Specimen".to_string(), "DomainResource".to_string());
+    map.insert("StructureDefinition".to_string(), "DomainResource".to_string());
+    map.insert("StructureMap".to_string(), "DomainResource".to_string());
+    map.insert("Subscription".to_string(), "DomainResource".to_string());
+    map.insert("Substance".to_string(), "DomainResource".to_string());
+    map.insert("SupplyDelivery".to_string(), "DomainResource".to_string());
+    map.insert("SupplyRequest".to_string(), "DomainResource".to_string());
+    map.insert("Task".to_string(), "DomainResource".to_string());
+    map.insert("TestReport".to_string(), "DomainResource".to_string());
+    map.insert("TestScript".to_string(), "DomainResource".to_string());
+    map.insert("Timing".to_string(), "Element".to_string());
+    map.insert("TriggerDefinition".to_string(), "Element".to_string());
+    map.insert("UsageContext".to_string(), "Element".to_string());
+    map.insert("ValueSet".to_string(), "DomainResource".to_string());
+    map.insert("VisionPrescription".to_string(), "DomainResource".to_string());
+    map.insert("base64Binary".to_string(), "Element".to_string());
+    map.insert("boolean".to_string(), "Element".to_string());
+    map.insert("code".to_string(), "string".to_string());
+    map.insert("date".to_string(), "Element".to_string());
+    map.insert("dateTime".to_string(), "Element".to_string());
+    map.insert("decimal".to_string(), "Element".to_string());
+    map.insert("id".to_string(), "string".to_string());
+    map.insert("instant".to_string(), "Element".to_string());
+    map.insert("integer".to_string(), "Element".to_string());
+    map.insert("markdown".to_string(), "string".to_string());
+    map.insert("oid".to_string(), "uri".to_string());
+    map.insert("positiveInt".to_string(), "integer".to_string());
+    map.insert("string".to_string(), "Element".to_string());
+    map.insert("time".to_string(), "Element".to_string());
+    map.insert("unsignedInt".to_string(), "integer".to_string());
+    map.insert("uri".to_string(), "Element".to_string());
+    map.insert("uuid".to_string(), "uri".to_string());
+    map.insert("xhtml".to_string(), "Element".to_string());
+    map
 }

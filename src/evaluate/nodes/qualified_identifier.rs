@@ -2,14 +2,14 @@ use serde_json::Value;
 
 use crate::{
     error::FhirpathError,
-    evaluate::{CompileResult, Evaluate, Text},
+    evaluate::{EvaluateResult, Evaluate, Text},
     parser::identifier::QualifiedIdentifier,
 };
 
 use super::resource_node::ResourceNode;
 
 impl Evaluate for QualifiedIdentifier {
-    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> CompileResult<ResourceNode<'a, 'b>> {
+    fn evaluate<'a, 'b>(&self, input: &'a ResourceNode<'a, 'b>) -> EvaluateResult<ResourceNode<'a, 'b>> {
         let identifiers: Vec<String> = self
             .children
             .iter()
@@ -18,12 +18,12 @@ impl Evaluate for QualifiedIdentifier {
                     .evaluate(input)
                     .and_then(|node| match node.get_single()? {
                         Value::String(string_val) => Ok(string_val),
-                        _ => Err(FhirpathError::CompileError {
+                        _ => Err(FhirpathError::EvaluateError {
                             msg: "Invalid Identifier".to_string(),
                         }),
                     })
             })
-            .collect::<CompileResult<Vec<String>>>()?;
+            .collect::<EvaluateResult<Vec<String>>>()?;
 
         Ok(ResourceNode::from_node(
             input,
@@ -33,12 +33,12 @@ impl Evaluate for QualifiedIdentifier {
 }
 
 impl Text for QualifiedIdentifier {
-    fn text(&self) -> CompileResult<String> {
+    fn text(&self) -> EvaluateResult<String> {
         Ok(self
             .children
             .iter()
             .map(|c| c.text())
-            .collect::<CompileResult<Vec<String>>>()?
+            .collect::<EvaluateResult<Vec<String>>>()?
             .join("."))
     }
 }

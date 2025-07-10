@@ -4,16 +4,16 @@ use crate::{error::FhirpathError, parser::expression::Expression};
 
 use super::{
     nodes::resource_node::{ResourceContext, ResourceNode},
-    CompileResult, Evaluate,
+    EvaluateResult, Evaluate,
 };
 
 pub fn aggregate<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let first = expressions
         .first()
-        .ok_or_else(|| FhirpathError::CompileError {
+        .ok_or_else(|| FhirpathError::EvaluateError {
             msg: "aggregate expects at least one expression".to_string(),
         })?;
 
@@ -53,7 +53,7 @@ pub fn aggregate<'a, 'b>(
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_aggregate_path() {
@@ -63,25 +63,25 @@ mod test {
             TestCase {
                 path: "Patient.a.aggregate($this + $total, 0)".to_string(),
                 input: patient.clone(),
-                expected: json!([5]),
+                expected: Expected::Value(json!([5])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.aggregate($this + $total, 2)".to_string(),
                 input: patient.clone(),
-                expected: json!([7]),
+                expected: Expected::Value(json!([7])),
                 options: None,
             },
             TestCase {
                 path: "Patient.a.aggregate(iif($total.empty(), $this, iif($this < $total, $this, $total)))".to_string(),
                 input: json!({ "resourceType": "Patient", "a": [2, 3, 4, 5, 6] }),
-                expected: json!([2]),
+                expected: Expected::Value(json!([2])),
                 options: None,
             },
             TestCase {
               path: "Patient.a.aggregate($total + $this, 0) / Patient.a.count()".to_string(),
               input: json!({ "resourceType": "Patient", "a": [2, 3, 4, 5, 6] }),
-              expected: json!([4]),
+              expected: Expected::Value(json!([4])),
               options: None,
           },
         ];

@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 mod stu3;
 mod r4;
+mod r5;
 
 #[derive(Clone, Debug)]
 pub enum ModelType {
@@ -22,7 +23,6 @@ pub struct ModelDetails {
 
 #[derive(Debug)]
 pub enum ModelError {
-    FileLoadFail { msg: String },
     ParseFail { msg: String },
 }
 
@@ -43,7 +43,7 @@ pub fn get_model_details(model_type: ModelType) -> ModelResult<ModelDetails> {
                 choice_type_paths: stu3::choice_type_paths::choice_type_paths(),
                 path_to_type: stu3::path_to_type::path_to_type(),
                 paths_defined_elsewhere: stu3::paths_defined_elsewhere::paths_defined_elsewhere(),
-                path_cardinality: HashMap::new(),
+                path_cardinality: stu3::path_cardinality::path_cardinality(),
                 type_to_parent,
                 available_types,
             })
@@ -66,6 +66,23 @@ pub fn get_model_details(model_type: ModelType) -> ModelResult<ModelDetails> {
                 available_types,
             })
         }
-        _ => todo!(),
+        ModelType::R5 => {
+            let type_to_parent = r5::type_to_parent::type_to_parent();
+            let mut available_types: HashSet<String> = HashSet::new();
+
+            type_to_parent.iter().for_each(|(key, value)| {
+                available_types.insert(key.to_string());
+                available_types.insert(value.to_string());
+            });
+
+            Ok(ModelDetails {
+                choice_type_paths: r5::choice_type_paths::choice_type_paths(),
+                path_to_type: r5::path_to_type::path_to_type(),
+                paths_defined_elsewhere: r5::paths_defined_elsewhere::paths_defined_elsewhere(),
+                path_cardinality: r5::path_cardinality::path_cardinality(),
+                type_to_parent,
+                available_types,
+            })
+        }
     }
 }

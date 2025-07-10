@@ -3,11 +3,11 @@ use std::{cmp::Ordering, ops::Deref};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, parser::expression::Expression};
-
+use crate::evaluate::data_types::quantity::{CalendarUnit, Quantity, TimeUnit};
 use super::{
     data_types::{arithmetic_type::ArithmeticType, utils::implicit_convert},
     strings::normalise,
-    CompileResult, Evaluate, ResourceNode,
+    EvaluateResult, Evaluate, ResourceNode,
 };
 
 impl ArithmeticType {
@@ -47,7 +47,9 @@ impl ArithmeticType {
                         Ordering::Equal => Some(true),
                         _ => Some(false),
                     },
-                    None => None,
+                    // in particular for Quantities, Time and Calendar Units return
+                    // true/false rather than empty when being compared
+                    None => q1.fhir_eq(&q2)
                 }
             }
             _ => Some(false),
@@ -137,9 +139,9 @@ fn value_arrays_are_equal(first: &Vec<Value>, second: &Vec<Value>) -> Option<boo
     Some(true)
 }
 
-fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>) -> CompileResult<Value> {
+fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expression>>) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Equal function takes exactly 2 expressions".to_string(),
         });
     }
@@ -169,7 +171,7 @@ fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expr
 pub fn equal<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let result = are_equal(input, expressions)?;
 
     Ok(ResourceNode::from_node(input, result))
@@ -178,12 +180,12 @@ pub fn equal<'a, 'b>(
 pub fn not_equal<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let result = are_equal(input, expressions)?;
 
     let inverse = match result {
         Value::Bool(val) => Ok(Value::Bool(!val)),
-        _ => Err(FhirpathError::CompileError {
+        _ => Err(FhirpathError::EvaluateError {
             msg: "Invalid Boolean value".to_string(),
         }),
     }?;
@@ -240,7 +242,7 @@ fn values_are_equivalent(first: &Value, second: &Value) -> Option<bool> {
         (Value::Number(n1), Value::Number(n2)) => Some(n1.eq(n2)),
         (Value::String(s1), Value::String(s2)) => Some(normalise(s1).eq(&normalise(s2))),
         (Value::Null, Value::Null) => Some(true),
-        _ => todo!(),
+        _ => Some(false),
     }
 }
 
@@ -287,8 +289,7 @@ fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Optio
 
     let mut equivalent_indexes: Vec<Vec<usize>> = vec![];
 
-    // https://www.google.com/search?q=find+all+permutations+of+arrays+of+arrays+picking+one+element+from+each+array+rust&client=firefox-b-d&sca_esv=51ee083cf20858f1&sxsrf=AHTn8zq6-Nm9g9j9YCQjG_MR9UWBmoiOlQ%3A1744666466231&ei=Yn_9Z8TtDaSPxc8PmayEyQo&ved=0ahUKEwjEpuKHvdiMAxWkR_EDHRkWIakQ4dUDCBA&uact=5&oq=find+all+permutations+of+arrays+of+arrays+picking+one+element+from+each+array+rust&gs_lp=Egxnd3Mtd2l6LXNlcnAiUmZpbmQgYWxsIHBlcm11dGF0aW9ucyBvZiBhcnJheXMgb2YgYXJyYXlzIHBpY2tpbmcgb25lIGVsZW1lbnQgZnJvbSBlYWNoIGFycmF5IHJ1c3RI6xNQkQNY3BBwAXgBkAEAmAGNAaAB_AKqAQM0LjG4AQPIAQD4AQGYAgGgAgvCAgoQABiwAxjWBBhHmAMAiAYBkAYIkgcBMaAHigWyBwC4BwA&sclient=gws-wiz-serp
-    for (fi, first_item) in first.iter().enumerate() {
+    for first_item in first.iter() {
         // for each item in first array, find items in the
         // second array that are equivalent and get the
         // indexes
@@ -338,9 +339,9 @@ fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Optio
 fn are_equivalent<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<Value> {
+) -> EvaluateResult<Value> {
     if expressions.len() != 2 {
-        return Err(FhirpathError::CompileError {
+        return Err(FhirpathError::EvaluateError {
             msg: "Equivalent function takes exactly 2 expressions".to_string(),
         });
     }
@@ -377,7 +378,7 @@ fn are_equivalent<'a, 'b>(
 pub fn equivalent<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     Ok(ResourceNode::from_node(
         input,
         are_equivalent(input, expressions)?,
@@ -387,7 +388,7 @@ pub fn equivalent<'a, 'b>(
 pub fn not_equivalent<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expressions: &Vec<Box<Expression>>,
-) -> CompileResult<ResourceNode<'a, 'b>> {
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let equivalent = are_equivalent(input, expressions)?;
 
     let are_not_equivalent = match equivalent {
@@ -402,7 +403,7 @@ pub fn not_equivalent<'a, 'b>(
 mod test {
     use serde_json::json;
 
-    use crate::evaluate::test::test::{run_tests, TestCase};
+    use crate::evaluate::test::test::{run_tests, Expected, TestCase};
 
     #[test]
     fn test_evaluate_eq_path() {
@@ -417,151 +418,151 @@ mod test {
                 path: "Patient.birthDate = @2022-01-01".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.birthDate = @2022-03".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "Patient.birthDate = @2022-03-01T00:00:00".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "1 = 2".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "1 = 1".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "1.0 = 1".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "1.1 = 1".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "1.100 = 1.1".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "'abc' = 'ABC'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "'abc' = 'abc'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "2 'years' = 2 'years'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "2 'years' = 3 'years'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "2 'a' = 3 'b'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "@2012 = @2012".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "@2012 = @2013".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "@2012-01 = @2012".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "@2012-01-01T10:30 = @2012-01-01T10:30".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "@2012-01-01T10:30 = @2012-01-01T10:31".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "@2012-01-01T10:30:31 = @2012-01-01T10:30".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([]),
+                expected: Expected::Value(json!([])),
             },
             TestCase {
                 path: "@2012-01-01T10:30:31.0 = @2012-01-01T10:30:31".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "@2012-01-01T10:30:31.1 = @2012-01-01T10:30:31".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T01:15:00.0-05:00".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T00:30:00.0-05:00".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.name[0] = Patient.name[1]".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
-                path: "1 'a' = 1 'year'".to_string(),
+                path: "1 'a' = 1 year".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([false]),
+                expected: Expected::Value(json!([false])),
             },
         ];
 
@@ -581,13 +582,13 @@ mod test {
                 path: "Patient.name[0].given ~ Patient.name[1].given".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.name[0] ~ Patient.name[1]".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "Patient.name[0].given ~ Patient.name[1].given".to_string(),
@@ -597,13 +598,13 @@ mod test {
                     "name": [{ "family": "test", "given": ["Test1", "test2"] }, { "family": "test", "given": ["test2", "test1"]  }]
                 }),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
             TestCase {
                 path: "'test\n\r\tstring' ~ 'test string'".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: json!([true]),
+                expected: Expected::Value(json!([true])),
             },
         ];
 

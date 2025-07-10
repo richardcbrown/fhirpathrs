@@ -2,15 +2,14 @@ use std::{cell::LazyCell, cmp::Ordering};
 
 use chrono::{NaiveTime, Timelike, Utc};
 use regex::Regex;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{error::FhirpathError, evaluate::CompileResult};
+use crate::{error::FhirpathError, evaluate::EvaluateResult};
 
 use super::{
     date_time::DateTimePrecision,
-    utils::{parse_optional_f64, parse_optional_u32},
+    utils::{parse_optional_u32},
 };
 
 /**
@@ -51,7 +50,7 @@ impl Time {
     }
 
     pub fn to_time_string(&self) -> String {
-        format!("@T{}", self.to_string())
+        format!("{}", self.to_string())
     }
 
     pub fn to_time(&self) -> Option<NaiveTime> {
@@ -208,7 +207,7 @@ impl TryFrom<&Value> for Time {
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(val) => Time::try_from(val),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Only parsing times from strings is supported".to_string(),
             }),
         }
@@ -225,7 +224,7 @@ impl TryFrom<&String> for Time {
         };
 
         let captures = Regex::captures(&TIME_REGEX, &time_string).ok_or_else(|| {
-            FhirpathError::CompileError {
+            FhirpathError::EvaluateError {
                 msg: format!("{} is not a Time", value),
             }
         })?;
@@ -261,13 +260,13 @@ impl TimePrecision {
         seconds: Option<u32>,
         minutes: Option<u32>,
         hours: Option<u32>,
-    ) -> CompileResult<Self> {
+    ) -> EvaluateResult<Self> {
         match (millis, seconds, minutes, hours) {
             (Some(_millis), _, _, _) => Ok(TimePrecision::Millis),
             (None, Some(_sec), _, _) => Ok(TimePrecision::Seconds),
             (None, None, Some(_min), _) => Ok(TimePrecision::Minutes),
             (None, None, None, Some(_hr)) => Ok(TimePrecision::Hours),
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Invalid Time precision".to_string(),
             }),
         }

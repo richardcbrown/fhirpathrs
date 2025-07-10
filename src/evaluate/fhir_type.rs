@@ -4,6 +4,7 @@ pub fn determine_fhir_type(
     path: &String,
     child_property: &String,
     context: &FhirContext,
+    is_extensible_key: bool,
 ) -> PathDetails {
     let mut child_path = format!("{}.{}", path.clone(), child_property);
     let mut fhir_type: Option<String> = None;
@@ -22,5 +23,6 @@ pub fn determine_fhir_type(
     PathDetails {
         path: child_path,
         fhir_type,
+        extensible: !is_extensible_key && child_property.starts_with("_"),
     }
 }

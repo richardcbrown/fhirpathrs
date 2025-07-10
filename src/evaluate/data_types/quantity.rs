@@ -3,13 +3,45 @@ use std::{
     ops::{Add, Mul, Sub},
     str::FromStr,
 };
-
+use std::cell::LazyCell;
+use regex::Regex;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{error::FhirpathError, evaluate::CompileResult, parser::literal::QuantityLiteral};
+use crate::{error::FhirpathError, evaluate::EvaluateResult, parser::literal::QuantityLiteral};
 
+const QUANTITY_REGEX: LazyCell<Regex> = LazyCell::new(|| {
+    Regex::new(r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))").unwrap()
+});
+
+#[derive(PartialEq)]
+pub enum CalendarUnit {
+    Years,
+    Months,
+    Weeks,
+    Days,
+    Hours,
+    Minutes,
+    Seconds,
+    Millis,
+}
+
+// define the static ordering of CalendarUnit
+// so we know if a given CalendarUnit is
+// greater than or less than another
+static CALENDAR_UNIT_ORDER: [CalendarUnit; 8] = [
+    CalendarUnit::Millis,
+    CalendarUnit::Seconds,
+    CalendarUnit::Minutes,
+    CalendarUnit::Hours,
+    CalendarUnit::Days,
+    CalendarUnit::Weeks,
+    CalendarUnit::Months,
+    CalendarUnit::Years
+];
+
+#[derive(PartialEq)]
 pub enum TimeUnit {
     Years,
     Months,
@@ -21,37 +53,83 @@ pub enum TimeUnit {
     Millis,
 }
 
-impl TimeUnit {
-    pub fn to_ucum(&self) -> &str {
-        match &self {
-            TimeUnit::Years => "a",
-            TimeUnit::Months => "mo",
-            TimeUnit::Weeks => "wk",
-            TimeUnit::Days => "d",
-            TimeUnit::Hours => "h",
-            TimeUnit::Minutes => "min",
-            TimeUnit::Seconds => "s",
-            TimeUnit::Millis => "ms",
+impl CalendarUnit {
+    fn is_equivalent(&self, other: &TimeUnit) -> bool {
+        match self {
+            CalendarUnit::Years => other == &TimeUnit::Years,
+            CalendarUnit::Months => other == &TimeUnit::Months,
+            CalendarUnit::Weeks => other == &TimeUnit::Weeks,
+            CalendarUnit::Days => other == &TimeUnit::Days,
+            CalendarUnit::Hours => other == &TimeUnit::Hours,
+            CalendarUnit::Minutes => other == &TimeUnit::Minutes,
+            CalendarUnit::Seconds => other == &TimeUnit::Seconds,
+            CalendarUnit::Millis => other == &TimeUnit::Millis,
         }
     }
 
-    // pub fn to_seconds(&self) -> Option<Decimal> {
-    //     match self {
-    //         TimeUnit::Years => Decimal::from_u32(356 * 60 * 60 * 60),
-    //         TimeUnit::Months => Decimal::from_u32()
-    //     }
-    // }
+    /// TimeUnit and CalendarUnit are considered equal
+    /// for precision Second and below
+    fn is_equal(&self, other: &TimeUnit) -> bool {
+        match self {
+            CalendarUnit::Seconds => other == &TimeUnit::Seconds,
+            CalendarUnit::Millis => other == &TimeUnit::Millis,
+            _ => false
+        }
+    }
+}
 
-    // pub fn get_conversion_factor(&self, other: &TimeUnit) -> Option<Decimal> {
-    //     match self {
-    //         TimeUnit::Years => match other {
-    //             TimeUnit::Years => Decimal::from_i8(1),
-    //             TimeUnit::Months => Decimal::from_i8(12),
-    //             TimeUnit::Weeks => Decimal::from_i8(52),
-    //             TimeUnit::Days => Decimal::from_i8(365),
-    //         },
-    //     }
-    // }
+impl TimeUnit {
+    fn is_equivalent(&self, other: &CalendarUnit) -> bool {
+        match self {
+            TimeUnit::Years => other == &CalendarUnit::Years,
+            TimeUnit::Months => other == &CalendarUnit::Months,
+            TimeUnit::Weeks => other == &CalendarUnit::Weeks,
+            TimeUnit::Days => other == &CalendarUnit::Days,
+            TimeUnit::Hours => other == &CalendarUnit::Hours,
+            TimeUnit::Minutes => other == &CalendarUnit::Minutes,
+            TimeUnit::Seconds => other == &CalendarUnit::Seconds,
+            TimeUnit::Millis => other == &CalendarUnit::Millis,
+        }
+    }
+
+    /// TimeUnit and CalendarUnit are considered equal
+    /// for precision Second and below
+    fn is_equal(&self, other: &CalendarUnit) -> bool {
+        match self {
+            TimeUnit::Seconds => other == &CalendarUnit::Seconds,
+            TimeUnit::Millis => other == &CalendarUnit::Millis,
+            _ => false
+        }
+    }
+}
+
+impl TryFrom<&String> for CalendarUnit {
+    type Error = FhirpathError;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "year" | "years" => Ok(CalendarUnit::Years),
+            "month" | "months" => Ok(CalendarUnit::Months),
+            "week" | "weeks" => Ok(CalendarUnit::Weeks),
+            "day" | "days" => Ok(CalendarUnit::Days),
+            "hour" | "hours" => Ok(CalendarUnit::Hours),
+            "minute" | "minutes" => Ok(CalendarUnit::Minutes),
+            "second" | "seconds" => Ok(CalendarUnit::Seconds),
+            "millisecond" | "milliseconds" => Ok(CalendarUnit::Millis),
+            _ => Err(FhirpathError::EvaluateError {
+                msg: format!("{} is not a Calendar Unit", value),
+            }),
+        }
+    }
+}
+
+impl PartialOrd for CalendarUnit {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let self_index = CALENDAR_UNIT_ORDER.iter().enumerate().find(|&(i, x)| x == self)?;
+        let other_index = CALENDAR_UNIT_ORDER.iter().enumerate().find(|&(i, x)| x == other)?;
+
+        self_index.partial_cmp(&other_index)
+    }
 }
 
 impl TryFrom<&String> for TimeUnit {
@@ -59,22 +137,22 @@ impl TryFrom<&String> for TimeUnit {
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
         match value.as_str() {
-            "a" | "year" | "years" => Ok(TimeUnit::Years),
-            "mo" | "month" | "months" => Ok(TimeUnit::Months),
-            "wk" | "week" | "weeks" => Ok(TimeUnit::Weeks),
-            "d" | "day" | "days" => Ok(TimeUnit::Days),
-            "h" | "hour" | "hours" => Ok(TimeUnit::Hours),
-            "min" | "minute" | "minutes" => Ok(TimeUnit::Minutes),
-            "s" | "second" | "seconds" => Ok(TimeUnit::Seconds),
-            "ms" | "millisecond" | "milliseconds" => Ok(TimeUnit::Millis),
-            _ => Err(FhirpathError::CompileError {
+            "'a'" => Ok(TimeUnit::Years),
+            "'mo'" => Ok(TimeUnit::Months),
+            "'wk'" => Ok(TimeUnit::Weeks),
+            "'d'" => Ok(TimeUnit::Days),
+            "'h'" => Ok(TimeUnit::Hours),
+            "'min'" => Ok(TimeUnit::Minutes),
+            "'s'" => Ok(TimeUnit::Seconds),
+            "'ms'" => Ok(TimeUnit::Millis),
+            _ => Err(FhirpathError::EvaluateError {
                 msg: format!("{} is not a Time Unit", value),
             }),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Quantity {
     pub value: Decimal,
     pub unit: Option<String>,
@@ -85,7 +163,7 @@ impl TryFrom<&QuantityLiteral> for Quantity {
 
     fn try_from(value: &QuantityLiteral) -> Result<Self, Self::Error> {
         let quant_value =
-            Decimal::from_str(value.text.as_str()).map_err(|err| FhirpathError::CompileError {
+            Decimal::from_str(value.text.as_str()).map_err(|err| FhirpathError::EvaluateError {
                 msg: format!("Failed to parse Quantity.value: {}", err.to_string()),
             })?;
 
@@ -109,7 +187,7 @@ impl TryFrom<&Value> for Quantity {
                         Value::String(string_num) => Decimal::from_str_exact(&string_num).ok(),
                         _ => None,
                     })
-                    .ok_or(FhirpathError::CompileError {
+                    .ok_or(FhirpathError::EvaluateError {
                         msg: "Could not parse Quantity.value".to_string(),
                     })?;
 
@@ -127,48 +205,111 @@ impl TryFrom<&Value> for Quantity {
                             value: q_value,
                             unit: Some(string_unit.to_string()),
                         }),
-                        _ => Err(FhirpathError::CompileError {
+                        _ => Err(FhirpathError::EvaluateError {
                             msg: "Invalid Qunatity.unit".to_string(),
                         }),
                     },
                 }
             }
-            _ => Err(FhirpathError::CompileError {
+            _ => Err(FhirpathError::EvaluateError {
                 msg: "Cannot convert value to Quantity".to_string(),
             }),
         }
     }
 }
 
+impl TryFrom<&String> for Quantity {
+    type Error = FhirpathError;
+
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        let captures = Regex::captures(&QUANTITY_REGEX, value).ok_or(FhirpathError::EvaluateError { msg: format!("Failed to parse Quantity. {}", value) })?;
+
+        let capture_text = captures[1].to_string();
+
+        let capture_unit = captures[3].to_string();
+
+        Ok(Quantity {
+            value: Decimal::from_str_exact(&capture_text).map_err(|e| FhirpathError::EvaluateError {
+                msg: format!("Could not convert value to Decimal: {}", e)
+            })?,
+            unit: Some(capture_unit),
+        })
+    }
+}
+
 impl Quantity {
     pub fn to_string(&self) -> String {
         match &self.unit {
-            Some(u) => format!("{} '{}'", self.value, u),
+            Some(u) => format!("{} {}", self.value, u),
             None => self.value.to_string(),
         }
     }
 
-    pub fn try_convert_unit(&self, unit: &Option<String>) -> CompileResult<Quantity> {
-        match (&self.unit, unit) {
+    pub fn fhir_eq(&self, other: &Self) -> Option<bool> {
+        if let Ok(conv) = self.try_convert(other) {
+            return Some(conv.value.eq(&other.value) && conv.unit.eq(&other.unit));
+        }
+
+        // if Quantities are Calendar and Time unit based we can check for equality
+        let calendar_unit_first = CalendarUnit::try_from(&self.unit.clone()?);
+        let calendar_unit_second = CalendarUnit::try_from(&other.unit.clone()?);
+
+        // check if either unit is a UCUM time unit
+        let time_unit_first = TimeUnit::try_from(&self.unit.clone()?);
+        let time_unit_second = TimeUnit::try_from(&other.unit.clone()?);
+
+        // check for equality by Calendar and Time unit semantics
+        if let (Ok(first), Ok(second)) = (calendar_unit_first, time_unit_second) {
+            return Some(first.is_equal(&second));
+        }
+
+        if let (Ok(first), Ok(second)) = (time_unit_first, calendar_unit_second) {
+            return Some(first.is_equal(&second));
+        }
+
+        None
+    }
+
+
+    pub fn try_convert(&self, other: &Quantity) -> EvaluateResult<Quantity> {
+        match (&self.unit, &other.unit) {
             (None, None) => Ok(self.clone()),
             (Some(u1), Some(u2)) => {
                 if u1.eq(u2) {
                     return Ok(self.clone());
                 }
 
-                // let t1 = TimeUnit::try_from(u1);
-                // let t2 = TimeUnit::try_from(u2);
+                // if they are both calendar units convert using
+                // calendar conversion
+                let calendar_unit_first = CalendarUnit::try_from(u1);
+                let calendar_unit_second = CalendarUnit::try_from(u2);
 
-                // if let (Ok(time1), Ok(time2)) = (t1, t2) {
-                //     let factor = time1.get_conversion_factor(time2);
-                // }
+                // @todo calendar unit conversion
 
-                Err(FhirpathError::CompileError {
+                // check if either unit is a UCUM time unit
+                let time_unit_first = TimeUnit::try_from(u1);
+                let time_unit_second = TimeUnit::try_from(u2);
+
+                // if the Calendar and Time unit are equal according to
+                // fhirpath rules we can safely convert
+                if let (Ok(first), Ok(second)) = (calendar_unit_first, time_unit_second) {
+                    if first.is_equal(&second) {
+                        return Ok(Quantity { value: self.value, unit: other.unit.clone() })
+                    }
+                }
+
+                if let (Ok(first), Ok(second)) = (time_unit_first, calendar_unit_second) {
+                    if first.is_equal(&second) {
+                        return Ok(Quantity { value: self.value, unit: other.unit.clone() })
+                    }
+                }
+
+                Err(FhirpathError::EvaluateError {
                     msg: format!("Converting between {u1} and {u2} not supported."),
                 })
             }
-            _ => Err(FhirpathError::CompileError {
-                msg: format!("Cannot convert Quantities with mismatched units."),
+            _ => Err(FhirpathError::EvaluateError {
+                msg: "Cannot convert Quantities with mismatched units.".to_string(),
             }),
         }
     }
@@ -232,7 +373,7 @@ impl Sub for Quantity {
 impl PartialOrd for Quantity {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // attempt to convert self so units match with other
-        let converted = self.try_convert_unit(&other.unit).ok()?;
+        let converted = self.try_convert(&other).ok()?;
 
         // units match so only need to compare values
         converted.value.partial_cmp(&other.value)

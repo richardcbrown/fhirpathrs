@@ -87,12 +87,6 @@ pub struct PolarityExpression {
 }
 
 #[derive(Debug)]
-struct OpParsedTerms {
-    children: Vec<Box<Expression>>,
-    op: String,
-}
-
-#[derive(Debug)]
 pub struct MultiplicativeExpression {
     pub children: Vec<Box<Expression>>,
     pub op: String,
