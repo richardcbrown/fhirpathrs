@@ -5,14 +5,21 @@ use crate::evaluate::nodes::resource_node::{FhirContext, ResourceNode};
 use crate::evaluate::utils::get_string;
 use crate::parser::expression::Expression;
 
-fn call_trace(ctx: &FhirContext, name: String, value: Value) -> EvaluateResult<()> {
-    let mut func = ctx.trace_function.lock().map_err(|e| {
-        FhirpathError::EvaluateError {
-            msg: format!("Could not obtain lock on trace function: {}", e),
-        }
-    })?;
+const DEFAULT_TRACE: fn(String, Value) = |name: String, output_result: Value|  println!("TRACE:[{}] {}", name.clone(), output_result.clone());
 
-    func(name, value);
+fn call_trace(ctx: &FhirContext, name: String, value: Value) -> EvaluateResult<()> {
+    match ctx.trace_function {
+        Some(ref f) => {
+            let mut func = f.lock().map_err(|e| {
+                FhirpathError::EvaluateError {
+                    msg: format!("Could not obtain lock on trace function: {}", e),
+                }
+            })?;
+
+            func(name.clone(), value);
+        },
+        None => DEFAULT_TRACE(name.clone(), value),
+    };
     
     Ok(())
 }
@@ -35,9 +42,7 @@ pub fn trace<'a, 'b>(
     };
 
     call_trace(input.context, name.clone(), output_result.clone());
-
-    println!("TRACE:[{}] {}", name.clone(), output_result.clone());
-
+    
     Ok(ResourceNode::from_node(input, input.data.clone()))
 }
 
@@ -85,7 +90,7 @@ mod test {
                         model: None,
                         vars: None,
                         now: None,
-                        trace_function: Some(&mut trace_function),
+                        trace_function: Some(Arc::new(Mutex::new(&mut trace_function))),
                     }),
                 },
             ];

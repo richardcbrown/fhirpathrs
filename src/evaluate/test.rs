@@ -1,5 +1,6 @@
 #[cfg(test)]
 pub mod test {
+    use std::sync::Arc;
     use assert_json_diff::assert_json_eq;
     use serde_json::Value;
     use crate::error::FhirpathError;
@@ -26,7 +27,9 @@ pub mod test {
 
             println!("{:?}", compiled.expression);
 
-            let evaluate_result = compiled.evaluate_single(test.input, test.options);
+            let opts = test.options.and_then(|opts| Some(Arc::new(opts)));
+
+            let evaluate_result = compiled.evaluate_single(test.input, opts);
 
             println!("{:?}", evaluate_result);
 

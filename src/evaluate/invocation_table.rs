@@ -282,8 +282,6 @@ mod tests {
 
     #[test]
     fn test_where_function() {
-        let mut dummy = &mut |_, _| {};
-
         let node = ResourceNode {
             data_root: &json!([
               { "use": "a" },
@@ -299,7 +297,7 @@ mod tests {
                 model: None,
                 vars: HashMap::<String, Value>::new(),
                 now: Utc::now(),
-                trace_function: Arc::new(Mutex::new(&mut dummy))
+                trace_function: None
             },
             path: None,
             fhir_types: vec![],

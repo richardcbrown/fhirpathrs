@@ -17,7 +17,7 @@ pub struct FhirContext<'a> {
     pub model: Option<ModelDetails>,
     pub vars: HashMap<String, Value>,
     pub now: DateTime<Utc>,
-    pub trace_function: Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>,
+    pub trace_function: Option<Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>>,
 }
 
 #[derive(Clone, Debug)]
