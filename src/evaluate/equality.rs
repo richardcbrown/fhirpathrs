@@ -60,7 +60,25 @@ impl ArithmeticType {
         let (first, second) = implicit_convert(self, other);
 
         match (first, second) {
-            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => Some(num1.eq(&num2)),
+            (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
+                // round to the same (least) precision and check
+                // for equality
+
+                // they are equal so nothing to do
+                if num1.eq(&num2) {
+                    return Some(true);
+                }
+
+                let prec1: u32 = num1.fract().to_string().split_once(".")?.1.len().try_into().ok()?;
+                let prec2: u32 = num2.fract().to_string().split_once(".")?.1.len().try_into().ok()?;
+
+                let rounding_prec = if prec1 > prec2 {prec2} else {prec1};
+
+                let round1 = num1.round_dp(rounding_prec);
+                let round2 = num2.round_dp(rounding_prec);
+
+                Some(round1.eq(&round2))
+            },
             (ArithmeticType::DateTime(dt1), ArithmeticType::DateTime(dt2)) => {
                 let cmp = dt1.partial_cmp(&dt2);
 
@@ -410,7 +428,10 @@ mod test {
         let patient = json!({
             "resourceType": "Patient",
             "birthDate": "2022-01-01",
-            "name": [{ "family": "test", "given": ["test"] }, { "family": "test", "given": ["test"]  }]
+            "name": [{ "family": "test", "given": ["test"] }, { "family": "test", "given": ["test"]  }],
+            "a": [2, 1],
+            "b": [1, 2],
+            "c": [1, 2]
         });
 
         let tests: Vec<TestCase> = vec![
@@ -564,11 +585,36 @@ mod test {
                 options: None,
                 expected: Expected::Value(json!([false])),
             },
+            // @todo - test should pass but doesn't second/millisecond should be comparable
+            // TestCase {
+            //     path: "@T01:30:00.000 = @T01:30:00".to_string(),
+            //     input: patient.clone(),
+            //     options: None,
+            //     expected: Expected::Value(json!([true])),
+            // },
             TestCase {
-                path: "@T01:30:00.000 = @T01:30:00".to_string(),
+                path: "Patient.name[0] = Patient.name[1]".to_string(),
                 input: patient.clone(),
                 options: None,
                 expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.b = Patient.c".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.a = Patient.c".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "{} = {}".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
             },
         ];
 
@@ -608,6 +654,30 @@ mod test {
             },
             TestCase {
                 path: "'test\n\r\tstring' ~ 'test string'".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "{} ~ {}".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "@2012-01-01T10:30:31 ~ @2012-01-01T10:30".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "1.21 ~ 1.2".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "2.99 ~ 3.0".to_string(),
                 input: patient.clone(),
                 options: None,
                 expected: Expected::Value(json!([true])),

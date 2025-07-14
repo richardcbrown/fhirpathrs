@@ -105,19 +105,19 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 5.9.1. trace(name : String [, projection: Expression]) : collection - :white_check_mark:
     - 5.9.2. Current date and time functions
       - now() : DateTime - :white_check_mark:
-      - timeOfDay() : Time
+      - timeOfDay() : Time - :exclamation:
       - today() : Date - :white_check_mark:
 - 6. Operations
   - 6.1. Equality
-    - 6.1.1. = (Equals)
-    - 6.1.2. ~ (Equivalent)
-    - 6.1.3. != (Not Equals)
-    - 6.1.4. !~ (Not Equivalent)
+    - 6.1.1. = (Equals) - :exclamation:
+    - 6.1.2. ~ (Equivalent) - :exclamation:
+    - 6.1.3. != (Not Equals) - :exclamation:
+    - 6.1.4. !~ (Not Equivalent) - :exclamation:
   - 6.2. Comparison
-    - 6.2.1. > (Greater Than)
-    - 6.2.2. < (Less Than)
-    - 6.2.3. <= (Less or Equal)
-    - 6.2.4. >= (Greater or Equal)
+    - 6.2.1. > (Greater Than) - :exclamation:
+    - 6.2.2. < (Less Than) - :exclamation:
+    - 6.2.3. <= (Less or Equal) - :exclamation:
+    - 6.2.4. >= (Greater or Equal) - :exclamation:
   - 6.3. Types
     - 6.3.1. is type specifier
     - 6.3.2. is(type : type specifier)
