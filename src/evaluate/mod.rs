@@ -52,10 +52,10 @@ pub trait Text {
 }
 
 pub struct EvaluateOptions<'a> {
-    model: Option<ModelDetails>,
-    vars: Option<HashMap<String, Value>>,
-    now: Option<DateTime<Utc>>,
-    trace_function: Option<Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>>
+    pub model: Option<ModelDetails>,
+    pub vars: Option<HashMap<String, Value>>,
+    pub now: Option<DateTime<Utc>>,
+    pub trace_function: Option<Arc<Mutex<&'a mut dyn FnMut(String, Value) -> ()>>>
 }
 
 impl CompiledPath {
