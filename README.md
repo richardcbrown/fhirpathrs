@@ -2,6 +2,44 @@
 
 A [FHIRPath](http://hl7.org/fhirpath/) implementation in Rust.
 
+## Usage
+
+```rust
+use fhirpathrs::evaluate::{compile, EvaluateOptions};
+use fhirpathrs::models::{get_model_details, ModelType};
+use serde_json::json;
+
+fn main() {
+    let compiled_path = compile(&"Patient.name[0].given".to_string()).unwrap();
+
+    let patient = json!({
+        "resourceType": "Patient",
+        "name": [
+            {
+                "family": "FamilyName",
+                "given": "GivenName"
+            }
+        ]
+    });
+
+    let options: EvaluateOptions = EvaluateOptions {
+        // select the FHIR context model to use when
+        // evaluating resources, allowing fhirpath
+        // to extract type information and access
+        // choice[x] properties
+        model: Some(get_model_details(ModelType::Stu3).unwrap()),
+        vars: None,
+        now: None,
+        trace_function: None
+    };
+
+    let result = compiled_path.evaluate(vec![patient], Some(options)).unwrap();
+
+    // [String("GivenName")]
+    println!("{:?}", result);
+}
+```
+
 ## Implementation Status
 
 The current intention is to support the [N1 normative release of FHIRPath](https://hl7.org/fhirpath/N1/) and the [R5 specification](https://hl7.org/fhir/R5/fhirpath.html),
