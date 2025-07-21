@@ -1,7 +1,7 @@
 use serde_json::{json, Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
-
+use crate::evaluate::utils::{get_string, get_string_from_expression};
 use super::{
     data_types::{date_time::DateTime, quantity::Quantity, time::Time},
     utils::{
@@ -320,7 +320,69 @@ pub fn converts_to_time<'a, 'b>(
     Ok(ResourceNode::from_node(input, date_result))
 }
 
-// @todo - missing toQuantity and convertToQuantity
+fn check_quantity<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
+    expressions: &Vec<Box<Expression>>,
+) -> EvaluateResult<Option<Quantity>> {
+    if input.is_empty()? {
+        return Ok(None);
+    }
+
+    let unit_expr = expressions.first();
+
+    let unit_string: Option<String> = match unit_expr {
+        Some(expr) => Some(get_string_from_expression(input, expr)?),
+        None => None,
+    };
+
+    let single = input.get_single()?;
+
+    let quantity = Quantity::try_from(&single)
+        .ok();
+
+    let quantity_result = quantity.and_then(|quantity| {
+        match unit_string {
+            None => Some(quantity),
+            Some(unit) => {
+                if let Some(q_unit) = &quantity.unit {
+                    // currently converting between Quantity units
+                    // is not supported
+                    if unit.eq(q_unit) {
+                        Some(quantity)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+        }
+    });
+
+    Ok(quantity_result)
+}
+
+pub fn to_quantity<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
+    expressions: &Vec<Box<Expression>>,
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
+    let quantity_result = check_quantity(input, expressions)?
+        .and_then(|quantity| Some(Value::String(quantity.to_string())))
+        .unwrap_or(Value::Array(vec![]));
+
+    Ok(ResourceNode::from_node(input, quantity_result))
+}
+
+pub fn converts_to_quantity<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
+    expressions: &Vec<Box<Expression>>,
+) -> EvaluateResult<ResourceNode<'a, 'b>> {
+    let quantity_result = check_quantity(input, expressions)?
+        .and_then(|_| Some(true))
+        .unwrap_or(false);
+
+    Ok(ResourceNode::from_node(input, Value::Bool(quantity_result)))
+}
 
 #[cfg(test)]
 mod test {
@@ -1045,6 +1107,144 @@ mod test {
             },
             TestCase {
                 path: "Patient.e.convertsToTime()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+        ];
+
+        run_tests(tests);
+    }
+
+    #[test]
+    fn test_evaluate_to_quantity_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": {
+                "value": 1,
+                "unit": "year"
+            },
+            "b": true,
+            "c": "1 year",
+            "d": 1.0,
+            "e": [],
+            "f": [1.0, 0.0]
+        });
+
+        let tests: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["1 year"])),
+            },
+            TestCase {
+                path: "Patient.b.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["1 '1'"])),
+            },
+            TestCase {
+                path: "Patient.c.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["1 year"])),
+            },
+            TestCase {
+                path: "Patient.d.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["1 '1'"])),
+            },
+            TestCase {
+                path: "Patient.e.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
+            },
+            TestCase {
+                path: "Patient.f.toQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            },
+            TestCase {
+                path: "Patient.a.toQuantity('a')".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([])),
+            },
+            TestCase {
+                path: "Patient.a.toQuantity('year')".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!(["1 year"])),
+            },
+        ];
+
+        run_tests(tests);
+    }
+
+    #[test]
+    fn test_evaluate_converts_to_quantity_path() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "a": {
+                "value": 1,
+                "unit": "year"
+            },
+            "b": true,
+            "c": "1 year",
+            "d": 1.0,
+            "e": [],
+            "f": [1.0, 0.0]
+        });
+
+        let tests: Vec<TestCase> = vec![
+            TestCase {
+                path: "Patient.a.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.b.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.c.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.d.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
+            TestCase {
+                path: "Patient.e.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "Patient.f.convertsToQuantity()".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Error(FhirpathError::EvaluateError { msg: "Expected single value for node".to_string() }),
+            },
+            TestCase {
+                path: "Patient.a.convertsToQuantity('a')".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([false])),
+            },
+            TestCase {
+                path: "Patient.a.convertsToQuantity('year')".to_string(),
                 input: patient.clone(),
                 options: None,
                 expected: Expected::Value(json!([true])),

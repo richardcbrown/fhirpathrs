@@ -17,7 +17,7 @@ fn main() {
         "name": [
             {
                 "family": "FamilyName",
-                "given": "GivenName"
+                "given": ["GivenName"]
             }
         ]
     });
@@ -104,8 +104,8 @@ however due to the asynchronous nature of the R5 specification this will likely 
       - toDecimal() : Decimal - :white_check_mark:
       - convertsToDecimal() : Boolean - :white_check_mark:
     - 5.5.7. Quantity Conversion Functions
-      - toQuantity([unit : String]) : Quantity - :x:
-      - convertsToQuantity([unit : String]) : Boolean - :x:
+      - toQuantity([unit : String]) : Quantity - :exclamation:
+      - convertsToQuantity([unit : String]) : Boolean - :exclamation:
     - 5.5.8. String Conversion Functions
       - toString() : String - :white_check_mark:
       - convertsToString() : String - :white_check_mark:

@@ -33,6 +33,7 @@ use super::{
 };
 use crate::parser::expression::Expression;
 use std::collections::HashMap;
+use crate::evaluate::conversion::{converts_to_quantity, to_quantity};
 use crate::evaluate::trace::trace;
 
 pub fn invocation_table<'a, 'b>() -> HashMap<
@@ -242,6 +243,10 @@ pub fn invocation_table<'a, 'b>() -> HashMap<
 
     map.insert("convertsToTime".to_string(), converts_to_time);
 
+    map.insert("toQuantity".to_string(), to_quantity);
+
+    map.insert("convertsToQuantity".to_string(), converts_to_quantity);
+    
     map.insert("and".to_string(), and);
 
     map.insert("or".to_string(), or);
