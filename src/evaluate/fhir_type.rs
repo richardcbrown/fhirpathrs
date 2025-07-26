@@ -1,11 +1,15 @@
+use serde_json::Value;
 use super::{FhirContext, PathDetails};
 
 pub fn determine_fhir_type(
+    value: &Value,
     path: &String,
-    child_property: &String,
+    child_property: Option<&String>,
     context: &FhirContext,
     is_extensible_key: bool,
 ) -> PathDetails {
+    
+    
     let mut child_path = format!("{}.{}", path.clone(), child_property);
     let mut fhir_type: Option<String> = None;
 

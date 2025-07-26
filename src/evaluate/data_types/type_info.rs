@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::ResourceNode, models::ModelDetails};
+use crate::evaluate::data_types::date_time::DateTime as DateTimeType;
+use crate::evaluate::data_types::date_time::Time as TimeType;
+use crate::evaluate::data_types::quantity::Quantity;
+use crate::evaluate::utils::number_to_decimal;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum SystemType {
@@ -49,6 +53,51 @@ fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
         type_name: value.name.clone(),
         namespace: Some(Namespace::Fhir),
     })
+}
+
+fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
+    match value {
+        Value::Number(n) => {
+            let decimal = number_to_decimal(n)?;
+
+            if decimal.is_integer() {
+                Ok(SystemType::Integer)
+            } else {
+                Ok(SystemType::Decimal)
+            }
+        },
+        Value::String(s) => {
+            if let Ok(dt) = DateTimeType::try_from(s) {
+                return match dt.time {
+                    Some(_) => Ok(SystemType::DateTime),
+                    None => Ok(SystemType::DateTime),
+                }
+            }
+
+            if let Ok(_) = TimeType::try_from(s) {
+                return Ok(SystemType::Time);
+            }
+
+            if let Ok(_) = Quantity::try_from(s) {
+                return Ok(SystemType::Quantity);
+            }
+
+            Ok(SystemType::String)
+        },
+        Value::Object(_) => {
+            if let Ok(_) =  Quantity::try_from(value) {
+                return Ok(SystemType::Quantity);
+            }
+            
+            Err(FhirpathError::EvaluateError {
+                msg: "Cannot determine system type".to_string()
+            })
+        },
+        Value::Bool(_) => Ok(SystemType::Boolean),
+        _ => Err(FhirpathError::EvaluateError {
+            msg: "Cannot determine system type".to_string()
+        })
+    }
 }
 
 fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {

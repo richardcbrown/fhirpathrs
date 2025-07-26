@@ -95,6 +95,8 @@ impl Evaluate for MemberInvocation {
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
             let mut node = ResourceNode::from_node(input, json!(input_data));
 
+            let path_details = determine_fhir_type();
+
             node.path = Some(key_value.clone());
 
             node.fhir_types = vec![Some(PathDetails {
@@ -210,21 +212,21 @@ mod test {
         });
 
         let test_cases: Vec<TestCase> = vec![
-            // TestCase {
-            //     path: "Patient.birthDate".to_string(),
-            //     input: patient.clone(),
-            //     expected: Expected::Value(json!(["2022"]),
-            //     options: None,
-            // },
-            // TestCase {
-            //     path: "Patient.birthDate.extension".to_string(),
-            //     input: patient.clone(),
-            //     expected: Expected::Value(json!([{
-            //         "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
-            //         "valueDateTime": "1974-12-25T14:35:45-05:00"
-            //       }]),
-            //     options: None,
-            // },
+            TestCase {
+                path: "Patient.birthDate".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!(["2022"]),
+                options: None,
+            },
+            TestCase {
+                path: "Patient.birthDate.extension".to_string(),
+                input: patient.clone(),
+                expected: Expected::Value(json!([{
+                    "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
+                    "valueDateTime": "1974-12-25T14:35:45-05:00"
+                  }]),
+                options: None,
+            },
             TestCase {
                 path: "Patient._birthDate".to_string(),
                 input: patient.clone(),

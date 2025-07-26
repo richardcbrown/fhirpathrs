@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::EvaluateResult};
 use crate::evaluate::data_types::time::TimePrecision;
-use super::{
+pub(crate) use super::{
     date::Date,
     offset::{get_fixed_offset, Offset},
     quantity::{Quantity, CalendarUnit},

@@ -90,7 +90,8 @@ impl CompiledPath {
             "ucum".to_string(),
             Value::String("http://unitsofmeasure.org".to_string()),
         );
-
+        vars.insert("loinc".to_string(), Value::String("http://loinc.org".to_string()));
+        vars.insert("sct".to_string(), Value::String("http://snomed.info/sct".to_string()));
         vars.insert("resource".to_string(), resource.clone());
         vars.insert("rootResource".to_string(), resource.clone());
 
@@ -152,7 +153,7 @@ impl CompiledPath {
 
 pub fn compile(path: &String) -> EvaluateResult<CompiledPath> {
     Ok(CompiledPath {
-        expression: Box::new(fhirpath::EntireExpressionParser::new().parse(path).unwrap()),
+        expression: Box::new(fhirpath::EntireExpressionParser::new().parse(path).map_err(|e| FhirpathError::CompileError { msg: format!("Failed to parse path: {:?}", e) })?)
     })
 }
 
@@ -175,7 +176,12 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let evaluate_result = compiled.evaluate_single(patient, None).unwrap();
+        let evaluate_result = compiled.evaluate_single(patient, Some(Arc::new(EvaluateOptions {
+            trace_function: None,
+            now: None,
+            vars: None,
+            model: Some(get_model_details(ModelType::R4).unwrap())
+        }))).unwrap();
 
         assert_json_eq!(
             evaluate_result,
@@ -208,11 +214,38 @@ mod tests {
                     now: None,
                     trace_function: None,
                 })),
-            )
-            .unwrap();
+            );
+
+        match Some("true".to_string()) {
+            Some(invalid_mode) => {
+                match invalid_mode.as_str() {
+                    "true" => {
+                        let err = evaluate_result.err().unwrap();
+                        match err {
+                            FhirpathError::EvaluateError { msg } => panic!(),
+                            _ => {}
+                        }
+                    },
+                    "semantic" => {
+                        let err = evaluate_result.err().unwrap();
+
+                        match err {
+                            FhirpathError::CompileError { msg } => panic!(),
+                            _ => {}
+                        }
+                    },
+                    _ => panic!("Invalid mode")
+                };
+            },
+            None => {
+                assert_json_eq!(evaluate_result.ok(), Value::Null)
+            }
+        }
+
+        todo!();
 
         assert_json_eq!(
-            evaluate_result,
+            evaluate_result.unwrap(),
             json!([{
                 "use": "usual",
                 "given": ["test"]

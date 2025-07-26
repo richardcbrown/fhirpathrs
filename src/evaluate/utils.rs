@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use rust_decimal::{prelude::FromPrimitive, Decimal};
+use rust_decimal::prelude::ToPrimitive;
 use serde_json::{Number, Value};
 
 use crate::{error::FhirpathError, parser::expression::Expression};
-
 use super::{
     equality::values_are_equal,
     nodes::resource_node::ResourceContext,
@@ -73,19 +73,26 @@ pub fn get_number_from_expression<'a, 'b>(
     }
 }
 
-pub fn get_i32_from_expression<'a, 'b>(
+pub fn get_decimal_from_expression<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     expression: &Expression,
-) -> EvaluateResult<i32> {
+) -> EvaluateResult<Decimal> {
     let json_num = get_number_from_expression(input, expression)?;
 
     let num = json_num.as_f64().ok_or(FhirpathError::EvaluateError {
         msg: "Could not convert number to f64".to_string(),
     })?;
 
-    let decimal = Decimal::from_f64(num).ok_or(FhirpathError::EvaluateError {
+    Ok(Decimal::from_f64(num).ok_or(FhirpathError::EvaluateError {
         msg: "Could not convert number to Decimal".to_string(),
-    })?;
+    })?)
+}
+
+pub fn get_i32_from_expression<'a, 'b>(
+    input: &'a ResourceNode<'a, 'b>,
+    expression: &Expression,
+) -> EvaluateResult<i32> {
+    let decimal = get_decimal_from_expression(input, expression)?;
 
     if !decimal.is_integer() {
         return Err(FhirpathError::EvaluateError {
@@ -360,4 +367,20 @@ pub fn from_decimal(dec: Decimal) -> EvaluateResult<f64> {
     dec.try_into().map_err(|_| FhirpathError::EvaluateError {
         msg: format!("Could not convert from Decimal"),
     })
+}
+pub fn decimal_to_number(decimal: Decimal) -> EvaluateResult<Number> {
+    Ok(
+        Number::from_f64(
+        decimal.to_f64().ok_or(
+            FhirpathError::EvaluateError { msg: "Could not convert Decimal to f64".to_string() })?
+        ).ok_or(
+            FhirpathError::EvaluateError { msg: "Could not convert f64 to Number".to_string() })?
+    )
+}
+
+pub fn number_to_decimal(number: &Number) -> EvaluateResult<Decimal> {
+    Ok(
+        number.as_f64().and_then(|num| Decimal::from_f64(num)).ok_or(
+            FhirpathError::EvaluateError { msg: "Could not convert Number to Decimal".to_string() })?
+    )
 }

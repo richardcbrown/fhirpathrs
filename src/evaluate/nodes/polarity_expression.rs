@@ -1,11 +1,12 @@
-use serde_json::{Number, Value};
+use std::ops::Neg;
+use serde_json::Value;
 
 use crate::{
     error::FhirpathError,
     evaluate::{EvaluateResult, Evaluate, Text},
     parser::expression::PolarityExpression,
 };
-
+use crate::evaluate::utils::{decimal_to_number, get_decimal_from_expression};
 use super::resource_node::ResourceNode;
 
 impl Evaluate for PolarityExpression {
@@ -16,23 +17,15 @@ impl Evaluate for PolarityExpression {
             .ok_or(FhirpathError::EvaluateError {
                 msg: "PolarityExpression must have a single child expression".to_string(),
             })
-            .and_then(|child_expr| child_expr.evaluate(input))
-            .and_then(|result| Ok(result.get_single()?))
-            .and_then(|expr_result| match expr_result {
-                Value::Number(json_num) => {
-                    let mut num: i64 = json_num.as_i64().ok_or(FhirpathError::EvaluateError {
-                        msg: "PolarityExpression result was not a number".to_string(),
-                    })?;
+            .and_then(|child_expr| Ok(get_decimal_from_expression(input, child_expr)?))
+            .and_then(|decimal| {
+                    let mut result = decimal;
 
                     if self.op == "-" {
-                        num = -num;
+                        result = -result.neg();
                     }
 
-                    Ok(Value::Number(Number::from(num)))
-                }
-                _ => Err(FhirpathError::EvaluateError {
-                    msg: "PolarityExpression result was not a number".to_string(),
-                }),
+                    Ok(Value::Number(decimal_to_number(result)?))
             })
             .and_then(|result| Ok(ResourceNode::from_node(input, result)))
     }
