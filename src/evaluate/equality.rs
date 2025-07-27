@@ -131,12 +131,12 @@ pub fn values_are_equal(first: &Value, second: &Value) -> bool {
     first == second
 }
 
-fn value_arrays_are_equal(first: &Vec<Value>, second: &Vec<Value>) -> Option<bool> {
+fn value_arrays_are_equal(first: &Vec<&Value>, second: &Vec<&Value>) -> Option<bool> {
     for (index, first_item) in first.iter().enumerate() {
         let result = second.iter().nth(index).and_then(|second_item| {
             if let (Ok(t1), Ok(t2)) = (
-                ArithmeticType::try_from(first_item),
-                ArithmeticType::try_from(second_item),
+                ArithmeticType::try_from(first_item.clone()),
+                ArithmeticType::try_from(second_item.clone()),
             ) {
                 return t1.eq(&t2);
             }
@@ -169,7 +169,7 @@ fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expr
 
     let first_val = first.get_array()?;
     let second_val = second.get_array()?;
-    
+
     if first_val.is_empty() || second_val.is_empty() {
         return Ok(Value::Array(vec![]));
     }
@@ -178,7 +178,7 @@ fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expr
         return Ok(Value::Bool(false));
     }
 
-    let result = value_arrays_are_equal(first_val, second_val);
+    let result = value_arrays_are_equal(&first_val, &second_val);
 
     match result {
         Some(bool) => Ok(Value::Bool(bool)),
@@ -203,6 +203,7 @@ pub fn not_equal<'a, 'b>(
 
     let inverse = match result {
         Value::Bool(val) => Ok(Value::Bool(!val)),
+        Value::Array(_) => Ok(result),
         _ => Err(FhirpathError::EvaluateError {
             msg: "Invalid Boolean value".to_string(),
         }),
@@ -220,7 +221,7 @@ fn values_are_equivalent(first: &Value, second: &Value) -> Option<bool> {
     }
 
     match (first, second) {
-        (Value::Array(arr1), Value::Array(arr2)) => value_arrays_are_equivalent(&arr1, &arr2),
+        (Value::Array(arr1), Value::Array(arr2)) => value_arrays_are_equivalent(&arr1.iter().collect(), &arr2.iter().collect()),
         (Value::Object(obj1), Value::Object(obj2)) => {
             let first_object_keys: Vec<&String> = obj1.keys().collect();
             let second_object_keys: Vec<&String> = obj2.keys().collect();
@@ -296,7 +297,7 @@ fn generate_permutations(arrays: Vec<Vec<usize>>) -> Vec<Vec<usize>> {
     permutations
 }
 
-fn value_arrays_are_equivalent(first: &Vec<Value>, second: &Vec<Value>) -> Option<bool> {
+fn value_arrays_are_equivalent(first: &Vec<&Value>, second: &Vec<&Value>) -> Option<bool> {
     if first.len() != second.len() {
         return Some(false);
     }
@@ -379,7 +380,7 @@ fn are_equivalent<'a, 'b>(
     }
 
     // equivalent if they are equal
-    let arrays_are_equal = value_arrays_are_equal(first_val, second_val);
+    let arrays_are_equal = value_arrays_are_equal(&first_val, &second_val);
 
     if let Some(equality_result) = arrays_are_equal {
         if equality_result {
@@ -387,7 +388,7 @@ fn are_equivalent<'a, 'b>(
         }
     }
 
-    match value_arrays_are_equivalent(first_val, second_val) {
+    match value_arrays_are_equivalent(&first_val, &second_val) {
         Some(are_equivalent) => Ok(Value::Bool(are_equivalent)),
         None => Ok(Value::Array(vec![])),
     }

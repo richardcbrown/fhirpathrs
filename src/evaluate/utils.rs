@@ -215,7 +215,7 @@ pub fn get_arrays<'a, 'b>(
 
             let second_array = get_array_from_expression(&second_input, &expression)?;
 
-            Ok((array.to_vec(), second_array))
+            Ok((array.into_iter().cloned().collect(), second_array))
         }
         Target::Expr => {
             if expressions.len() != 2 {
@@ -248,7 +248,7 @@ pub fn get_arrays<'a, 'b>(
     }
 }
 
-pub fn unique_array_elements(array: &Vec<Value>) -> Vec<Value> {
+pub fn unique_array_elements(array: &Vec<&Value>) -> Vec<Value> {
     let mut unique: Vec<Value> = vec![];
 
     array.into_iter().for_each(|item| {
@@ -258,7 +258,7 @@ pub fn unique_array_elements(array: &Vec<Value>) -> Vec<Value> {
             .is_some();
 
         if !exists {
-            unique.push(item.clone());
+            unique.push(item.clone().clone());
         }
     });
 
@@ -276,7 +276,7 @@ pub fn evaluate_array_boolean_expression(
         .map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                item.to_owned(),
+                item.clone().clone(),
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),

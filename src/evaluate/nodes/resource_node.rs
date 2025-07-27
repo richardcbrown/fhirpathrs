@@ -142,13 +142,8 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
         }
     }
 
-    pub fn get_array(&self) -> EvaluateResult<&Vec<Value>> {
-        match &self.data {
-            Value::Array(array) => Ok(array),
-            _ => Err(FhirpathError::EvaluateError {
-                msg: "Data must be a Value::Array".to_string(),
-            }),
-        }
+    pub fn get_array(&self) -> EvaluateResult<Vec<&Value>> {
+        self.filter_extensible_types()
     }
 
     pub fn get_var(&self, var_name: &String) -> Option<Value> {
@@ -172,7 +167,7 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
 
     pub fn get_reflection_types(&self) -> Vec<Option<ReflectionType>> {
         self.get_array()
-            .unwrap_or(&vec![])
+            .unwrap_or(vec![])
             .iter()
             .enumerate()
             .map(|(index, value)| {
@@ -193,5 +188,40 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
         self.resource_context
             .as_ref()
             .and_then(|rc| rc.total.clone())
+    }
+
+    pub fn filter_extensible_types(&self) -> EvaluateResult<Vec<&Value>> {
+        // where data contains values from both property and _property
+        // remove the _property results
+        let fhir_types = &self.fhir_types;
+        let data = match &self.data {
+            Value::Array(array) => Ok(array),
+            _ => Err(FhirpathError::EvaluateError {
+                msg: "Expected array".to_string(),
+            })
+        }?;
+
+        let has_none_extension_data = fhir_types.iter().any(|ft| {
+            ft.as_ref().and_then(|fhir_type| Some(fhir_type.extensible)).unwrap_or(false)
+        });
+
+        if has_none_extension_data {
+            let combined: Vec<(bool, &Value)> = data.iter().enumerate().map(|(index, item)| {
+                let is_extensible = fhir_types
+                    .iter()
+                    .nth(index)
+                    .unwrap_or(&None)
+                    .as_ref()
+                    .and_then(|ft| Some(ft.extensible)).unwrap_or(false);
+
+                (is_extensible , item)
+            }).collect();
+
+            let filtered: Vec<&Value> =  combined.into_iter().filter(|item| !item.0).map(|item| item.1).collect();
+
+            return Ok(filtered);
+        }
+
+        Ok(data.iter().collect())
     }
 }

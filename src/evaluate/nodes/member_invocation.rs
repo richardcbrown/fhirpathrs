@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use serde_json::{json, Value};
 
 use crate::{
@@ -94,10 +95,12 @@ impl Evaluate for MemberInvocation {
 
         // MemberInvocation is resourceType, so return whole resource
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
-            let resource_data = Value::Array(input_data.clone());
+            let first_elem = input_data.first().cloned();
+
+            let resource_data = Value::Array(input_data.into_iter().cloned().collect());
 
             let path_details = determine_fhir_type(
-                input_data.first(),
+                first_elem,
                 Some(Path {
                     path: key_value.clone(),
                     child_property: None

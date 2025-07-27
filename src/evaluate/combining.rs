@@ -30,7 +30,7 @@ pub fn union<'a, 'b>(
 
     Ok(ResourceNode::from_node(
         input,
-        json!(unique_array_elements(&union_array)),
+        Value::Array(unique_array_elements(&union_array.iter().collect())),
     ))
 }
 

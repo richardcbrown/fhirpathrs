@@ -29,7 +29,7 @@ pub fn single<'a, 'b>(
         msg: "Failed to get single item from array".to_string(),
     })?;
 
-    Ok(ResourceNode::from_node(input, single_value.clone()))
+    Ok(ResourceNode::from_node(input, single_value.clone().clone()))
 }
 
 pub fn first<'a, 'b>(
@@ -72,7 +72,7 @@ pub fn tail<'a, 'b>(
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let array = input.get_array()?;
 
-    let tail_values: Vec<&Value> = array.iter().skip(1).collect();
+    let tail_values: Vec<&Value> = array.into_iter().skip(1).collect();
 
     Ok(ResourceNode::from_node(input, json!(tail_values)))
 }
@@ -98,7 +98,7 @@ pub fn skip<'a, 'b>(
     let int_num = get_i32_from_expression(input, expression)?;
 
     if int_num <= 0 {
-        return Ok(ResourceNode::from_node(input, Value::Array(array)));
+        return Ok(ResourceNode::from_node(input, Value::Array(array.into_iter().cloned().collect())));
     }
 
     let skip_num: usize = int_num.try_into().map_err(|e| FhirpathError::EvaluateError {
@@ -107,7 +107,7 @@ pub fn skip<'a, 'b>(
 
     Ok(ResourceNode::from_node(
         input,
-        Value::Array(array.into_iter().skip(skip_num).collect::<Vec<Value>>()),
+        Value::Array(array.into_iter().skip(skip_num).cloned().collect::<Vec<Value>>()),
     ))
 }
 
@@ -141,7 +141,7 @@ pub fn take<'a, 'b>(
 
     Ok(ResourceNode::from_node(
         input,
-        Value::Array(array.into_iter().take(take_num).collect::<Vec<Value>>()),
+        Value::Array(array.into_iter().take(take_num).cloned().collect::<Vec<Value>>()),
     ))
 }
 
@@ -151,8 +151,8 @@ pub fn intersect<'a, 'b>(
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let (array, second_array) = get_arrays(input, expressions, Target::AnyAtRoot)?;
 
-    let intersect_array: Vec<Value> = array
-        .into_iter()
+    let intersect_array: Vec<&Value> = array
+        .iter()
         .filter(|item| {
             second_array
                 .iter()
@@ -163,7 +163,7 @@ pub fn intersect<'a, 'b>(
 
     Ok(ResourceNode::from_node(
         input,
-        json!(unique_array_elements(&intersect_array)),
+        Value::Array(unique_array_elements(&intersect_array)),
     ))
 }
 

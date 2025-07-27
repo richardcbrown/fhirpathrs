@@ -32,7 +32,7 @@ pub fn aggregate<'a, 'b>(
         .try_fold(init, |acc, (index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                item.to_owned(),
+                item.clone().clone(),
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),

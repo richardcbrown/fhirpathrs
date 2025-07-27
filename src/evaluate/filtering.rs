@@ -16,7 +16,7 @@ use super::{
 
 fn evaluate_filter_expression(
     input: ResourceNode,
-    array: &Vec<Value>,
+    array: &Vec<&Value>,
     expr: &Expression,
 ) -> Vec<Value> {
     let results: Vec<Value> = array
@@ -25,7 +25,7 @@ fn evaluate_filter_expression(
         .filter_map(|(index, item)| {
             let node = ResourceNode::new(
                 input.data_root,
-                item.to_owned(),
+                item.clone().clone(),
                 input.context,
                 input.path.clone(),
                 input.fhir_types.clone(),
@@ -49,6 +49,7 @@ fn evaluate_filter_expression(
                     None
                 })
         })
+        .cloned()
         .collect();
 
     results
@@ -66,7 +67,7 @@ pub fn where_function<'a, 'b>(
         .and_then(|expr| {
             let data = input
                 .get_array()
-                .and_then(|val| Ok(evaluate_filter_expression(input.clone(), val, expr)))?;
+                .and_then(|val| Ok(evaluate_filter_expression(input.clone(), &val, expr)))?;
 
             Ok(ResourceNode::from_node(input, json!(data)))
         })
@@ -129,7 +130,7 @@ fn repeat_expr<'a, 'b>(
     let mut items: Vec<Value> = values.iter().try_fold(vec![], |mut acc, val| {
         let node = ResourceNode::from_node(input, val.clone());
 
-        let node_results = unique_array_elements(&get_array_from_expression(&node, &expression)?);
+        let node_results = unique_array_elements(&get_array_from_expression(&node, &expression)?.iter().collect());
 
         // unique results not currently in values
         let unique_results: Vec<Value> = node_results
@@ -148,7 +149,7 @@ fn repeat_expr<'a, 'b>(
 
     values.append(&mut items);
 
-    Ok(unique_array_elements(&values))
+    Ok(unique_array_elements(&values.iter().collect()))
 }
 
 pub fn repeat<'a, 'b>(
@@ -161,7 +162,7 @@ pub fn repeat<'a, 'b>(
             msg: "repeat expects exactly 1 Expression".to_string(),
         })?;
 
-    let initial_items = unique_array_elements(&get_array_from_expression(input, expression)?);
+    let initial_items = unique_array_elements(&get_array_from_expression(input, expression)?.iter().collect());
 
     let accumulated = repeat_expr(input, initial_items, expression)?;
 
@@ -214,7 +215,7 @@ pub fn of_type<'a, 'b>(
         }
     }
 
-    Ok(ResourceNode::from_node(input, Value::Array(type_array)))
+    Ok(ResourceNode::from_node(input, Value::Array(type_array.into_iter().cloned().collect())))
 }
 
 #[cfg(test)]

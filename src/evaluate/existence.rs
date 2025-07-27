@@ -164,7 +164,7 @@ pub fn distinct<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
-    let array = unique_array_elements(input.get_array()?);
+    let array = unique_array_elements(&input.get_array()?);
 
     Ok(ResourceNode::from_node(input, Value::Array(array)))
 }
@@ -175,7 +175,7 @@ pub fn is_distinct<'a, 'b>(
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
     let total_array = input.get_array()?;
 
-    let array = unique_array_elements(total_array);
+    let array = unique_array_elements(&total_array);
 
     let is_distinct = total_array.len() == array.len();
 
