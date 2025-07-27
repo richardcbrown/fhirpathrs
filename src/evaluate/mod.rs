@@ -34,13 +34,14 @@ use crate::models::ModelDetails;
 use crate::parser::expression::EntireExpression;
 
 use lalrpop_util::lalrpop_mod;
+use crate::evaluate::fhir_type::determine_fhir_type;
 
 lalrpop_mod!(pub fhirpath);
 
 pub type EvaluateResult<T> = std::result::Result<T, FhirpathError>;
 
 pub struct CompiledPath {
-    expression: Box<EntireExpression>,
+    pub(crate) expression: Box<EntireExpression>,
 }
 
 pub trait Evaluate {
@@ -112,7 +113,12 @@ impl CompiledPath {
             resource.clone(),
             &context,
             None,
-            vec![],
+            vec![determine_fhir_type(
+                Some(&resource),
+                None,
+                &context,
+                false
+            )],
             None,
             vec![],
         );
@@ -215,34 +221,6 @@ mod tests {
                     trace_function: None,
                 })),
             );
-
-        match Some("true".to_string()) {
-            Some(invalid_mode) => {
-                match invalid_mode.as_str() {
-                    "true" => {
-                        let err = evaluate_result.err().unwrap();
-                        match err {
-                            FhirpathError::EvaluateError { msg } => panic!(),
-                            _ => {}
-                        }
-                    },
-                    "semantic" => {
-                        let err = evaluate_result.err().unwrap();
-
-                        match err {
-                            FhirpathError::CompileError { msg } => panic!(),
-                            _ => {}
-                        }
-                    },
-                    _ => panic!("Invalid mode")
-                };
-            },
-            None => {
-                assert_json_eq!(evaluate_result.ok(), Value::Null)
-            }
-        }
-
-        todo!();
 
         assert_json_eq!(
             evaluate_result.unwrap(),

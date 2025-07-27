@@ -169,7 +169,7 @@ fn are_equal<'a, 'b>(input: &'a ResourceNode<'a, 'b>, expressions: &Vec<Box<Expr
 
     let first_val = first.get_array()?;
     let second_val = second.get_array()?;
-
+    
     if first_val.is_empty() || second_val.is_empty() {
         return Ok(Value::Array(vec![]));
     }

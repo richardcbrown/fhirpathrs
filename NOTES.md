@@ -21,3 +21,5 @@ with other implementations, there is discussion here https://chat.fhir.org/#narr
 on the correct way to do this. This implementation also doesn't flatten array nodes out, which all other implementations appear to do.
 
 Time equality does not respect second / millisecond comparison
+
+Take another look at determine_fhir_type

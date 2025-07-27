@@ -96,7 +96,7 @@ Expression: Expression = {
     })),
 
     // PolarityExpression
-    #[precedence(level="4")] #[assoc(side="right")]
+    #[precedence(level="4")]
     "+" <e: Expression> => Expression::PolarityExpression(Box::new(PolarityExpression {
         op: "+".to_string(),
         children: vec![

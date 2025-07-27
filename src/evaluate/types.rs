@@ -30,9 +30,11 @@ fn is_type<'a, 'b>(
         }
     })?;
 
+    dbg!(input.data.clone());
+
     if !input.is_single()? {
         return Err(FhirpathError::EvaluateError {
-            msg: "expected expects a single input".to_string(),
+            msg: "is expects a single input".to_string(),
         });
     }
 

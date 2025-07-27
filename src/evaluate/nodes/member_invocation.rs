@@ -9,6 +9,7 @@ use crate::{
     },
     parser::invocation::MemberInvocation,
 };
+use crate::evaluate::fhir_type::Path;
 use crate::evaluate::nodes::utils::capitalise;
 
 fn expand_choice_values<'a, 'b>(input: &'a ResourceNode<'a, 'b>, property: &String) -> Vec<String> {
@@ -93,17 +94,25 @@ impl Evaluate for MemberInvocation {
 
         // MemberInvocation is resourceType, so return whole resource
         if node_resource_type.is_some_and(|resource_type| resource_type.eq(&key_value)) {
-            let mut node = ResourceNode::from_node(input, json!(input_data));
+            let resource_data = Value::Array(input_data.clone());
 
-            let path_details = determine_fhir_type();
+            let path_details = determine_fhir_type(
+                input_data.first(),
+                Some(Path {
+                    path: key_value.clone(),
+                    child_property: None
+                }),
+                input.context,
+                false
+            );
 
-            node.path = Some(key_value.clone());
+            let mut node = ResourceNode::from_node(input, resource_data);
 
-            node.fhir_types = vec![Some(PathDetails {
-                path: key_value.clone(),
-                fhir_type: Some(key_value.clone()),
-                extensible: false
-            })];
+            if let Some(pd) = path_details {
+                node.path = Some(pd.path.clone());
+
+                node.fhir_types = vec![Some(pd)];
+            }
 
             return Ok(node);
         }
@@ -147,18 +156,38 @@ impl Evaluate for MemberInvocation {
             acc
         });
 
-        let mut node = ResourceNode::from_node(input, Value::Array(flattened_values));
+        let path_details = match &input.path {
+            Some(path) => {
+                let path_info = Some(Path {
+                    path: path.clone(),
+                    child_property: Some(key_value.clone()),
+                });
 
-        node.path = match &input.path {
-            Some(path) => Some(determine_fhir_type(path, &key_value, input.context, is_extensible_key).path),
+                determine_fhir_type(
+                    flattened_values.first(),
+                    path_info,
+                    input.context,
+                    is_extensible_key
+                )
+            },
             None => None,
         };
 
+        let mut node = ResourceNode::from_node(input, Value::Array(flattened_values));
+
+        if let Some(pd) = path_details {
+            node.path = Some(pd.path);
+        }
+
         let type_details: Vec<Option<PathDetails>> = keys
             .iter()
-            .map(|key| match &input.path {
-                Some(path) => Some(determine_fhir_type(path, &key, input.context, is_extensible_key)),
-                None => None,
+            .map(|key| {
+                let path = Some(Path {
+                    path: input.path.clone()?,
+                    child_property: Some(key.clone()),
+                });
+
+                determine_fhir_type(None, path, input.context, is_extensible_key)
             })
             .collect();
 
@@ -215,17 +244,17 @@ mod test {
             TestCase {
                 path: "Patient.birthDate".to_string(),
                 input: patient.clone(),
-                expected: Expected::Value(json!(["2022"]),
                 options: None,
+                expected: Expected::Value(json!(["2022"])),
             },
             TestCase {
                 path: "Patient.birthDate.extension".to_string(),
                 input: patient.clone(),
+                options: None,
                 expected: Expected::Value(json!([{
                     "url": "http://hl7.org/fhir/StructureDefinition/patient-birthTime",
                     "valueDateTime": "1974-12-25T14:35:45-05:00"
-                  }]),
-                options: None,
+                  }])),
             },
             TestCase {
                 path: "Patient._birthDate".to_string(),

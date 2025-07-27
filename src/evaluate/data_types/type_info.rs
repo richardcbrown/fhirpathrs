@@ -21,7 +21,7 @@ pub enum SystemType {
 }
 
 impl SystemType {
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             SystemType::Integer => "Integer".to_string(),
             SystemType::Decimal => "Decimal".to_string(),
@@ -55,7 +55,7 @@ fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
     })
 }
 
-fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
+pub fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
     match value {
         Value::Number(n) => {
             let decimal = number_to_decimal(n)?;
@@ -88,7 +88,7 @@ fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
             if let Ok(_) =  Quantity::try_from(value) {
                 return Ok(SystemType::Quantity);
             }
-            
+
             Err(FhirpathError::EvaluateError {
                 msg: "Cannot determine system type".to_string()
             })

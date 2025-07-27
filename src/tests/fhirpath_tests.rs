@@ -12178,6 +12178,9 @@ mod test_official {
     #[test]
     fn test_boolean_implies_test_boolean_implies_6_590() {
         let compiled = compile(&"(false implies {}) = true".to_string()).unwrap();
+
+        println!("{:?}", compiled.expression);
+
         let input_value = INPUT_MAP.get("patient-example.xml").unwrap().clone();
         let evaluate_result = compiled
             .evaluate_single(
@@ -13002,6 +13005,9 @@ mod test_official {
     #[test]
     fn test_abs_test_abs_3_631() {
         let compiled = compile(&"(-5.5 'mg').abs() = 5.5 'mg'".to_string()).unwrap();
+
+        println!("{:?}", compiled.expression);
+
         let input_value = INPUT_MAP.get("patient-example.xml").unwrap().clone();
         let evaluate_result = compiled
             .evaluate_single(
@@ -13801,7 +13807,7 @@ mod test_official {
     }
     #[test]
     fn test_type_test_type_10_670() {
-        let compiled = compile(&"Patient.active.type().name = 'boolean'".to_string())
+        let compiled = compile(&"Patient.active.type()".to_string())
             .unwrap();
         let input_value = INPUT_MAP.get("patient-example.xml").unwrap().clone();
         let evaluate_result = compiled
