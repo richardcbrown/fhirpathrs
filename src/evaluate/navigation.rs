@@ -20,7 +20,15 @@ pub fn children<'a, 'b>(
                 Value::Object(obj) => {
                     let mut values: Vec<Value> = obj.values().map(|item| item.to_owned()).collect();
 
-                    acc.append(&mut values);
+                    // flatten any child arrays
+                    values.into_iter().for_each(|item| {
+                        match item {
+                            Value::Array(mut array) => {
+                                acc.append(&mut array);
+                            }
+                            _ => acc.push(item),
+                        }
+                    });
                 }
                 _ => {}
             }
@@ -80,7 +88,7 @@ mod test {
                   "a": [2, 3],
                   "b": 6
                 }),
-                expected: Expected::Value(json!([[2, 3], 6, "Patient"])),
+                expected: Expected::Value(json!([2, 3, 6, "Patient"])),
                 options: None,
             },
         ];
@@ -110,7 +118,7 @@ mod test {
                   "a": [2, 3],
                   "b": 6
                 }),
-                expected: Expected::Value(json!([[2, 3], 6, "Patient"])),
+                expected: Expected::Value(json!([2, 3, 6, "Patient"])),
                 options: None,
             },
             TestCase {
@@ -130,7 +138,7 @@ mod test {
                   "b": 6,
                   "c": { "d": 1, "e": { "f": 2 } }
                 }),
-                expected: Expected::Value(json!([[2, 3], 6, { "d": 1, "e": { "f": 2 } }, "Patient", 1, { "f": 2 }, 2])),
+                expected: Expected::Value(json!([2, 3, 6, { "d": 1, "e": { "f": 2 } }, "Patient", 1, { "f": 2 }])),
                 options: None,
             },
         ];

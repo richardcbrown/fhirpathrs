@@ -59,22 +59,7 @@ impl PartialOrd for DateTime {
             Ordering::Equal => match (&self.time, &other.time) {
                 (None, None) => Some(Ordering::Equal),
                 (Some(t1), Some(t2)) => {
-                    let mut first_time = t1.clone();
-                    let mut second_time = t2.clone();
-
-                    // convert the second precision time
-                    // to milli precision time and compare
-                    if is_sec_milli_comparison {
-                        if first_time.precision == TimePrecision::Seconds {
-                            first_time.precision = TimePrecision::Millis;
-                            first_time.millis = Some(0);
-                        } else {
-                            second_time.precision = TimePrecision::Millis;
-                            second_time.millis = Some(0);
-                        }
-                    }
-                    
-                    first_time.partial_cmp(&second_time)
+                    t1.partial_cmp(&t2)
                 },
                 _ => None,
             },

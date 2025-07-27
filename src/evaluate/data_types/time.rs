@@ -68,11 +68,32 @@ impl Time {
 
 impl PartialOrd for Time {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // we can compare second and millisecond precision
+        let is_sec_milli_comparison = (self.precision == TimePrecision::Seconds && other.precision == TimePrecision::Millis)
+            || (self.precision == TimePrecision::Millis &&  other.precision == TimePrecision::Seconds);
+
         if self.precision != other.precision {
-            return None;
+            if !is_sec_milli_comparison {
+                return None;
+            }
         }
 
-        match (self.hours, other.hours) {
+        let mut first_time = self.clone();
+        let mut second_time = other.clone();
+
+        // convert the second precision time
+        // to milli precision time and compare
+        if is_sec_milli_comparison {
+            if first_time.precision == TimePrecision::Seconds {
+                first_time.precision = TimePrecision::Millis;
+                first_time.millis = Some(0);
+            } else {
+                second_time.precision = TimePrecision::Millis;
+                second_time.millis = Some(0);
+            }
+        }
+
+        match (first_time.hours, second_time.hours) {
             (Some(self_hours), Some(other_hours)) => {
                 if self_hours > other_hours {
                     return Some(Ordering::Greater);
@@ -86,7 +107,7 @@ impl PartialOrd for Time {
             _ => return None,
         }
 
-        match (self.minutes, other.minutes) {
+        match (first_time.minutes, second_time.minutes) {
             (Some(self_minutes), Some(other_minutes)) => {
                 if self_minutes > other_minutes {
                     return Some(Ordering::Greater);
@@ -100,13 +121,27 @@ impl PartialOrd for Time {
             _ => return None,
         }
 
-        match (self.seconds, other.seconds) {
+        match (first_time.seconds, second_time.seconds) {
             (Some(self_seconds), Some(other_seconds)) => {
                 if self_seconds > other_seconds {
                     return Some(Ordering::Greater);
                 }
 
                 if self_seconds < other_seconds {
+                    return Some(Ordering::Less);
+                }
+            }
+            (None, None) => {}
+            _ => return None,
+        }
+
+        match (first_time.millis, second_time.millis) {
+            (Some(self_millis), Some(other_millis)) => {
+                if self_millis > other_millis {
+                    return Some(Ordering::Greater);
+                }
+
+                if self_millis < other_millis {
                     return Some(Ordering::Less);
                 }
             }

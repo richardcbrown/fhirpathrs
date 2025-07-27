@@ -560,7 +560,7 @@ mod test {
                 path: "@2012-01-01T10:30:31.1 = @2012-01-01T10:30:31".to_string(),
                 input: patient.clone(),
                 options: None,
-                expected: Expected::Value(json!([true])),
+                expected: Expected::Value(json!([false])),
             },
             TestCase {
                 path: "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T01:15:00.0-05:00".to_string(),
@@ -586,13 +586,12 @@ mod test {
                 options: None,
                 expected: Expected::Value(json!([false])),
             },
-            // @todo - test should pass but doesn't second/millisecond should be comparable
-            // TestCase {
-            //     path: "@T01:30:00.000 = @T01:30:00".to_string(),
-            //     input: patient.clone(),
-            //     options: None,
-            //     expected: Expected::Value(json!([true])),
-            // },
+            TestCase {
+                path: "@T01:30:00.000 = @T01:30:00".to_string(),
+                input: patient.clone(),
+                options: None,
+                expected: Expected::Value(json!([true])),
+            },
             TestCase {
                 path: "Patient.name[0] = Patient.name[1]".to_string(),
                 input: patient.clone(),
