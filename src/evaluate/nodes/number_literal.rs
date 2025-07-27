@@ -7,7 +7,7 @@ use crate::{
     evaluate::{EvaluateResult, Evaluate, Text},
     parser::literal::NumberLiteral,
 };
-
+use crate::evaluate::fhir_type::determine_fhir_type;
 use super::resource_node::ResourceNode;
 
 impl Evaluate for NumberLiteral {
@@ -22,7 +22,13 @@ impl Evaluate for NumberLiteral {
                 msg: format!("Failed to serialize Decimal: {}", err.to_string()),
             })?;
 
-        Ok(ResourceNode::from_node(input, decimal_value))
+        let fhir_types = vec![determine_fhir_type(Some(&decimal_value), None, input.context, false)];
+
+        let mut node = ResourceNode::from_node(input, decimal_value);
+
+        node.fhir_types = fhir_types;
+
+        Ok(node)
     }
 }
 

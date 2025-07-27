@@ -145,6 +145,15 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
     pub fn get_array(&self) -> EvaluateResult<Vec<&Value>> {
         self.filter_extensible_types()
     }
+    
+    pub fn get_raw_array(&self) -> EvaluateResult<Vec<&Value>> {
+        match &self.data {
+            Value::Array(data) => Ok(data.iter().collect()),
+            _ => Err(FhirpathError::EvaluateError {
+                msg: "Data must be a Value::Array".to_string(),
+            })
+        }
+    }
 
     pub fn get_var(&self, var_name: &String) -> Option<Value> {
         self.context.vars.get(var_name).cloned()

@@ -89,7 +89,7 @@ impl Evaluate for MemberInvocation {
         // of a primitive FHIR value
         let is_extensible_key = key_value.starts_with("_");
 
-        let input_data = input.get_array()?;
+        let input_data = input.get_raw_array()?;
 
         let node_resource_type = input_data.first().and_then(|item| item.get("resourceType"));
 
