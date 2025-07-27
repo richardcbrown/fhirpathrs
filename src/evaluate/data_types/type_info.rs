@@ -6,7 +6,6 @@ use crate::{error::FhirpathError, evaluate::ResourceNode, models::ModelDetails};
 use crate::evaluate::data_types::date_time::DateTime as DateTimeType;
 use crate::evaluate::data_types::date_time::Time as TimeType;
 use crate::evaluate::data_types::quantity::Quantity;
-use crate::evaluate::utils::number_to_decimal;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum SystemType {
@@ -58,9 +57,7 @@ fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
 pub fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
     match value {
         Value::Number(n) => {
-            let decimal = number_to_decimal(n)?;
-
-            if decimal.is_integer() {
+            if n.is_i64() {
                 Ok(SystemType::Integer)
             } else {
                 Ok(SystemType::Decimal)
@@ -101,15 +98,15 @@ pub fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError>
 }
 
 fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
-    let result = match value.name.to_lowercase().as_str() {
-        "integer" => Ok(SystemType::Integer),
-        "decimal" => Ok(SystemType::Decimal),
-        "date" => Ok(SystemType::Date),
-        "time" => Ok(SystemType::Time),
-        "datetime" => Ok(SystemType::DateTime),
-        "boolean" => Ok(SystemType::Boolean),
-        "string" => Ok(SystemType::String),
-        "quantity" => Ok(SystemType::Quantity),
+    let result = match value.name.as_str() {
+        "Integer" => Ok(SystemType::Integer),
+        "Decimal" => Ok(SystemType::Decimal),
+        "Date" => Ok(SystemType::Date),
+        "Time" => Ok(SystemType::Time),
+        "DateTime" => Ok(SystemType::DateTime),
+        "Boolean" => Ok(SystemType::Boolean),
+        "String" => Ok(SystemType::String),
+        "Quantity" => Ok(SystemType::Quantity),
         _ => Err(FhirpathError::EvaluateError {
             msg: format!("Invalid System Type {}", value.name),
         }),
@@ -277,14 +274,14 @@ impl<'a> TryFrom<&TypeDetails<'a>> for TypeInfo {
 impl PartialEq for TypeInfo {
     fn eq(&self, other: &Self) -> bool {
         if self.namespace.is_none() || other.namespace.is_none() {
-            return self.type_name.to_lowercase() == other.type_name.to_lowercase();
+            return self.type_name == other.type_name;
         }
 
         // if this is a FHIR type and the other is a System type
         // they are implicitly equal if the type names are the same
         if let Some(self_ns) = &self.namespace {
             if self_ns.eq(&Namespace::Fhir) {
-                return self.type_name.to_lowercase() == other.type_name.to_lowercase();
+                return self.type_name == other.type_name;
             }
         }
 

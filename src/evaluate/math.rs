@@ -134,7 +134,7 @@ impl ArithmeticType {
                 if num2.is_zero() {
                     return Ok(Value::Array(vec![]));
                 }
-                
+
                 let result = num1.rem(num2);
 
                 Ok(
@@ -498,7 +498,7 @@ pub fn amp<'a, 'b>(
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
-            msg: "sub expects exactly two expressions".to_string(),
+            msg: "amp expects exactly two expressions".to_string(),
         });
     }
 
@@ -519,7 +519,7 @@ pub fn amp<'a, 'b>(
     }
 
     Err(FhirpathError::EvaluateError {
-        msg: "add operator not supported for types".to_string(),
+        msg: "amp operator not supported for types".to_string(),
     })
 }
 

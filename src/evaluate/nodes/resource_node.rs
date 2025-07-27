@@ -86,6 +86,19 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
         )
     }
 
+    /// generate a new node, preserving the other node types
+    pub fn from_other_node(node: &'a ResourceNode<'a, 'b>, other: ResourceNode<'a, 'b>) -> Self {
+        Self::new(
+            node.data_root,
+            other.data.clone(),
+            node.context,
+            other.path.clone(),
+            other.fhir_types.clone(),
+            None,
+            other.reflection_types.clone(),
+        )
+    }
+
     pub fn is_empty(&self) -> EvaluateResult<bool> {
         match &self.data {
             Value::Array(array) => Ok(array.len() == 0),

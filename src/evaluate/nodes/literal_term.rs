@@ -16,7 +16,7 @@ impl Evaluate for LiteralTerm {
 
         let first = &self.children[0];
 
-        Ok(ResourceNode::from_node(input, first.evaluate(input)?.data))
+        Ok(ResourceNode::from_other_node(input, first.evaluate(input)?))
     }
 }
 

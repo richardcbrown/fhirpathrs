@@ -149,7 +149,7 @@ mod test {
                 }),
             },
             TestCase {
-                path: "Observation.component[1].value.is(System.String)".to_string(),
+                path: "Observation.component[1].value.is(FHIR.string)".to_string(),
                 input: observation.clone(),
                 expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
@@ -220,7 +220,7 @@ mod test {
                 }),
             },
             TestCase {
-                path: "Observation.component[1].value is System.String".to_string(),
+                path: "Observation.component[1].value is FHIR.string".to_string(),
                 input: observation.clone(),
                 expected: Expected::Value(json!([true])),
                 options: Some(EvaluateOptions {
@@ -300,7 +300,7 @@ mod test {
                 }),
             },
             TestCase {
-                path: "Observation.component[1].value.as(System.String)".to_string(),
+                path: "Observation.component[1].value.as(FHIR.string)".to_string(),
                 input: observation.clone(),
                 expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
@@ -391,7 +391,7 @@ mod test {
                 }),
             },
             TestCase {
-                path: "Observation.component[1].value as System.String".to_string(),
+                path: "Observation.component[1].value as FHIR.string".to_string(),
                 input: observation.clone(),
                 expected: Expected::Value(json!(["abc"])),
                 options: Some(EvaluateOptions {
