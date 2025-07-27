@@ -96,12 +96,9 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
     }
 
     pub fn is_single(&self) -> EvaluateResult<bool> {
-        match &self.data {
-            Value::Array(array) => Ok(array.len() == 1),
-            _ => Err(FhirpathError::EvaluateError {
-                msg: "Data must be a Value::Array".to_string(),
-            }),
-        }
+        let values = self.get_array()?;
+
+        Ok(values.len() == 1)
     }
 
     pub fn get_single(&self) -> EvaluateResult<Value> {
@@ -111,18 +108,11 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
             });
         }
 
-        match &self.data {
-            Value::Array(array) => {
-                let first = array.first().ok_or_else(|| FhirpathError::EvaluateError {
-                    msg: "Expected single value for node".to_string(),
-                })?;
+        let array = self.get_array()?;
 
-                Ok(first.clone())
-            }
-            _ => Err(FhirpathError::EvaluateError {
-                msg: "Data must be a Value::Array".to_string(),
-            }),
-        }
+        Ok(array.first().ok_or_else(|| FhirpathError::EvaluateError {
+            msg: "Expected single value for node".to_string(),
+        })?.clone().clone())
     }
 
     pub fn get_single_or_empty(&self) -> EvaluateResult<Option<Value>> {
@@ -145,7 +135,7 @@ impl<'a, 'b> ResourceNode<'a, 'b> {
     pub fn get_array(&self) -> EvaluateResult<Vec<&Value>> {
         self.filter_extensible_types()
     }
-    
+
     pub fn get_raw_array(&self) -> EvaluateResult<Vec<&Value>> {
         match &self.data {
             Value::Array(data) => Ok(data.iter().collect()),
