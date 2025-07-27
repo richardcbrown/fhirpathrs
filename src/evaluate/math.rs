@@ -1,3 +1,4 @@
+use std::ops::Rem;
 use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal, MathematicalOps,
@@ -130,14 +131,11 @@ impl ArithmeticType {
     pub fn rem(&self, other: &ArithmeticType) -> EvaluateResult<Value> {
         match (self, other) {
             (ArithmeticType::Number(num1), ArithmeticType::Number(num2)) => {
-                let f1: f64 = from_decimal(num1.to_owned())?;
-                let f2: f64 = from_decimal(num2.to_owned())?;
-
-                let result = Decimal::from_f64(f1.rem_euclid(f2)).ok_or_else(|| {
-                    FhirpathError::EvaluateError {
-                        msg: "Failed to convert to Decimal".to_string(),
-                    }
-                })?;
+                if num2.is_zero() {
+                    return Ok(Value::Array(vec![]));
+                }
+                
+                let result = num1.rem(num2);
 
                 Ok(
                     serde_json::to_value(result).map_err(|err| FhirpathError::EvaluateError {
@@ -466,7 +464,7 @@ pub fn rem<'a, 'b>(
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
     if expressions.len() != 2 {
         return Err(FhirpathError::EvaluateError {
-            msg: "sub expects exactly two expressions".to_string(),
+            msg: "rem expects exactly two expressions".to_string(),
         });
     }
 
