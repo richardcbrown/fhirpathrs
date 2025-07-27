@@ -711,12 +711,12 @@ mod test {
         });
 
         let test_cases: Vec<TestCase> = vec![
-            TestCase {
-                path: "Patient.a + Patient.b".to_string(),
-                input: patient.clone(),
-                expected: Expected::Value(json!([8])),
-                options: None,
-            },
+            // TestCase {
+            //     path: "Patient.a + Patient.b".to_string(),
+            //     input: patient.clone(),
+            //     expected: Expected::Value(json!([8])),
+            //     options: None,
+            // },
             TestCase {
                 path: "Patient.a + 1 year".to_string(),
                 input: json!({

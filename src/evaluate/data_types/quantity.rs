@@ -15,7 +15,7 @@ use crate::evaluate::utils::try_convert_to_decimal;
 const DEFAULT_UNIT: &str = "'1'";
 
 const QUANTITY_REGEX: LazyCell<Regex> = LazyCell::new(|| {
-    Regex::new(r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))").unwrap()
+    Regex::new(r"^(([+\-])?\d+(\.\d+)?)\s*('([^']+)'|([a-zA-Z]+))?$").unwrap()
 });
 
 #[derive(PartialEq)]
@@ -209,7 +209,7 @@ impl TryFrom<&Value> for Quantity {
                             unit: Some(string_unit.to_string()),
                         }),
                         _ => Err(FhirpathError::EvaluateError {
-                            msg: "Invalid Qunatity.unit".to_string(),
+                            msg: "Invalid Quantity.unit".to_string(),
                         }),
                     },
                 }
@@ -248,15 +248,15 @@ impl TryFrom<&String> for Quantity {
     fn try_from(value: &String) -> Result<Self, Self::Error> {
         let captures = Regex::captures(&QUANTITY_REGEX, value).ok_or(FhirpathError::EvaluateError { msg: format!("Failed to parse Quantity. {}", value) })?;
 
-        let capture_text = captures[1].to_string();
+        let capture_text = captures.get(1).and_then(|cap| Some(cap.as_str().to_string())).ok_or(FhirpathError::EvaluateError { msg: format!("Failed to parse Quantity. {}", value) })?;
 
-        let capture_unit = captures[3].to_string();
+        let capture_unit = captures.get(4).and_then(|cap| Some(cap.as_str().to_string()));
 
         Ok(Quantity {
             value: Decimal::from_str_exact(&capture_text).map_err(|e| FhirpathError::EvaluateError {
                 msg: format!("Could not convert value to Decimal: {}", e)
             })?,
-            unit: Some(capture_unit),
+            unit: capture_unit,
         })
     }
 }

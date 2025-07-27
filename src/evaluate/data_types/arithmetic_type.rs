@@ -27,10 +27,6 @@ impl TryFrom<&Value> for ArithmeticType {
                 })?,
             )),
             Value::String(string_val) => {
-                if let Ok(quantity) = Quantity::try_from(string_val) {
-                    return Ok(ArithmeticType::Quantity(quantity));
-                }
-
                 if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
                     return Ok(ArithmeticType::DateTime(datetime_value));
                 }
@@ -39,6 +35,10 @@ impl TryFrom<&Value> for ArithmeticType {
 
                 if let Ok(num_value) = num {
                     return Ok(ArithmeticType::Number(num_value));
+                }
+                
+                if let Ok(quantity) = Quantity::try_from(string_val) {
+                    return Ok(ArithmeticType::Quantity(quantity));
                 }
 
                 Ok(ArithmeticType::String(string_val.to_string()))
