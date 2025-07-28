@@ -13,6 +13,8 @@ impl Evaluate for InvocationExpression {
 
                 match result {
                     Ok(res) => {
+                        dbg!(res.data.clone());
+                        
                         let mut node = ResourceNode::from_node(input, res.data);
 
                         node.path = res.path.clone();

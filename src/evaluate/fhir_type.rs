@@ -53,7 +53,7 @@ pub fn determine_fhir_type(
     if let Ok(system_type) = system_try_from_value(value?) {
         return Some(PathDetails {
             path: "".to_string(),
-            fhir_type: Some(format!("System.{}", system_type.to_string())),
+            fhir_type: Some(format!("System.{}", system_type.type_name.to_string())),
             extensible: false
         })
     }

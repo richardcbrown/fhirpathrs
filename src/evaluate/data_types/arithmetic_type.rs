@@ -30,6 +30,10 @@ impl TryFrom<&Value> for ArithmeticType {
                 if let Some(datetime_value) = DateTime::try_from(string_val).ok() {
                     return Ok(ArithmeticType::DateTime(datetime_value));
                 }
+
+                if let Some(time_value) = Time::try_from(string_val).ok() {
+                    return Ok(ArithmeticType::Time(time_value));
+                }
                 
                 let num = Decimal::from_str(&string_val);
 

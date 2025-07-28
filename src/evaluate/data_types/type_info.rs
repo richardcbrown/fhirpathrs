@@ -54,8 +54,8 @@ fn fhir_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
     })
 }
 
-pub fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError> {
-    match value {
+pub fn system_try_from_value(value: &Value) -> Result<TypeInfo, FhirpathError> {
+    let sys_type = match value {
         Value::Number(n) => {
             if n.is_i64() {
                 Ok(SystemType::Integer)
@@ -65,36 +65,37 @@ pub fn system_try_from_value(value: &Value) -> Result<SystemType, FhirpathError>
         },
         Value::String(s) => {
             if let Ok(dt) = DateTimeType::try_from(s) {
-                return match dt.time {
+                match dt.time {
                     Some(_) => Ok(SystemType::DateTime),
-                    None => Ok(SystemType::DateTime),
+                    None => Ok(SystemType::Date),
                 }
+            } else if let Ok(_) = TimeType::try_from(s) {
+                Ok(SystemType::Time)
+            } else if let Ok(_) = Quantity::try_from(s) {
+                Ok(SystemType::Quantity)
+            } else {
+                Ok(SystemType::String)
             }
-
-            if let Ok(_) = TimeType::try_from(s) {
-                return Ok(SystemType::Time);
-            }
-
-            if let Ok(_) = Quantity::try_from(s) {
-                return Ok(SystemType::Quantity);
-            }
-
-            Ok(SystemType::String)
         },
         Value::Object(_) => {
-            if let Ok(_) =  Quantity::try_from(value) {
-                return Ok(SystemType::Quantity);
+            if let Ok(_) = Quantity::try_from(value) {
+                Ok(SystemType::Quantity)
+            } else {
+                Err(FhirpathError::EvaluateError {
+                    msg: "Cannot determine system type".to_string()
+                })
             }
-
-            Err(FhirpathError::EvaluateError {
-                msg: "Cannot determine system type".to_string()
-            })
         },
         Value::Bool(_) => Ok(SystemType::Boolean),
         _ => Err(FhirpathError::EvaluateError {
             msg: "Cannot determine system type".to_string()
         })
-    }
+    }?;
+
+    Ok(TypeInfo {
+        type_name: sys_type.to_string(),
+        namespace: Some(Namespace::System),
+    })
 }
 
 fn system_try_from(value: &NameAndModel) -> Result<TypeInfo, FhirpathError> {
@@ -178,15 +179,7 @@ impl<'a> TryFrom<&Value> for TypeInfo {
     type Error = FhirpathError;
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        match value {
-            Value::String(_) => Ok(TypeInfo {
-                namespace: Some(Namespace::System),
-                type_name: SystemType::String.to_string(),
-            }),
-            _ => Err(FhirpathError::EvaluateError {
-                msg: "Cannot convert Value to TypeInfo".to_string(),
-            }),
-        }
+        system_try_from_value(value)
     }
 }
 

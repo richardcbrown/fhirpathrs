@@ -129,37 +129,45 @@ fn get_class_reflection_type(
     fhir_type: &String,
     model: &ModelDetails,
 ) -> Option<ReflectionType> {
-    let obj = match value {
-        Value::Object(obj) => obj,
-        _ => return None,
-    };
-
-    let element: Vec<ClassInfoElement> = obj.keys().filter_map(|elem| {
-        let elem_path = format!("{}.{}", fhir_type, elem);
-
-        let elem_type = model.path_to_type.get(elem_path.as_str())?;
-        let cardinality = model.path_cardinality.get(elem_path.as_str())?;
-
-        Some(ClassInfoElement {
-            name: elem.clone(),
-            r#type: Some(TypeSpecifier {
-                name: elem_type.clone(),
-                namespace: Namespace::Fhir,
-                cardinality: Cardinality::try_from(cardinality.as_str()).ok()?
-            }),
-        })
-    }).collect();
-
     let base_type = model.type_to_parent.get(fhir_type).and_then(|bt| {
         Some(TypeSpecifier { namespace: Namespace::Fhir, name: bt.to_string(), cardinality: Cardinality::Single })
     });
 
-    Some(ReflectionType::ClassInfo(ClassInfo {
-        namespace: Namespace::Fhir,
-        base_type,
-        name: fhir_type.clone(),
-        element,
-    }))
+    match value {
+        Value::Object(obj) => {
+            let element: Vec<ClassInfoElement> = obj.keys().filter_map(|elem| {
+                let elem_path = format!("{}.{}", fhir_type, elem);
+
+                let elem_type = model.path_to_type.get(elem_path.as_str())?;
+                let cardinality = model.path_cardinality.get(elem_path.as_str())?;
+
+                Some(ClassInfoElement {
+                    name: elem.clone(),
+                    r#type: Some(TypeSpecifier {
+                        name: elem_type.clone(),
+                        namespace: Namespace::Fhir,
+                        cardinality: Cardinality::try_from(cardinality.as_str()).ok()?
+                    }),
+                })
+            }).collect();
+
+            Some(ReflectionType::ClassInfo(ClassInfo {
+                namespace: Namespace::Fhir,
+                base_type,
+                name: fhir_type.clone(),
+                element,
+            }))
+        },
+        Value::Bool(_) | Value::Number(_) | Value::String(_) => {
+            Some(ReflectionType::ClassInfo(ClassInfo {
+                namespace: Namespace::Fhir,
+                base_type,
+                name: fhir_type.clone(),
+                element: vec![],
+            }))
+        }
+        _ => None,
+    }
 }
 
 fn get_tuple_reflection_type(
@@ -168,9 +176,9 @@ fn get_tuple_reflection_type(
     model: &ModelDetails,
 ) -> Option<ReflectionType> {
     let obj = match value {
-        Value::Object(obj) => obj,
-        _ => return None,
-    };
+        Value::Object(obj) => Some(obj),
+        _ => None,
+    }?;
 
     let element: Vec<TupleTypeInfoElement> = obj.keys().filter_map(|elem| {
         let elem_path = format!("{}.{}", path, elem);
@@ -199,24 +207,39 @@ pub fn get_reflection_type(
     model: &Option<ModelDetails>,
 ) -> Option<ReflectionType> {
     if let (Some(pd), Some(model_details)) = (path_details, model) {
-        let fhir_type = model_details.path_to_type.get(&pd.path)?;
+        let fhir_type: Option<&String> = model_details.path_to_type.get(&pd.path).or_else(|| {
+            // check if we are looking at a resource
+            let resource_type = value.get("resourceType").and_then(Value::as_str)?;
 
-        match fhir_type.as_str() {
-            "BackboneElement" =>  get_tuple_reflection_type(
-                value,
-                &pd.path,
-                model_details,
-            ),
-            _ => get_class_reflection_type(
-                value,
-                fhir_type,
-                model_details,
-            ),
+            if resource_type.eq(&pd.path) {
+                return Some(&pd.path);
+            }
+
+            None
+        });
+
+        if let Some(fhir_type) = fhir_type {
+            match fhir_type.as_str() {
+                "BackboneElement" => get_tuple_reflection_type(
+                    value,
+                    &pd.path,
+                    model_details,
+                ),
+                _ => get_class_reflection_type(
+                    value,
+                    fhir_type,
+                    model_details,
+                ),
+            }
+        } else {
+            Some(ReflectionType::SimpleTypeInfo(
+                SimpleTypeInfo::try_from(value).ok()?,
+            ))
         }
     } else {
-        return Some(ReflectionType::SimpleTypeInfo(
+        Some(ReflectionType::SimpleTypeInfo(
             SimpleTypeInfo::try_from(value).ok()?,
-        ));
+        ))
     }
 }
 
@@ -224,13 +247,18 @@ pub fn reflection_type<'a, 'b>(
     input: &'a ResourceNode<'a, 'b>,
     _expressions: &Vec<Box<Expression>>,
 ) -> EvaluateResult<ResourceNode<'a, 'b>> {
-    let reflection_types = input.get_reflection_types();
+    let reflection_types: Vec<ReflectionType> = input.get_reflection_types()
+        .into_iter()
+        .filter_map(|item| item)
+        .collect();
+
+    let value = serde_json::to_value(reflection_types).map_err(|err| FhirpathError::EvaluateError {
+        msg: format!("Failed to Serialize TypeInfo: {}", err.to_string()),
+    })?;
 
     Ok(ResourceNode::from_node(
         input,
-        serde_json::to_value(reflection_types).map_err(|err| FhirpathError::EvaluateError {
-            msg: format!("Failed to Serialize TypeInfo: {}", err.to_string()),
-        })?,
+        value,
     ))
 }
 
@@ -316,6 +344,24 @@ mod test {
                         "element": [
                            { "name": "gender", "type": "FHIR.code" },
                         ]
+                    }
+                ])),
+                options: Some(EvaluateOptions {
+                    model: Some(get_model_details(ModelType::R4).unwrap()),
+                    vars: None,
+                    now: None,
+                    trace_function: None,
+                }),
+            },
+            TestCase {
+                path: "Patient.active.type()".to_string(),
+                input: json!({ "resourceType": "Patient", "active": true, "contact": [{ "gender": "male" }]}),
+                expected: Expected::Value(json!([
+                    {
+                        "baseType": "FHIR.Element",
+                        "name": "boolean",
+                        "namespace": "FHIR",
+                        "element": []
                     }
                 ])),
                 options: Some(EvaluateOptions {
