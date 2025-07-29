@@ -17,7 +17,7 @@ fn main() {
         "name": [
             {
                 "family": "FamilyName",
-                "given": "GivenName"
+                "given": ["GivenName"]
             }
         ]
     });
@@ -104,8 +104,8 @@ however due to the asynchronous nature of the R5 specification this will likely 
       - toDecimal() : Decimal - :white_check_mark:
       - convertsToDecimal() : Boolean - :white_check_mark:
     - 5.5.7. Quantity Conversion Functions
-      - toQuantity([unit : String]) : Quantity - :x:
-      - convertsToQuantity([unit : String]) : Boolean - :x:
+      - toQuantity([unit : String]) : Quantity - :exclamation:
+      - convertsToQuantity([unit : String]) : Boolean - :exclamation:
     - 5.5.8. String Conversion Functions
       - toString() : String - :white_check_mark:
       - convertsToString() : String - :white_check_mark:
@@ -157,40 +157,40 @@ however due to the asynchronous nature of the R5 specification this will likely 
     - 6.2.3. <= (Less or Equal) - :exclamation:
     - 6.2.4. >= (Greater or Equal) - :exclamation:
   - 6.3. Types
-    - 6.3.1. is type specifier
-    - 6.3.2. is(type : type specifier)
-    - 6.3.3. as type specifier
-    - 6.3.4. as(type : type specifier)
+    - 6.3.1. is type specifier - :exclamation:
+    - 6.3.2. is(type : type specifier) - :exclamation:
+    - 6.3.3. as type specifier - :exclamation:
+    - 6.3.4. as(type : type specifier) - :exclamation:
   - 6.4. Collections
-    - 6.4.1. | (union collections)
-    - 6.4.2. in (membership)
-    - 6.4.3. contains (containership)
+    - 6.4.1. | (union collections) - :white_check_mark:
+    - 6.4.2. in (membership) - :white_check_mark:
+    - 6.4.3. contains (containership) - :white_check_mark:
   - 6.5. Boolean logic
-    - 6.5.1. and
-    - 6.5.2. or
-    - 6.5.3. not() : Boolean
-    - 6.5.4. xor
-    - 6.5.5. implies
+    - 6.5.1. and - :white_check_mark:
+    - 6.5.2. or - :white_check_mark:
+    - 6.5.3. not() : Boolean - :white_check_mark:
+    - 6.5.4. xor - :white_check_mark:
+    - 6.5.5. implies - :white_check_mark:
   - 6.6. Math
-    - 6.6.1. * (multiplication)
-    - 6.6.2. / (division)
-    - 6.6.3. + (addition)
-    - 6.6.4. - (subtraction)
-    - 6.6.5. div
-    - 6.6.6. mod
-    - 6.6.7. & (String concatenation)
+    - 6.6.1. * (multiplication) - :exclamation:
+    - 6.6.2. / (division) - :exclamation:
+    - 6.6.3. + (addition) - :exclamation:
+    - 6.6.4. - (subtraction) - :exclamation:
+    - 6.6.5. div - :exclamation:
+    - 6.6.6. mod - :exclamation:
+    - 6.6.7. & (String concatenation) - :exclamation:
   - 6.7. Date/Time Arithmetic
-    - 6.7.1. + (addition)
-    - 6.7.2. - (subtraction)
+    - 6.7.1. + (addition) - :exclamation:
+    - 6.7.2. - (subtraction) - :exclamation:
 - 7. Aggregates
   - 7.1. aggregate(aggregator : expression [, init : value]) : value - :white_check_mark:
 - 8. Lexical Elements
-  - 8.1. Whitespace
-  - 8.2. Comments
-- 9. Environment variables
+  - 8.1. Whitespace - :exclamation:
+  - 8.2. Comments - :exclamation:
+- 9. Environment variables - :exclamation:
 - 10. Types and Reflection
   - 10.2. Reflection
-    - 10.2.1. Primitive Types
-    - 10.2.2. Class Types
-    - 10.2.3. Collection Types
-    - 10.2.4. Anonymous Types
+    - 10.2.1. Primitive Types - :exclamation:
+    - 10.2.2. Class Types - :exclamation:
+    - 10.2.3. Collection Types - :exclamation:
+    - 10.2.4. Anonymous Types - :exclamation:

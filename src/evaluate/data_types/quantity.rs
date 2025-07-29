@@ -10,6 +10,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{error::FhirpathError, evaluate::EvaluateResult, parser::literal::QuantityLiteral};
+use crate::evaluate::utils::try_convert_to_decimal;
+
+const DEFAULT_UNIT: &str = "'1'";
 
 const QUANTITY_REGEX: LazyCell<Regex> = LazyCell::new(|| {
     Regex::new(r"([0-9]+(\.[0-9]+)?)\s*(year|month|week|day|hour|minute|second|millisecond|years|months|weeks|days|hours|minutes|seconds|milliseconds|('[^']*'))").unwrap()
@@ -211,6 +214,27 @@ impl TryFrom<&Value> for Quantity {
                     },
                 }
             }
+            Value::String(string) => Quantity::try_from(string),
+            Value::Number(_) | Value::Bool(_)  => {
+                let decimal = try_convert_to_decimal(value).ok_or(FhirpathError::EvaluateError {
+                    msg: "Cannot convert Number to Decimal".to_string(),
+                })?;
+
+                Ok(Quantity {
+                    value: decimal,
+                    unit: Some(DEFAULT_UNIT.to_string())
+                })
+            },
+            _ => {
+                let decimal = try_convert_to_decimal(value).ok_or(FhirpathError::EvaluateError {
+                    msg: "Cannot convert Number to Decimal".to_string(),
+                })?;
+
+                Ok(Quantity {
+                    value: decimal,
+                    unit: Some(DEFAULT_UNIT.to_string())
+                })
+            },
             _ => Err(FhirpathError::EvaluateError {
                 msg: "Cannot convert value to Quantity".to_string(),
             }),
